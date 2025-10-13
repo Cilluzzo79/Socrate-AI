@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ["python39"]
+
+[phases.install]
+cmds = ["pip install -r requirements_multitenant.txt"]
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = "celery -A celery_config worker --loglevel=info --concurrency=2"
+
+[healthcheck]
+enabled = false
