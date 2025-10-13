@@ -1,0 +1,47 @@
+Analizza il documento e crea una mappa concettuale strutturata seguendo ESATTAMENTE questo formato:
+
+=== MAPPA CONCETTUALE ===
+
+TEMA_CENTRALE: [Scrivi qui il tema principale del documento in 5-10 parole]
+
+DESCRIZIONE_CENTRALE: [Spiega il tema centrale in 1-2 frasi]
+
+---
+
+RAMO_1: [Primo concetto importante]
+├─ [Sotto-concetto 1.1 - descrizione breve]
+├─ [Sotto-concetto 1.2 - descrizione breve]
+└─ [Sotto-concetto 1.3 - descrizione breve]
+
+RAMO_2: [Secondo concetto importante]
+├─ [Sotto-concetto 2.1 - descrizione breve]
+├─ [Sotto-concetto 2.2 - descrizione breve]
+└─ [Sotto-concetto 2.3 - descrizione breve]
+
+RAMO_3: [Terzo concetto importante]
+├─ [Sotto-concetto 3.1 - descrizione breve]
+├─ [Sotto-concetto 3.2 - descrizione breve]
+└─ [Sotto-concetto 3.3 - descrizione breve]
+
+RAMO_4: [Quarto concetto importante]
+├─ [Sotto-concetto 4.1 - descrizione breve]
+└─ [Sotto-concetto 4.2 - descrizione breve]
+
+RAMO_5: [Quinto concetto importante]
+├─ [Sotto-concetto 5.1 - descrizione breve]
+└─ [Sotto-concetto 5.2 - descrizione breve]
+
+---
+
+COLLEGAMENTI:
+• [RAMO_1] <-> [RAMO_2]: [come sono collegati]
+• [RAMO_2] <-> [RAMO_3]: [come sono collegati]
+• [RAMO_4] <-> [RAMO_5]: [come sono collegati]
+
+=== FINE MAPPA ===
+
+IMPORTANTE: 
+- Usa contenuti REALI dal documento
+- Ogni ramo deve avere 2-4 sotto-concetti
+- Le descrizioni devono essere specifiche e dettagliate
+- Non usare placeholder o termini generici

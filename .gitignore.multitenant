@@ -1,0 +1,102 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+socrate_dev.db
+socrate_ai_dev.db
+
+# Logs
+*.log
+logs/
+debug_logs/
+retrieval.log
+
+# Storage
+storage/
+uploads/
+outputs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Railway
+.railway/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+.gradio/
+
+# Backups
+backup/
+*.backup
+*_backup/
+version_backup/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Project specific
+tokenOpen/
+Master Backup/
+Prompt efficaci/
+knowledge base/
+produzione railway/
+memvid_simple/
+copy-from-backup.bat.old
+deploy-*.bat
+*.bat.old
+
+# Keep examples
+!.env.example
+!requirements*.txt

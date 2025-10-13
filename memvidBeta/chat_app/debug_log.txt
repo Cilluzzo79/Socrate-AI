@@ -1,0 +1,553 @@
+
+
+=== MANUAL RETRIEVAL TEST FOR: TUIR, QUERY: 'articolo 32' ===
+
+=== CHECKING FILES FOR DOCUMENT: TUIR ===
+Checking directory: D:\railway\memvid\memvidBeta\encoder_app\outputs
+Found 4 files related to TUIR:
+  - TUIR 2025_sections.mp4 (22130.80 KB)
+  - TUIR 2025_sections_index.faiss (2082.38 KB)
+  - TUIR 2025_sections_index.json (1527.90 KB)
+    JSON structure for TUIR 2025_sections_index.json:
+      metadata: list with 1381 items
+      chunk_to_frame: dict with 1381 keys
+      frame_to_chunks: dict with 1381 keys
+      config: dict with 9 keys
+  - TUIR 2025_sections_metadata.json (1708.14 KB)
+    JSON structure for TUIR 2025_sections_metadata.json:
+      file: str
+      chunk_size: int
+      overlap: int
+      chunks_count: int
+      sections_count: int
+      total_text_length: int
+      processing_info: dict with 2 keys
+      chunks: list with 1381 items
+      Sample chunk keys: text, metadata
+      Scanning chunks for page and article info...
+      *** FOUND ARTICLE 32 in chunk 154 ***
+      Text preview: sì sostituito dall’art. 1, comma 155, l. 30 dicembre 2021, n. 234, a decorrere dal 1° gennaio 2022. ...
+      *** FOUND ARTICLE 32 in chunk 248 ***
+      Text preview: e», nella formulazione introdotta dall’art. 8, comma 5, della legge 9 dicembre 1998, n. 431, solleva...
+      *** FOUND ARTICLE 32 in chunk 249 ***
+      Text preview: nte riforma 2004]. [260] vedi ora art. 32 a norma dell'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. ...
+      *** FOUND ARTICLE 32 in chunk 250 ***
+      Text preview: previo parere della commissione censuaria centrale e può essere effettuata, d'ufﬁcio o su richiesta ...
+      *** FOUND ARTICLE 32 in chunk 251 ***
+      Text preview: o mediante l'applicazione alla superﬁcie della particella catastale su cui insiste l'immobile della ...
+      *** FOUND ARTICLE 32 in chunk 260 ***
+      Text preview: 4.    ai ﬁni del presente articolo il fondo rustico deve essere costituito da particelle catastali r...
+      *** FOUND ARTICLE 32 in chunk 261 ***
+      Text preview: n. 116. art. 32. reddito agrario [testo post riforma 2004] [274] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 270 ***
+      Text preview: o il contratto. 2.    nei casi di conduzione associata, salvo il disposto dell'art. 5, il reddito ag...
+      *** FOUND ARTICLE 32 in chunk 273 ***
+      Text preview: da uno degli associati. 4.    per la determinazione del reddito agrario delle superﬁci adibite alle ...
+      *** FOUND ARTICLE 32 in chunk 274 ***
+      Text preview: ll'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. 344. [292] vedi ora l'art. 30 a norma dell'art. 2, c...
+      *** FOUND ARTICLE 32 in chunk 275 ***
+      Text preview: in corso al 31 dicembre 2003, vedi l'art. 32, d.p.r. 22 dicembre 1986, n. 917 [testo ante riforma 20...
+      *** FOUND ARTICLE 32 in chunk 276 ***
+      Text preview:  reddito, se non sono oggetto di locazione, le unità immobiliari destinate esclusivamente all'eserci...
+      *** FOUND ARTICLE 32 in chunk 294 ***
+      Text preview: )  alla protezione delle piante, alla conservazione dei prodotti agricoli e alle attività di manipol...
+      *** FOUND ARTICLE 32 in chunk 331 ***
+      Text preview: di imposta che hanno inizio successivamente al 1° gennaio 2004. [336] per la disciplina applicabile ...
+      *** FOUND ARTICLE 32 in chunk 335 ***
+      Text preview: periodo di imposta. [339]comma così modiﬁcato dall’art. 1, comma 1004, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 336 ***
+      Text preview:  legge n. 205/2017. [340]sull’applicabilità delle disposizioni del presente comma vedi l’art. 1, com...
+      *** FOUND ARTICLE 32 in chunk 446 ***
+      Text preview:  commerciali si intende l'esercizio per professione abituale, ancorché non esclusiva, delle attività...
+      *** FOUND ARTICLE 32 in chunk 460 ***
+      Text preview: s. altre attività agricole [testo post riforma 2004] [446] [451] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 462 ***
+      Text preview: orrispettivi delle operazioni registrate o soggette a registrazione agli effetti dell'imposta sul va...
+      *** FOUND ARTICLE 32 in chunk 471 ***
+      Text preview: vembre 2005, n. 247. le modiﬁche del presente comma hanno effetto per i periodi di imposta che inizi...
+      *** FOUND ARTICLE 32 in chunk 472 ***
+      Text preview: 2 dell'art. 1, l. 24 dicembre 2007, n. 244. vedi, inoltre, l’art. 32-quater, comma 1, lett. b), d.l....
+      *** FOUND ARTICLE 32 in chunk 488 ***
+      Text preview: scrivere tra le attività relative all'impresa nell'inventario di cui all'articolo 2217 del codice ci...
+      *** FOUND ARTICLE 32 in chunk 489 ***
+      Text preview:  n. 383. per l'assoggettamento dei redditi di impresa a tassazione separata vedi i commi 40, 41 e 42...
+      *** FOUND ARTICLE 32 in chunk 552 ***
+      Text preview: , comma 59, lett. b), l. 30 dicembre 2023, n. 213, a decorrere dal 1° gennaio 2024. in precedenza, i...
+      *** FOUND ARTICLE 32 in chunk 561 ***
+      Text preview: e, il d.m. 26 maggio 2017. [531]comma abrogato dall’art. 1, comma 999, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 562 ***
+      Text preview: itata legge n. 205/2017. [532]lettera abrogata dall’art. 1, comma 999, lett. c), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 570 ***
+      Text preview:  attività di cui all'articolo 29 [548], eccedenti i limiti di cui al comma 2, lettera c), del predet...
+      *** FOUND ARTICLE 32 in chunk 586 ***
+      Text preview: . 214, il d.m. 23 febbraio 2017, l’art. 1, commi da 28 a 34, l. 30 dicembre 2018, n. 145 e l’art. 2,...
+      *** FOUND ARTICLE 32 in chunk 587 ***
+      Text preview: on modiﬁcazioni, dalla l. 13 ottobre 2020, n. 126, e l’art. 1, commi da 436 a 444, l. 30 dicembre 20...
+      *** FOUND ARTICLE 32 in chunk 588 ***
+      Text preview: e 2024, n. 207. [568]vedi, anche, gli artt. 2 e 11, d.lgs. 1° aprile 1996, n. 239, l’art. 32-quater,...
+      *** FOUND ARTICLE 32 in chunk 687 ***
+      Text preview:  1, l. 244/2007. [668]comma inserito dall’art. 26, comma 1, l. 7 luglio 2016, n. 122; per l’applicaz...
+      *** FOUND ARTICLE 32 in chunk 688 ***
+      Text preview: n vigore a decorrere dal periodo di imposta successivo a quello in corso al 31 dicembre 2011 testo r...
+      Page info found in 696 chunks, max page: 185
+      Article references found in 1160 chunks
+      Articles found: 1, 10, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 11, 110, 111, 1117, 112, 113, 114, 115, 116, 117, 118, 119, 12, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 13, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 14, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 15, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 16, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 17, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 18, 180, 1803, 1808, 181, 182, 183, 184, 185, 186, 187, 188, 189, 19, 190, 191, 1996, 2, 20, 204, 21, 210, 2117, 2120, 2122, 2125, 2135, 2161, 2162, 2195, 22, 2217, 2272, 2277, 23, 230, 2346, 2350, 2359, 24, 2409, 2425, 2426, 2435, 25, 2500, 2501, 2504, 2506, 2532, 2554, 2561, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 429, 43, 433, 44, 45, 46, 47, 48, 49, 5, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 6, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 7, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 8, 80, 81, 817, 82, 83, 84, 85, 86, 87, 88, 89, 9, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99
+Metadata file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_metadata.json
+Index file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_index.json
+Searching through 1381 chunks in metadata file...
+Found query in chunk 250 of metadata file
+Found query in chunk 251 of metadata file
+Found query in chunk 270 of metadata file
+Found query in chunk 273 of metadata file
+Found query in chunk 276 of metadata file
+Found query in chunk 446 of metadata file
+Found query in chunk 460 of metadata file
+Found query in chunk 462 of metadata file
+Found query in chunk 688 of metadata file
+
+Found 9 results for query: 'articolo 32'
+
+Result 1 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 250
+  - start: 23490
+  - end: 24690
+  - length: 1200
+  - title: previo parere della Commissione censuaria centrale e può essere
+  - section: 5
+  - total_sections: 25
+Text preview: previo parere della Commissione censuaria centrale e può essere effettuata, d'ufﬁcio o su richiesta dei comuni interessati, anche per singole zone censuarie e per singole qualità e classi di terreni. ...
+
+Result 2 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 251
+  - start: 24490
+  - end: 25676
+  - length: 1186
+  - title: o mediante
+  - section: 5
+  - total_sections: 25
+Text preview: o mediante l'applicazione alla superﬁcie della particella catastale su cui insiste l'immobile della tariffa d'estimo più alta in vigore nella provincia in cui è censita la particella incrementata del ...
+
+Result 3 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 270
+  - start: 39292
+  - end: 40361
+  - length: 1069
+  - title: di cui all’articolo 32, comma 2, lettera b).[288]
+  - section: 5
+  - total_sections: 25
+Text preview: o il contratto. 2.    Nei casi di conduzione associata, salvo il disposto dell'art. 5, il reddito agrario concorre a formare il reddito complessivo di ciascun associato per la quota di sua spettanza. ...
+
+Result 4 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 273
+  - start: 41224
+  - end: 42410
+  - length: 1186
+  - title: particella, incrementata del 400 per cento.[293]
+  - section: 5
+  - total_sections: 25
+Text preview: da uno degli associati. 4.    Per la determinazione del reddito agrario delle superﬁci adibite alle colture prodotte in serra o alla funghicoltura si applica la disposizione del comma 4-bis dell'art. ...
+
+Result 5 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 276
+  - start: 43904
+  - end: 44915
+  - length: 1011
+  - title: dell'articolo 28, commi 4-ter e 4-quater.[298]
+  - section: 5
+  - total_sections: 25
+Text preview:  reddito, se non sono oggetto di locazione, le unità immobiliari destinate esclusivamente all'esercizio del culto, compresi i monasteri di clausura, purché compatibile con le disposizioni degli artt. ...
+
+Result 6 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 446
+  - start: 1905
+  - end: 3103
+  - length: 1198
+  - title: commerciali si intende
+  - section: 9
+  - total_sections: 25
+Text preview:  commerciali si intende l'esercizio per professione abituale, ancorché non esclusiva, delle attività indicate nell'art. 2195 c.c., e delle attività indicate alle lettere b) e c) del comma 2 dell'art. ...
+
+Result 7 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 460
+  - start: 12942
+  - end: 14142
+  - length: 1200
+  - title: s. Altre attività agricole [Testo post riforma 2004] [446] [451]
+  - section: 9
+  - total_sections: 25
+Text preview: s. Altre attività agricole [Testo post riforma 2004] [446] [451] In vigore dal 31 dicembre 2024 Testo risultante dopo le modiﬁche apportate dall’art. 1, comma 1, lett. e), D.Lgs. 13 dicembre 2024, n. ...
+
+Result 8 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 462
+  - start: 14340
+  - end: 15422
+  - length: 1082
+  - title: agli effetti dell'imposta sul valore aggiunto il coefﬁciente di redditività del 5 per cento.[447]
+  - page: 64
+  - section: 9
+  - total_sections: 25
+Text preview: orrispettivi delle operazioni registrate o soggette a registrazione agli effetti dell'imposta sul valore aggiunto, conseguiti con tali attività, il coefﬁciente di redditività del 25 per cento. 3-bis. ...
+
+Result 9 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 688
+  - start: 13578
+  - end: 14683
+  - length: 1105
+  - title: n vigore a decorrere dal periodo di imposta successivo a quello in corso al 31 dicembre 2011
+  - section: 13
+  - total_sections: 25
+Text preview: n vigore a decorrere dal periodo di imposta successivo a quello in corso al 31 dicembre 2011 Testo risultante dopo le modiﬁche apportate dall'art. 4, comma 5-sexies, lettera b), D.L. 2 marzo 2012, n. ...
+
+=== MANUAL RETRIEVAL TEST FOR: TUIR, QUERY: 'pagina 151' ===
+
+=== CHECKING FILES FOR DOCUMENT: TUIR ===
+Checking directory: D:\railway\memvid\memvidBeta\encoder_app\outputs
+Found 4 files related to TUIR:
+  - TUIR 2025_sections.mp4 (22130.80 KB)
+  - TUIR 2025_sections_index.faiss (2082.38 KB)
+  - TUIR 2025_sections_index.json (1527.90 KB)
+    JSON structure for TUIR 2025_sections_index.json:
+      metadata: list with 1381 items
+      chunk_to_frame: dict with 1381 keys
+      frame_to_chunks: dict with 1381 keys
+      config: dict with 9 keys
+  - TUIR 2025_sections_metadata.json (1708.14 KB)
+    JSON structure for TUIR 2025_sections_metadata.json:
+      file: str
+      chunk_size: int
+      overlap: int
+      chunks_count: int
+      sections_count: int
+      total_text_length: int
+      processing_info: dict with 2 keys
+      chunks: list with 1381 items
+      Sample chunk keys: text, metadata
+      Scanning chunks for page and article info...
+      *** FOUND ARTICLE 32 in chunk 154 ***
+      Text preview: sì sostituito dall’art. 1, comma 155, l. 30 dicembre 2021, n. 234, a decorrere dal 1° gennaio 2022. ...
+      *** FOUND ARTICLE 32 in chunk 248 ***
+      Text preview: e», nella formulazione introdotta dall’art. 8, comma 5, della legge 9 dicembre 1998, n. 431, solleva...
+      *** FOUND ARTICLE 32 in chunk 249 ***
+      Text preview: nte riforma 2004]. [260] vedi ora art. 32 a norma dell'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. ...
+      *** FOUND ARTICLE 32 in chunk 250 ***
+      Text preview: previo parere della commissione censuaria centrale e può essere effettuata, d'ufﬁcio o su richiesta ...
+      *** FOUND ARTICLE 32 in chunk 251 ***
+      Text preview: o mediante l'applicazione alla superﬁcie della particella catastale su cui insiste l'immobile della ...
+      *** FOUND ARTICLE 32 in chunk 260 ***
+      Text preview: 4.    ai ﬁni del presente articolo il fondo rustico deve essere costituito da particelle catastali r...
+      *** FOUND ARTICLE 32 in chunk 261 ***
+      Text preview: n. 116. art. 32. reddito agrario [testo post riforma 2004] [274] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 270 ***
+      Text preview: o il contratto. 2.    nei casi di conduzione associata, salvo il disposto dell'art. 5, il reddito ag...
+      *** FOUND ARTICLE 32 in chunk 273 ***
+      Text preview: da uno degli associati. 4.    per la determinazione del reddito agrario delle superﬁci adibite alle ...
+      *** FOUND ARTICLE 32 in chunk 274 ***
+      Text preview: ll'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. 344. [292] vedi ora l'art. 30 a norma dell'art. 2, c...
+      *** FOUND ARTICLE 32 in chunk 275 ***
+      Text preview: in corso al 31 dicembre 2003, vedi l'art. 32, d.p.r. 22 dicembre 1986, n. 917 [testo ante riforma 20...
+      *** FOUND ARTICLE 32 in chunk 276 ***
+      Text preview:  reddito, se non sono oggetto di locazione, le unità immobiliari destinate esclusivamente all'eserci...
+      *** FOUND ARTICLE 32 in chunk 294 ***
+      Text preview: )  alla protezione delle piante, alla conservazione dei prodotti agricoli e alle attività di manipol...
+      *** FOUND ARTICLE 32 in chunk 331 ***
+      Text preview: di imposta che hanno inizio successivamente al 1° gennaio 2004. [336] per la disciplina applicabile ...
+      *** FOUND ARTICLE 32 in chunk 335 ***
+      Text preview: periodo di imposta. [339]comma così modiﬁcato dall’art. 1, comma 1004, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 336 ***
+      Text preview:  legge n. 205/2017. [340]sull’applicabilità delle disposizioni del presente comma vedi l’art. 1, com...
+      *** FOUND ARTICLE 32 in chunk 446 ***
+      Text preview:  commerciali si intende l'esercizio per professione abituale, ancorché non esclusiva, delle attività...
+      *** FOUND ARTICLE 32 in chunk 460 ***
+      Text preview: s. altre attività agricole [testo post riforma 2004] [446] [451] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 462 ***
+      Text preview: orrispettivi delle operazioni registrate o soggette a registrazione agli effetti dell'imposta sul va...
+      *** FOUND ARTICLE 32 in chunk 471 ***
+      Text preview: vembre 2005, n. 247. le modiﬁche del presente comma hanno effetto per i periodi di imposta che inizi...
+      *** FOUND ARTICLE 32 in chunk 472 ***
+      Text preview: 2 dell'art. 1, l. 24 dicembre 2007, n. 244. vedi, inoltre, l’art. 32-quater, comma 1, lett. b), d.l....
+      *** FOUND ARTICLE 32 in chunk 488 ***
+      Text preview: scrivere tra le attività relative all'impresa nell'inventario di cui all'articolo 2217 del codice ci...
+      *** FOUND ARTICLE 32 in chunk 489 ***
+      Text preview:  n. 383. per l'assoggettamento dei redditi di impresa a tassazione separata vedi i commi 40, 41 e 42...
+      *** FOUND ARTICLE 32 in chunk 552 ***
+      Text preview: , comma 59, lett. b), l. 30 dicembre 2023, n. 213, a decorrere dal 1° gennaio 2024. in precedenza, i...
+      *** FOUND ARTICLE 32 in chunk 561 ***
+      Text preview: e, il d.m. 26 maggio 2017. [531]comma abrogato dall’art. 1, comma 999, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 562 ***
+      Text preview: itata legge n. 205/2017. [532]lettera abrogata dall’art. 1, comma 999, lett. c), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 570 ***
+      Text preview:  attività di cui all'articolo 29 [548], eccedenti i limiti di cui al comma 2, lettera c), del predet...
+      *** FOUND ARTICLE 32 in chunk 586 ***
+      Text preview: . 214, il d.m. 23 febbraio 2017, l’art. 1, commi da 28 a 34, l. 30 dicembre 2018, n. 145 e l’art. 2,...
+      *** FOUND ARTICLE 32 in chunk 587 ***
+      Text preview: on modiﬁcazioni, dalla l. 13 ottobre 2020, n. 126, e l’art. 1, commi da 436 a 444, l. 30 dicembre 20...
+      *** FOUND ARTICLE 32 in chunk 588 ***
+      Text preview: e 2024, n. 207. [568]vedi, anche, gli artt. 2 e 11, d.lgs. 1° aprile 1996, n. 239, l’art. 32-quater,...
+      *** FOUND ARTICLE 32 in chunk 687 ***
+      Text preview:  1, l. 244/2007. [668]comma inserito dall’art. 26, comma 1, l. 7 luglio 2016, n. 122; per l’applicaz...
+      *** FOUND ARTICLE 32 in chunk 688 ***
+      Text preview: n vigore a decorrere dal periodo di imposta successivo a quello in corso al 31 dicembre 2011 testo r...
+      Page info found in 696 chunks, max page: 185
+      Article references found in 1160 chunks
+      Articles found: 1, 10, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 11, 110, 111, 1117, 112, 113, 114, 115, 116, 117, 118, 119, 12, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 13, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 14, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 15, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 16, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 17, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 18, 180, 1803, 1808, 181, 182, 183, 184, 185, 186, 187, 188, 189, 19, 190, 191, 1996, 2, 20, 204, 21, 210, 2117, 2120, 2122, 2125, 2135, 2161, 2162, 2195, 22, 2217, 2272, 2277, 23, 230, 2346, 2350, 2359, 24, 2409, 2425, 2426, 2435, 25, 2500, 2501, 2504, 2506, 2532, 2554, 2561, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 429, 43, 433, 44, 45, 46, 47, 48, 49, 5, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 6, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 7, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 8, 80, 81, 817, 82, 83, 84, 85, 86, 87, 88, 89, 9, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99
+Metadata file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_metadata.json
+Index file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_index.json
+Searching through 1381 chunks in metadata file...
+Found query in chunk 1112 of metadata file
+
+Found 1 results for query: 'pagina 151'
+
+Result 1 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 1112
+  - start: 0
+  - end: 221
+  - length: 221
+  - title: ## Pagina 151
+  - page: 151
+  - section: 21
+  - total_sections: 25
+Text preview:  ## Pagina 151  Art. 159. Obblighi contabili [Testo post riforma 2004] [1078] [1081] In vigore dal 31 dicembre 2024 Testo risultante dopo le modiﬁche apportate dall’art. 19, comma 1, lett. e), D.Lgs. ...
+
+=== MANUAL RETRIEVAL TEST FOR: TUIR, QUERY: 'pagina 170' ===
+
+=== CHECKING FILES FOR DOCUMENT: TUIR ===
+Checking directory: D:\railway\memvid\memvidBeta\encoder_app\outputs
+Found 4 files related to TUIR:
+  - TUIR 2025_sections.mp4 (22130.80 KB)
+  - TUIR 2025_sections_index.faiss (2082.38 KB)
+  - TUIR 2025_sections_index.json (1527.90 KB)
+    JSON structure for TUIR 2025_sections_index.json:
+      metadata: list with 1381 items
+      chunk_to_frame: dict with 1381 keys
+      frame_to_chunks: dict with 1381 keys
+      config: dict with 9 keys
+  - TUIR 2025_sections_metadata.json (1708.14 KB)
+    JSON structure for TUIR 2025_sections_metadata.json:
+      file: str
+      chunk_size: int
+      overlap: int
+      chunks_count: int
+      sections_count: int
+      total_text_length: int
+      processing_info: dict with 2 keys
+      chunks: list with 1381 items
+      Sample chunk keys: text, metadata
+      Scanning chunks for page and article info...
+      *** FOUND ARTICLE 32 in chunk 154 ***
+      Text preview: sì sostituito dall’art. 1, comma 155, l. 30 dicembre 2021, n. 234, a decorrere dal 1° gennaio 2022. ...
+      *** FOUND ARTICLE 32 in chunk 248 ***
+      Text preview: e», nella formulazione introdotta dall’art. 8, comma 5, della legge 9 dicembre 1998, n. 431, solleva...
+      *** FOUND ARTICLE 32 in chunk 249 ***
+      Text preview: nte riforma 2004]. [260] vedi ora art. 32 a norma dell'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. ...
+      *** FOUND ARTICLE 32 in chunk 250 ***
+      Text preview: previo parere della commissione censuaria centrale e può essere effettuata, d'ufﬁcio o su richiesta ...
+      *** FOUND ARTICLE 32 in chunk 251 ***
+      Text preview: o mediante l'applicazione alla superﬁcie della particella catastale su cui insiste l'immobile della ...
+      *** FOUND ARTICLE 32 in chunk 260 ***
+      Text preview: 4.    ai ﬁni del presente articolo il fondo rustico deve essere costituito da particelle catastali r...
+      *** FOUND ARTICLE 32 in chunk 261 ***
+      Text preview: n. 116. art. 32. reddito agrario [testo post riforma 2004] [274] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 270 ***
+      Text preview: o il contratto. 2.    nei casi di conduzione associata, salvo il disposto dell'art. 5, il reddito ag...
+      *** FOUND ARTICLE 32 in chunk 273 ***
+      Text preview: da uno degli associati. 4.    per la determinazione del reddito agrario delle superﬁci adibite alle ...
+      *** FOUND ARTICLE 32 in chunk 274 ***
+      Text preview: ll'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. 344. [292] vedi ora l'art. 30 a norma dell'art. 2, c...
+      *** FOUND ARTICLE 32 in chunk 275 ***
+      Text preview: in corso al 31 dicembre 2003, vedi l'art. 32, d.p.r. 22 dicembre 1986, n. 917 [testo ante riforma 20...
+      *** FOUND ARTICLE 32 in chunk 276 ***
+      Text preview:  reddito, se non sono oggetto di locazione, le unità immobiliari destinate esclusivamente all'eserci...
+      *** FOUND ARTICLE 32 in chunk 294 ***
+      Text preview: )  alla protezione delle piante, alla conservazione dei prodotti agricoli e alle attività di manipol...
+      *** FOUND ARTICLE 32 in chunk 331 ***
+      Text preview: di imposta che hanno inizio successivamente al 1° gennaio 2004. [336] per la disciplina applicabile ...
+      *** FOUND ARTICLE 32 in chunk 335 ***
+      Text preview: periodo di imposta. [339]comma così modiﬁcato dall’art. 1, comma 1004, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 336 ***
+      Text preview:  legge n. 205/2017. [340]sull’applicabilità delle disposizioni del presente comma vedi l’art. 1, com...
+      *** FOUND ARTICLE 32 in chunk 446 ***
+      Text preview:  commerciali si intende l'esercizio per professione abituale, ancorché non esclusiva, delle attività...
+      *** FOUND ARTICLE 32 in chunk 460 ***
+      Text preview: s. altre attività agricole [testo post riforma 2004] [446] [451] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 462 ***
+      Text preview: orrispettivi delle operazioni registrate o soggette a registrazione agli effetti dell'imposta sul va...
+      *** FOUND ARTICLE 32 in chunk 471 ***
+      Text preview: vembre 2005, n. 247. le modiﬁche del presente comma hanno effetto per i periodi di imposta che inizi...
+      *** FOUND ARTICLE 32 in chunk 472 ***
+      Text preview: 2 dell'art. 1, l. 24 dicembre 2007, n. 244. vedi, inoltre, l’art. 32-quater, comma 1, lett. b), d.l....
+      *** FOUND ARTICLE 32 in chunk 488 ***
+      Text preview: scrivere tra le attività relative all'impresa nell'inventario di cui all'articolo 2217 del codice ci...
+      *** FOUND ARTICLE 32 in chunk 489 ***
+      Text preview:  n. 383. per l'assoggettamento dei redditi di impresa a tassazione separata vedi i commi 40, 41 e 42...
+      *** FOUND ARTICLE 32 in chunk 552 ***
+      Text preview: , comma 59, lett. b), l. 30 dicembre 2023, n. 213, a decorrere dal 1° gennaio 2024. in precedenza, i...
+      *** FOUND ARTICLE 32 in chunk 561 ***
+      Text preview: e, il d.m. 26 maggio 2017. [531]comma abrogato dall’art. 1, comma 999, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 562 ***
+      Text preview: itata legge n. 205/2017. [532]lettera abrogata dall’art. 1, comma 999, lett. c), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 570 ***
+      Text preview:  attività di cui all'articolo 29 [548], eccedenti i limiti di cui al comma 2, lettera c), del predet...
+      *** FOUND ARTICLE 32 in chunk 586 ***
+      Text preview: . 214, il d.m. 23 febbraio 2017, l’art. 1, commi da 28 a 34, l. 30 dicembre 2018, n. 145 e l’art. 2,...
+      *** FOUND ARTICLE 32 in chunk 587 ***
+      Text preview: on modiﬁcazioni, dalla l. 13 ottobre 2020, n. 126, e l’art. 1, commi da 436 a 444, l. 30 dicembre 20...
+      *** FOUND ARTICLE 32 in chunk 588 ***
+      Text preview: e 2024, n. 207. [568]vedi, anche, gli artt. 2 e 11, d.lgs. 1° aprile 1996, n. 239, l’art. 32-quater,...
+      *** FOUND ARTICLE 32 in chunk 687 ***
+      Text preview:  1, l. 244/2007. [668]comma inserito dall’art. 26, comma 1, l. 7 luglio 2016, n. 122; per l’applicaz...
+      *** FOUND ARTICLE 32 in chunk 688 ***
+      Text preview: n vigore a decorrere dal periodo di imposta successivo a quello in corso al 31 dicembre 2011 testo r...
+      Page info found in 696 chunks, max page: 185
+      Article references found in 1160 chunks
+      Articles found: 1, 10, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 11, 110, 111, 1117, 112, 113, 114, 115, 116, 117, 118, 119, 12, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 13, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 14, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 15, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 16, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 17, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 18, 180, 1803, 1808, 181, 182, 183, 184, 185, 186, 187, 188, 189, 19, 190, 191, 1996, 2, 20, 204, 21, 210, 2117, 2120, 2122, 2125, 2135, 2161, 2162, 2195, 22, 2217, 2272, 2277, 23, 230, 2346, 2350, 2359, 24, 2409, 2425, 2426, 2435, 25, 2500, 2501, 2504, 2506, 2532, 2554, 2561, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 429, 43, 433, 44, 45, 46, 47, 48, 49, 5, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 6, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 7, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 8, 80, 81, 817, 82, 83, 84, 85, 86, 87, 88, 89, 9, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99
+Metadata file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_metadata.json
+Index file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_index.json
+Searching through 1381 chunks in metadata file...
+Found query in chunk 1255 of metadata file
+Found query in chunk 1256 of metadata file
+
+Found 2 results for query: 'pagina 170'
+
+Result 1 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 1255
+  - start: 21759
+  - end: 22945
+  - length: 1186
+  - title: ell'ultimo periodo d'imposta della società scissa chiuso prima della data di
+  - page: 170
+  - section: 23
+  - total_sections: 25
+Text preview: ell'ultimo periodo d'imposta della società scissa chiuso prima della data di efﬁcacia della scissione ai sensi dell'articolo 2506-quater del codice civile, escluse le eccedenze d'imposta utilizzabili ...
+
+Result 2 from metadata_file:
+Score: 0.95
+Metadata:
+  - index: 1256
+  - start: 22745
+  - end: 23945
+  - length: 1200
+  - title: ## Pagina 170
+  - page: 170
+  - section: 23
+  - total_sections: 25
+Text preview: e parziale, ovvero si trasferiscono alle società beneﬁciarie in caso di scissione totale, in relazione alle quote di patrimonio netto imputabile proporzionalmente a ciascuna di esse.   ## Pagina 170  ...
+
+=== MANUAL RETRIEVAL TEST FOR: TUIR, QUERY: 'ultima pagina' ===
+
+=== CHECKING FILES FOR DOCUMENT: TUIR ===
+Checking directory: D:\railway\memvid\memvidBeta\encoder_app\outputs
+Found 4 files related to TUIR:
+  - TUIR 2025_sections.mp4 (22130.80 KB)
+  - TUIR 2025_sections_index.faiss (2082.38 KB)
+  - TUIR 2025_sections_index.json (1527.90 KB)
+    JSON structure for TUIR 2025_sections_index.json:
+      metadata: list with 1381 items
+      chunk_to_frame: dict with 1381 keys
+      frame_to_chunks: dict with 1381 keys
+      config: dict with 9 keys
+  - TUIR 2025_sections_metadata.json (1708.14 KB)
+    JSON structure for TUIR 2025_sections_metadata.json:
+      file: str
+      chunk_size: int
+      overlap: int
+      chunks_count: int
+      sections_count: int
+      total_text_length: int
+      processing_info: dict with 2 keys
+      chunks: list with 1381 items
+      Sample chunk keys: text, metadata
+      Scanning chunks for page and article info...
+      *** FOUND ARTICLE 32 in chunk 154 ***
+      Text preview: sì sostituito dall’art. 1, comma 155, l. 30 dicembre 2021, n. 234, a decorrere dal 1° gennaio 2022. ...
+      *** FOUND ARTICLE 32 in chunk 248 ***
+      Text preview: e», nella formulazione introdotta dall’art. 8, comma 5, della legge 9 dicembre 1998, n. 431, solleva...
+      *** FOUND ARTICLE 32 in chunk 249 ***
+      Text preview: nte riforma 2004]. [260] vedi ora art. 32 a norma dell'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. ...
+      *** FOUND ARTICLE 32 in chunk 250 ***
+      Text preview: previo parere della commissione censuaria centrale e può essere effettuata, d'ufﬁcio o su richiesta ...
+      *** FOUND ARTICLE 32 in chunk 251 ***
+      Text preview: o mediante l'applicazione alla superﬁcie della particella catastale su cui insiste l'immobile della ...
+      *** FOUND ARTICLE 32 in chunk 260 ***
+      Text preview: 4.    ai ﬁni del presente articolo il fondo rustico deve essere costituito da particelle catastali r...
+      *** FOUND ARTICLE 32 in chunk 261 ***
+      Text preview: n. 116. art. 32. reddito agrario [testo post riforma 2004] [274] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 270 ***
+      Text preview: o il contratto. 2.    nei casi di conduzione associata, salvo il disposto dell'art. 5, il reddito ag...
+      *** FOUND ARTICLE 32 in chunk 273 ***
+      Text preview: da uno degli associati. 4.    per la determinazione del reddito agrario delle superﬁci adibite alle ...
+      *** FOUND ARTICLE 32 in chunk 274 ***
+      Text preview: ll'art. 2, comma 3, d.lgs. 12 dicembre 2003, n. 344. [292] vedi ora l'art. 30 a norma dell'art. 2, c...
+      *** FOUND ARTICLE 32 in chunk 275 ***
+      Text preview: in corso al 31 dicembre 2003, vedi l'art. 32, d.p.r. 22 dicembre 1986, n. 917 [testo ante riforma 20...
+      *** FOUND ARTICLE 32 in chunk 276 ***
+      Text preview:  reddito, se non sono oggetto di locazione, le unità immobiliari destinate esclusivamente all'eserci...
+      *** FOUND ARTICLE 32 in chunk 294 ***
+      Text preview: )  alla protezione delle piante, alla conservazione dei prodotti agricoli e alle attività di manipol...
+      *** FOUND ARTICLE 32 in chunk 331 ***
+      Text preview: di imposta che hanno inizio successivamente al 1° gennaio 2004. [336] per la disciplina applicabile ...
+      *** FOUND ARTICLE 32 in chunk 335 ***
+      Text preview: periodo di imposta. [339]comma così modiﬁcato dall’art. 1, comma 1004, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 336 ***
+      Text preview:  legge n. 205/2017. [340]sull’applicabilità delle disposizioni del presente comma vedi l’art. 1, com...
+      *** FOUND ARTICLE 32 in chunk 446 ***
+      Text preview:  commerciali si intende l'esercizio per professione abituale, ancorché non esclusiva, delle attività...
+      *** FOUND ARTICLE 32 in chunk 460 ***
+      Text preview: s. altre attività agricole [testo post riforma 2004] [446] [451] in vigore dal 31 dicembre 2024 test...
+      *** FOUND ARTICLE 32 in chunk 462 ***
+      Text preview: orrispettivi delle operazioni registrate o soggette a registrazione agli effetti dell'imposta sul va...
+      *** FOUND ARTICLE 32 in chunk 471 ***
+      Text preview: vembre 2005, n. 247. le modiﬁche del presente comma hanno effetto per i periodi di imposta che inizi...
+      *** FOUND ARTICLE 32 in chunk 472 ***
+      Text preview: 2 dell'art. 1, l. 24 dicembre 2007, n. 244. vedi, inoltre, l’art. 32-quater, comma 1, lett. b), d.l....
+      *** FOUND ARTICLE 32 in chunk 488 ***
+      Text preview: scrivere tra le attività relative all'impresa nell'inventario di cui all'articolo 2217 del codice ci...
+      *** FOUND ARTICLE 32 in chunk 489 ***
+      Text preview:  n. 383. per l'assoggettamento dei redditi di impresa a tassazione separata vedi i commi 40, 41 e 42...
+      *** FOUND ARTICLE 32 in chunk 552 ***
+      Text preview: , comma 59, lett. b), l. 30 dicembre 2023, n. 213, a decorrere dal 1° gennaio 2024. in precedenza, i...
+      *** FOUND ARTICLE 32 in chunk 561 ***
+      Text preview: e, il d.m. 26 maggio 2017. [531]comma abrogato dall’art. 1, comma 999, lett. a), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 562 ***
+      Text preview: itata legge n. 205/2017. [532]lettera abrogata dall’art. 1, comma 999, lett. c), l. 27 dicembre 2017...
+      *** FOUND ARTICLE 32 in chunk 570 ***
+      Text preview:  attività di cui all'articolo 29 [548], eccedenti i limiti di cui al comma 2, lettera c), del predet...
+      *** FOUND ARTICLE 32 in chunk 586 ***
+      Text preview: . 214, il d.m. 23 febbraio 2017, l’art. 1, commi da 28 a 34, l. 30 dicembre 2018, n. 145 e l’art. 2,...
+      *** FOUND ARTICLE 32 in chunk 587 ***
+      Text preview: on modiﬁcazioni, dalla l. 13 ottobre 2020, n. 126, e l’art. 1, commi da 436 a 444, l. 30 dicembre 20...
+      *** FOUND ARTICLE 32 in chunk 588 ***
+      Text preview: e 2024, n. 207. [568]vedi, anche, gli artt. 2 e 11, d.lgs. 1° aprile 1996, n. 239, l’art. 32-quater,...
+      *** FOUND ARTICLE 32 in chunk 687 ***
+      Text preview:  1, l. 244/2007. [668]comma inserito dall’art. 26, comma 1, l. 7 luglio 2016, n. 122; per l’applicaz...
+      *** FOUND ARTICLE 32 in chunk 688 ***
+      Text preview: n vigore a decorrere dal periodo di imposta successivo a quello in corso al 31 dicembre 2011 testo r...
+      Page info found in 696 chunks, max page: 185
+      Article references found in 1160 chunks
+      Articles found: 1, 10, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 11, 110, 111, 1117, 112, 113, 114, 115, 116, 117, 118, 119, 12, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 13, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 14, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 15, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 16, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 17, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 18, 180, 1803, 1808, 181, 182, 183, 184, 185, 186, 187, 188, 189, 19, 190, 191, 1996, 2, 20, 204, 21, 210, 2117, 2120, 2122, 2125, 2135, 2161, 2162, 2195, 22, 2217, 2272, 2277, 23, 230, 2346, 2350, 2359, 24, 2409, 2425, 2426, 2435, 25, 2500, 2501, 2504, 2506, 2532, 2554, 2561, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 429, 43, 433, 44, 45, 46, 47, 48, 49, 5, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 6, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 7, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 8, 80, 81, 817, 82, 83, 84, 85, 86, 87, 88, 89, 9, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99
+Metadata file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_metadata.json
+Index file: D:\railway\memvid\memvidBeta\encoder_app\outputs\TUIR 2025_sections_index.json
+Searching through 1381 chunks in metadata file...
+
+Found 0 results for query: 'ultima pagina'

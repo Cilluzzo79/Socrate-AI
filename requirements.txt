@@ -1,0 +1,9 @@
+memvid
+gradio>=4.0.0
+qrcode
+Pillow
+opencv-python
+pyzbar
+sentence-transformers
+numpy
+PyPDF2

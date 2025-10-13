@@ -1,0 +1,5 @@
+# Procfile for Celery Worker
+# Railway: Add this as separate service for workers
+
+worker: celery -A celery_config worker --loglevel=info --concurrency=2
+beat: celery -A celery_config beat --loglevel=info

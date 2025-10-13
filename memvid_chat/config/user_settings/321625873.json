@@ -1,0 +1,7 @@
+{
+  "top_k": 5,
+  "temperature": 0.7,
+  "max_tokens": 1500,
+  "current_document": "mind_magic_the_neuroscience_of_manifestation_and_how_it_changes 2",
+  "beta_mode": false
+}

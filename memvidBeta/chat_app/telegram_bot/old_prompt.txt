@@ -1,0 +1,25 @@
+        modified_prompt = """Genera un JSON strutturato per questo documento. Output: SOLO JSON, niente altro.
+
+Formato richiesto (usa contenuti REALI dal documento):
+{
+  "document_info": {"title": "Titolo reale", "main_theme": "Tema estratto dal testo", "complexity": "2"},
+  "key_concepts": [
+    {"id": "concept_1", "title": "Concetto reale 1", "description": "Spiegazione dettagliata (min 50 parole)", "importance": "high", "category": "Categoria", "related_concepts": ["concept_2"]},
+    {"id": "concept_2", "title": "Concetto reale 2", "description": "Altra spiegazione dettagliata", "importance": "high", "category": "Categoria", "related_concepts": ["concept_1"]}
+  ],
+  "structural_map": [
+    {"id": "section_1", "title": "Sezione reale 1", "level": 1, "description": "Contenuto della sezione", "subsections": [
+      {"id": "sub_1_1", "title": "Sottosezione reale", "level": 2, "description": "Dettagli", "key_points": ["Punto 1", "Punto 2"]}
+    ]}
+  ],
+  "connections": [
+    {"from": "concept_1", "to": "concept_2", "relationship": "tipo", "description": "Come sono collegati"}
+  ],
+  "key_excerpts": [
+    {"text": "Citazione TESTUALE dal documento (20-80 parole)", "context": "Perche' importante", "concepts": ["concept_1"]}
+  ],
+  "logical_progression": [
+    {"step": 1, "title": "Inizio", "description": "Come inizia"},
+    {"step": 2, "title": "Sviluppo", "description": "Come procede"},
+    {"step": 3, "title": "Fine", "description": "Come conclude"}
+  ]

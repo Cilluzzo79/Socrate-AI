@@ -1,0 +1,1375 @@
+"""
+Advanced command handlers for specialized content generation.
+Implements /quiz, /outline, /mindmap, /summary, and /analyze commands.
+"""
+
+from pathlib import Path
+import sys
+import logging
+from typing import List, Dict, Any, Optional
+
+# Add the project root to the Python path
+sys.path.append(str(Path(__file__).parent.parent))
+
+# Import Telegram libraries
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes, ConversationHandler
+
+# Import local modules
+from config.config import user_settings_manager
+from core.content_generators import (
+    generate_quiz_prompt,
+    generate_outline_prompt,
+    generate_mindmap_prompt,
+    generate_summary_prompt,
+    generate_analysis_prompt
+)
+from core.rag_pipeline_robust import process_query_robust as process_query
+from utils.file_formatter import (
+    format_as_txt,
+    format_as_html,
+    save_temp_file,
+    cleanup_old_exports
+)
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+# Conversation states for advanced commands
+QUIZ_CONFIG = 100
+OUTLINE_CONFIG = 101
+MINDMAP_CONFIG = 102
+SUMMARY_CONFIG = 103
+ANALYSIS_CONFIG = 104
+
+# Telegram message length limit
+TELEGRAM_MAX_MESSAGE_LENGTH = 4096
+
+
+def sanitize_markdown(text: str) -> str:
+    """
+    Sanitize text to prevent Telegram Markdown parsing errors.
+    Escapes special characters that could break Markdown formatting.
+    
+    Args:
+        text: The text to sanitize
+        
+    Returns:
+        Sanitized text safe for Telegram Markdown
+    """
+    if not text:
+        return text
+    
+    # Characters that need escaping in Telegram MarkdownV2
+    # For standard Markdown (parse_mode='Markdown'), we need to escape:
+    # _ * [ ] ( ) ~ ` > # + - = | { } . !
+    
+    # However, we want to preserve INTENTIONAL formatting
+    # So we'll use a smart approach:
+    
+    # 1. Replace common problematic patterns
+    replacements = {
+        '\\': '\\\\',  # Escape backslashes first
+        '_': '\\_',      # Underscore (used for italic)
+        '*': '\\*',      # Asterisk (used for bold)
+        '[': '\\[',      # Square brackets (used for links)
+        ']': '\\]',
+        '(': '\\(',      # Parentheses (used with links)
+        ')': '\\)',
+        '`': '\\`',      # Backtick (used for code)
+        '>': '\\>',      # Greater than (used for quotes)
+    }
+    
+    # Apply replacements
+    for char, escaped in replacements.items():
+        text = text.replace(char, escaped)
+    
+    return text
+
+
+async def send_long_message(update: Update, text: str, parse_mode: str = None, context: ContextTypes.DEFAULT_TYPE = None):
+    """
+    Send a message that might exceed Telegram's character limit by splitting it into multiple messages.
+    Automatically sanitizes text if parse_mode is Markdown to prevent parsing errors.
+    """
+    # Sanitize if using Markdown to prevent parsing errors
+    if parse_mode == 'Markdown':
+        text = sanitize_markdown(text)
+        logger.debug("Text sanitized for Markdown parsing")
+    
+    if len(text) <= TELEGRAM_MAX_MESSAGE_LENGTH:
+        if update.message:
+            await update.message.reply_text(text, parse_mode=parse_mode)
+        elif update.callback_query:
+            await update.callback_query.message.reply_text(text, parse_mode=parse_mode)
+        return
+    
+    # Split the message
+    parts = []
+    current_part = ""
+    paragraphs = text.split('\n\n')
+    
+    for paragraph in paragraphs:
+        if len(current_part + paragraph + '\n\n') > TELEGRAM_MAX_MESSAGE_LENGTH:
+            if current_part:
+                parts.append(current_part.strip())
+                current_part = ""
+            
+            if len(paragraph) > TELEGRAM_MAX_MESSAGE_LENGTH:
+                sentences = paragraph.split('. ')
+                for sentence in sentences:
+                    if len(current_part + sentence + '. ') > TELEGRAM_MAX_MESSAGE_LENGTH:
+                        if current_part:
+                            parts.append(current_part.strip())
+                            current_part = ""
+                        
+                        if len(sentence) > TELEGRAM_MAX_MESSAGE_LENGTH:
+                            i = 0
+                            while i < len(sentence):
+                                chunk_end = min(i + TELEGRAM_MAX_MESSAGE_LENGTH, len(sentence))
+                                if chunk_end < len(sentence) and sentence[chunk_end] != ' ':
+                                    last_space = sentence.rfind(' ', i, chunk_end)
+                                    if last_space > i:
+                                        chunk_end = last_space
+                                parts.append(sentence[i:chunk_end].strip())
+                                i = chunk_end
+                        else:
+                            current_part += sentence + '. '
+                    else:
+                        current_part += sentence + '. '
+            else:
+                current_part += paragraph + '\n\n'
+        else:
+            current_part += paragraph + '\n\n'
+    
+    if current_part:
+        parts.append(current_part.strip())
+    
+    # Send each part
+    for i, part in enumerate(parts):
+        if len(parts) > 1:
+            header = f"📄 Parte {i+1}/{len(parts)}:\n\n"
+            if len(header) + len(part) > TELEGRAM_MAX_MESSAGE_LENGTH:
+                part = part[:TELEGRAM_MAX_MESSAGE_LENGTH - len(header) - 3] + "..."
+            part = header + part
+        
+        if update.message:
+            await update.message.reply_text(part, parse_mode=parse_mode)
+        elif update.callback_query:
+            await update.callback_query.message.reply_text(part, parse_mode=parse_mode)
+
+
+async def quiz_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handler for /quiz command - start quiz generation flow."""
+    user = update.effective_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    
+    # Check if user has a current document
+    if not settings.get("current_document"):
+        await update.message.reply_text(
+            "❌ Nessun documento selezionato. Usa /select per scegliere un documento prima di generare un quiz."
+        )
+        return ConversationHandler.END
+    
+    # Create keyboard for quiz configuration
+    keyboard = [
+        [
+            InlineKeyboardButton("📝 Scelta Multipla", callback_data="quiz_type:multiple_choice"),
+            InlineKeyboardButton("✓/✗ Vero/Falso", callback_data="quiz_type:true_false")
+        ],
+        [
+            InlineKeyboardButton("✍️ Risposta Breve", callback_data="quiz_type:short_answer"),
+            InlineKeyboardButton("🎲 Misto", callback_data="quiz_type:mixed")
+        ],
+        [
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🎯 *Generazione Quiz*\n\n"
+        "Scegli il tipo di quiz che vuoi generare:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    
+    # Store initial configuration in context
+    context.user_data['quiz_config'] = {
+        'type': None,
+        'num_questions': 10,
+        'difficulty': 'medium',
+        'focus': None
+    }
+    
+    return QUIZ_CONFIG
+
+
+async def quiz_type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle quiz type selection."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Generazione quiz annullata.")
+        return ConversationHandler.END
+    
+    # Extract type
+    quiz_type = query.data.split(":")[1]
+    context.user_data['quiz_config']['type'] = quiz_type
+    
+    # Ask for number of questions
+    keyboard = [
+        [
+            InlineKeyboardButton("5 domande", callback_data="quiz_num:5"),
+            InlineKeyboardButton("10 domande", callback_data="quiz_num:10")
+        ],
+        [
+            InlineKeyboardButton("15 domande", callback_data="quiz_num:15"),
+            InlineKeyboardButton("20 domande", callback_data="quiz_num:20")
+        ],
+        [
+            InlineKeyboardButton("← Indietro", callback_data="back"),
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "📊 Quante domande vuoi nel quiz?",
+        reply_markup=reply_markup
+    )
+    
+    return QUIZ_CONFIG
+
+
+async def quiz_num_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle number of questions selection."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Generazione quiz annullata.")
+        return ConversationHandler.END
+    
+    if query.data == "back":
+        return await quiz_command(update, context)
+    
+    # Extract number
+    num = int(query.data.split(":")[1])
+    context.user_data['quiz_config']['num_questions'] = num
+    
+    # Ask for difficulty
+    keyboard = [
+        [
+            InlineKeyboardButton("😊 Facile", callback_data="quiz_diff:easy"),
+            InlineKeyboardButton("🤔 Medio", callback_data="quiz_diff:medium")
+        ],
+        [
+            InlineKeyboardButton("🧠 Difficile", callback_data="quiz_diff:hard"),
+            InlineKeyboardButton("🎲 Misto", callback_data="quiz_diff:mixed")
+        ],
+        [
+            InlineKeyboardButton("← Indietro", callback_data="back"),
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "🎚️ Scegli il livello di difficoltà:",
+        reply_markup=reply_markup
+    )
+    
+    return QUIZ_CONFIG
+
+
+async def quiz_difficulty_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle difficulty selection and generate quiz."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Generazione quiz annullata.")
+        return ConversationHandler.END
+    
+    if query.data == "back":
+        # Go back to num selection
+        return await quiz_num_selected(update, context)
+    
+    # Extract difficulty
+    difficulty = query.data.split(":")[1]
+    context.user_data['quiz_config']['difficulty'] = difficulty
+    
+    # Show processing message
+    await query.edit_message_text(
+        "⏳ Generazione del quiz in corso... Questo potrebbe richiedere alcuni secondi."
+    )
+    
+    # Generate the quiz
+    user = query.from_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    config = context.user_data['quiz_config']
+    
+    # Create the specialized prompt
+    quiz_prompt = generate_quiz_prompt(
+        quiz_type=config['type'],
+        num_questions=config['num_questions'],
+        difficulty=config['difficulty'],
+        focus_area=config.get('focus')
+    )
+    
+    # Process the query with the specialized prompt
+    try:
+        response, metadata = process_query(
+            user_id=user.id,
+            user_first_name=user.first_name,
+            user_last_name=user.last_name,
+            user_username=user.username,
+            query=quiz_prompt,
+            document_id=settings.get("current_document"),
+            include_history=False  # Don't include history for specialized generations
+        )
+        
+        # Send the quiz (no Markdown to avoid parsing errors)
+        await send_long_message(update, f"✅ Quiz generato con successo!\n\n{response}", parse_mode=None, context=context)
+        
+        # Show token usage in beta mode
+        if settings.get("beta_mode", False) and "error" not in metadata:
+            usage = metadata.get("usage", {})
+            debug_message = (
+                "*📊 Statistiche Generazione:*\n"
+                f"Token usati: `{usage.get('total_tokens', 'N/A')}`\n"
+                f"Tempo: `{metadata.get('processing_time', 'N/A')}s`"
+            )
+            await query.message.reply_text(debug_message, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error generating quiz: {e}", exc_info=True)
+        await query.message.reply_text(
+            f"❌ Si è verificato un errore durante la generazione del quiz: {str(e)}"
+        )
+    
+    return ConversationHandler.END
+
+
+async def outline_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handler for /outline command - generate document outline."""
+    user = update.effective_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    
+    if not settings.get("current_document"):
+        await update.message.reply_text(
+            "❌ Nessun documento selezionato. Usa /select per scegliere un documento."
+        )
+        return ConversationHandler.END
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("📋 Gerarchico", callback_data="outline_type:hierarchical"),
+            InlineKeyboardButton("⏱️ Cronologico", callback_data="outline_type:chronological")
+        ],
+        [
+            InlineKeyboardButton("🎯 Tematico", callback_data="outline_type:thematic")
+        ],
+        [
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📑 *Generazione Schema*\n\n"
+        "Scegli il tipo di schema da generare:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    
+    context.user_data['outline_config'] = {
+        'type': None,
+        'detail': 'medium'
+    }
+    
+    return OUTLINE_CONFIG
+
+
+async def outline_type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle outline type selection."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Generazione schema annullata.")
+        return ConversationHandler.END
+    
+    outline_type = query.data.split(":")[1]
+    context.user_data['outline_config']['type'] = outline_type
+    
+    # Ask for detail level
+    keyboard = [
+        [
+            InlineKeyboardButton("📝 Sintetico", callback_data="outline_detail:brief"),
+            InlineKeyboardButton("📄 Medio", callback_data="outline_detail:medium")
+        ],
+        [
+            InlineKeyboardButton("📚 Dettagliato", callback_data="outline_detail:detailed")
+        ],
+        [
+            InlineKeyboardButton("← Indietro", callback_data="back"),
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "🔍 Scegli il livello di dettaglio:",
+        reply_markup=reply_markup
+    )
+    
+    return OUTLINE_CONFIG
+
+
+async def outline_detail_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle detail level selection and generate outline."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Generazione schema annullata.")
+        return ConversationHandler.END
+    
+    if query.data == "back":
+        return await outline_command(update, context)
+    
+    detail = query.data.split(":")[1]
+    context.user_data['outline_config']['detail'] = detail
+    
+    # Map values to Italian for display
+    type_map = {
+        'hierarchical': 'Gerarchico',
+        'chronological': 'Cronologico', 
+        'thematic': 'Tematico'
+    }
+    detail_map = {
+        'brief': 'Sintetico',
+        'medium': 'Medio',
+        'detailed': 'Dettagliato'
+    }
+    
+    config = context.user_data['outline_config']
+    type_display = type_map.get(config['type'], config['type'])
+    detail_display = detail_map.get(detail, detail)
+    
+    # Show enhanced processing message
+    processing_msg = (
+        "⏳ *Generazione Schema in Corso*\n"
+        "═══════════════════════════════\n\n"
+        f"📋 Tipo: {type_display}\n"
+        f"🔍 Dettaglio: {detail_display}\n\n"
+        "⚙️ Analisi del documento...\n"
+        "📝 Creazione struttura gerarchica...\n"
+        "🔗 Identificazione collegamenti...\n\n"
+        "_Questo potrebbe richiedere 20-40 secondi_"
+    )
+    await query.edit_message_text(processing_msg, parse_mode='Markdown')
+    
+    user = query.from_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    
+    import time
+    start_time = time.time()
+    
+    outline_prompt = generate_outline_prompt(
+        outline_type=config['type'],
+        detail_level=config['detail']
+    )
+    
+    try:
+        response, metadata = process_query(
+            user_id=user.id,
+            user_first_name=user.first_name,
+            user_last_name=user.last_name,
+            user_username=user.username,
+            query=outline_prompt,
+            document_id=settings.get("current_document"),
+            include_history=False
+        )
+        
+        elapsed_time = time.time() - start_time
+        
+        # Enhanced success message with metadata
+        success_header = (
+            "✅ *Schema Generato con Successo!*\n"
+            "═══════════════════════════════\n\n"
+            f"📋 Tipo: {type_display}\n"
+            f"🔍 Dettaglio: {detail_display}\n"
+            f"⏱️ Tempo: {elapsed_time:.1f}s\n\n"
+            "─────────────────────────────\n\n"
+        )
+        
+        # Store the response for export
+        context.user_data['last_outline'] = {
+            'content': response,
+            'type': type_display,
+            'detail': detail_display,
+            'time': elapsed_time
+        }
+        
+        # Show preview (first 800 characters)
+        preview_text = response[:800]
+        if len(response) > 800:
+            preview_text += "\n\n[... continua ...]\n\n📄 Schema completo disponibile per il download"
+        
+        full_preview = success_header + preview_text
+        await send_long_message(update, full_preview, parse_mode=None, context=context)
+        
+        # Ask for export preference
+        export_keyboard = [
+            [
+                InlineKeyboardButton("📱 Leggi tutto qui", callback_data="outline_export:inline"),
+            ],
+            [
+                InlineKeyboardButton("📄 Scarica TXT", callback_data="outline_export:txt"),
+                InlineKeyboardButton("🌐 Scarica HTML", callback_data="outline_export:html")
+            ],
+            [
+                InlineKeyboardButton("📦 Entrambi (TXT + HTML)", callback_data="outline_export:both")
+            ]
+        ]
+        export_markup = InlineKeyboardMarkup(export_keyboard)
+        
+        await query.message.reply_text(
+            "\n💾 *Opzioni di Visualizzazione*\n\n"
+            "Come preferisci consultare lo schema completo?",
+            reply_markup=export_markup,
+            parse_mode='Markdown'
+        )
+        
+        # Enhanced beta mode statistics
+        if settings.get("beta_mode", False) and "error" not in metadata:
+            usage = metadata.get("usage", {})
+            debug_message = (
+                "*📊 Statistiche Dettagliate*\n"
+                "═════════════════════\n"
+                f"🔢 Token totali: `{usage.get('total_tokens', 'N/A')}`\n"
+                f"📥 Prompt: `{usage.get('prompt_tokens', 'N/A')}`\n"
+                f"📤 Risposta: `{usage.get('completion_tokens', 'N/A')}`\n"
+                f"⏱️ Generazione: `{elapsed_time:.2f}s`\n"
+                f"⚡ Velocità: `{usage.get('completion_tokens', 0) / max(elapsed_time, 0.1):.1f} token/s`"
+            )
+            await query.message.reply_text(debug_message, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error generating outline: {e}", exc_info=True)
+        error_msg = (
+            "❌ *Errore nella Generazione*\n\n"
+            f"Si è verificato un problema: {str(e)[:100]}\n\n"
+            "💡 Prova a:\n"
+            "• Ridurre il livello di dettaglio\n"
+            "• Verificare la selezione del documento\n"
+            "• Contattare il supporto se il problema persiste"
+        )
+        await query.message.reply_text(error_msg, parse_mode='Markdown')
+    
+    return ConversationHandler.END
+
+
+async def mindmap_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handler for /mindmap command - generate mind map."""
+    user = update.effective_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    
+    if not settings.get("current_document"):
+        await update.message.reply_text(
+            "❌ Nessun documento selezionato. Usa /select per scegliere un documento."
+        )
+        return ConversationHandler.END
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🌿 Leggera (2 livelli)", callback_data="mindmap_depth:2"),
+            InlineKeyboardButton("🌳 Media (3 livelli)", callback_data="mindmap_depth:3")
+        ],
+        [
+            InlineKeyboardButton("🌲 Profonda (4 livelli)", callback_data="mindmap_depth:4")
+        ],
+        [
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🧠 *Generazione Mappa Mentale*\n\n"
+        "Scegli la profondità della mappa concettuale:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    
+    context.user_data['mindmap_config'] = {
+        'depth': 3,
+        'central_concept': None
+    }
+    
+    return MINDMAP_CONFIG
+
+
+async def mindmap_depth_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle depth selection and generate mind map."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Generazione mappa annullata.")
+        return ConversationHandler.END
+    
+    depth = int(query.data.split(":")[1])
+    context.user_data['mindmap_config']['depth'] = depth
+    
+    # Map depth to display
+    depth_map = {
+        2: 'Leggera (2 livelli)',
+        3: 'Media (3 livelli)',
+        4: 'Profonda (4 livelli)'
+    }
+    depth_display = depth_map.get(depth, f'{depth} livelli')
+    
+    # Enhanced processing message
+    processing_msg = (
+        "⏳ *Generazione Mappa Concettuale*\n"
+        "═══════════════════════════════\n\n"
+        f"🌳 Profondità: {depth_display}\n\n"
+        "⚙️ Identificazione concetto centrale...\n"
+        "🌿 Mappatura concetti correlati...\n"
+        "🔗 Analisi relazioni tra concetti...\n"
+        "🎨 Creazione struttura visiva...\n\n"
+        "_Questo potrebbe richiedere 15-25 secondi_"
+    )
+    await query.edit_message_text(processing_msg, parse_mode='Markdown')
+    
+    user = query.from_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    config = context.user_data['mindmap_config']
+    
+    import time
+    start_time = time.time()
+    
+    mindmap_prompt = generate_mindmap_prompt(
+        central_concept=config.get('central_concept'),
+        depth_level=config['depth']
+    )
+    
+    try:
+        # Use specialized prompt for Study Dashboard instead of mindmap
+        modified_prompt = """Genera un JSON strutturato per questo documento. Output: SOLO JSON, niente altro.
+
+Formato richiesto (usa contenuti REALI dal documento):
+{
+  "document_info": {"title": "Titolo reale", "main_theme": "Tema estratto dal testo", "complexity": "2"},
+  "key_concepts": [
+    {"id": "concept_1", "title": "Concetto reale 1", "description": "Spiegazione dettagliata (min 50 parole)", "importance": "high", "category": "Categoria", "related_concepts": ["concept_2"]},
+    {"id": "concept_2", "title": "Concetto reale 2", "description": "Altra spiegazione dettagliata", "importance": "high", "category": "Categoria", "related_concepts": ["concept_1"]}
+  ],
+  "structural_map": [
+    {"id": "section_1", "title": "Sezione reale 1", "level": 1, "description": "Contenuto della sezione", "subsections": [
+      {"id": "sub_1_1", "title": "Sottosezione reale", "level": 2, "description": "Dettagli", "key_points": ["Punto 1", "Punto 2"]}
+    ]}
+  ],
+  "connections": [
+    {"from": "concept_1", "to": "concept_2", "relationship": "tipo", "description": "Come sono collegati"}
+  ],
+  "key_excerpts": [
+    {"text": "Citazione TESTUALE dal documento (20-80 parole)", "context": "Perche' importante", "concepts": ["concept_1"]}
+  ],
+  "logical_progression": [
+    {"step": 1, "title": "Inizio", "description": "Come inizia"},
+    {"step": 2, "title": "Sviluppo", "description": "Come procede"},
+    {"step": 3, "title": "Fine", "description": "Come conclude"}
+  ]
+}
+
+REQUISITI: min 5 key_concepts, 3 structural_map, 3 connections, 3 key_excerpts, 3 logical_progression.
+Genera SOLO il JSON. Inizia con { e finisci con }.
+"""
+
+        # Temporarily increase top_k for mindmap generation to get more content
+        original_top_k = settings.get("top_k", 5)
+
+        # Override user settings temporarily for mindmap - create new settings dict
+        settings["top_k"] = 20  # Much higher for mindmap content richness
+        try:
+            # First, do a semantic search to get relevant content
+            semantic_query = "concetti principali insegnamenti metodi tecniche definizioni teorie esempi pratici principi fondamentali"
+            
+            response, metadata = process_query(
+                user_id=user.id,
+                user_first_name=user.first_name,
+                user_last_name=user.last_name,
+                user_username=user.username,
+                query=semantic_query + "\n\n" + modified_prompt,
+                document_id=settings.get("current_document"),
+                include_history=False
+            )
+        finally:
+            # Restore original top_k
+            settings["top_k"] = original_top_k
+        
+        elapsed_time = time.time() - start_time
+        
+        # Extract and parse JSON from response
+        import json
+        import re
+        from utils.mindmap_visualizer import generate_study_dashboard_html
+        from pathlib import Path
+        
+        # Try to extract JSON from the response with multiple strategies
+        dashboard_data = None
+        
+        # Strategy 1: Look for JSON block in markdown
+        json_block_pattern = r'```json\s*(\{.*?\})\s*```'
+        json_matches = re.findall(json_block_pattern, response, re.DOTALL)
+        
+        if not json_matches:
+            # Strategy 1b: Look for complete JSON object with dashboard structure
+            json_pattern = r'\{.*?"document_info".*?"key_concepts".*?\}.*?\].*?\}'
+            json_matches = re.findall(json_pattern, response, re.DOTALL)
+        
+        if json_matches:
+            try:
+                dashboard_data = json.loads(json_matches[0])
+            except:
+                pass
+        
+        # Strategy 2: Look for any JSON-like structure
+        if not dashboard_data:
+            try:
+                # Find content between first { and last }
+                start = response.find('{')
+                end = response.rfind('}')
+                if start != -1 and end != -1 and end > start:
+                    json_str = response[start:end+1]
+                    dashboard_data = json.loads(json_str)
+            except:
+                pass
+        
+        # Strategy 3: Create dashboard from the textual response if JSON extraction fails
+        if not dashboard_data:
+            lines = response.split('\n')
+            
+            # Smart extraction of central concept from the actual generated mindmap
+            central_title = "Concetto Centrale"
+            document_name = settings.get("current_document", "")
+            
+            # Look for the actual central concept in the generated text
+            for i, line in enumerate(lines[:20]):
+                clean_line = line.strip('*#-•═─┌┐└┘│ ').strip()
+                if len(clean_line) > 8:
+                    # Look for lines that look like a central concept (usually in the first few lines, well formatted)
+                    if ('🎯' in line or '💡' in line or 
+                        any(keyword in line.lower() for keyword in ['centrale', 'principale', 'tema', 'focus']) or
+                        (i < 10 and len(clean_line) > 20 and not clean_line.lower().startswith(('per ', 'con ', 'che ', 'di ', 'da ', 'in ', 'su ')))):
+                        central_title = clean_line[:50]
+                        break
+            
+            # If still generic, extract from the first substantial content line
+            if central_title == "Concetto Centrale":
+                for line in lines[:30]:
+                    clean_line = line.strip('*#-•═─┌┐└┘│ ').strip()
+                    if (len(clean_line) > 15 and 
+                        not clean_line.lower().startswith(('il ', 'la ', 'per ', 'con ', 'che ', 'di ', 'da ', 'questo', 'questa')) and
+                        not clean_line.lower() in ['mappa concettuale', 'struttura', 'schema']):
+                        central_title = clean_line[:50]
+                        break
+            
+            # Extract branches intelligently from the textual mindmap
+            branches = []
+            current_branch = None
+            current_sub_branch = None
+            
+            for i, line in enumerate(lines):
+                line = line.strip()
+                clean_line = line.strip('*#-•═─┌┐└┘│ ').strip()
+                
+                # Skip empty lines and very short lines
+                if not clean_line or len(clean_line) < 4:
+                    continue
+                
+                # Look for main branch headers (usually bold, numbered, or with special chars)
+                if (line.startswith('**') or line.startswith('##') or 
+                    re.match(r'^\d+\.', line) or '🌿' in line or '🔹' in line or
+                    re.match(r'^[A-Z][A-Z\s]+:', line)):  # All caps headers
+                    
+                    title = re.sub(r'^[*#\d\.\-\s🌿🔹]+', '', clean_line).strip()
+                    if (len(title) > 5 and len(title) < 70 and 
+                        title.lower() not in ['mappa concettuale', 'struttura', 'schema', 'rami principali']):
+                        
+                        current_branch = {
+                            "title": title,
+                            "description": f"Aspetti principali di: {title}",
+                            "expanded": False,
+                            "sub_branches": []
+                        }
+                        branches.append(current_branch)
+                        current_sub_branch = None
+                
+                # Look for sub-branches (indented or with specific markers)
+                elif (current_branch and 
+                      (line.startswith('  ') or line.startswith('\t') or 
+                       '└' in line or '├' in line or '▸' in line)):
+                    
+                    title = re.sub(r'^[\s\t└├▸•\-]+', '', clean_line).strip()
+                    if (len(title) > 5 and len(title) < 60 and
+                        not title.lower().startswith(('dettagli', 'elementi', 'aspetti'))):
+                        
+                        current_sub_branch = {
+                            "title": title,
+                            "description": f"Dettagli su: {title}",
+                            "expanded": False,
+                            "nodes": []
+                        }
+                        current_branch["sub_branches"].append(current_sub_branch)
+                
+                # Look for individual nodes (further indented or bullet points)
+                elif (current_sub_branch and 
+                      (line.startswith('    ') or line.startswith('\t\t') or
+                       line.startswith('-') or line.startswith('•') or line.startswith('*'))):
+                    
+                    title = line.strip('*-•\t ').strip()
+                    if len(title) > 5 and len(title) < 50:
+                        current_sub_branch["nodes"].append({
+                            "title": title,
+                            "description": f"Approfondimento: {title[:30]}..."
+                        })
+                
+                # Legacy: direct nodes under branch (if no sub-branches structure)
+                elif (current_branch and not current_branch["sub_branches"] and
+                      (line.startswith('-') or line.startswith('•') or line.startswith('*'))):
+                    
+                    title = line.strip('*-• ').strip()
+                    if len(title) > 5 and len(title) < 60:
+                        # Convert to sub_branch structure
+                        if not current_branch["sub_branches"]:
+                            current_branch["sub_branches"].append({
+                                "title": f"Aspetti di {current_branch['title'][:20]}",
+                                "description": f"Elementi relativi a {current_branch['title']}",
+                                "expanded": False,
+                                "nodes": []
+                            })
+                        
+                        current_branch["sub_branches"][0]["nodes"].append({
+                            "title": title,
+                            "description": f"Elemento chiave: {title[:30]}..."
+                        })
+            
+            # Ensure we have meaningful content
+            if not branches or len(branches) < 2:
+                # Create basic structure based on content analysis
+                words = response.lower().split()
+                important_topics = []
+                
+                # Find repeated important words (excluding common words)
+                word_count = {}
+                skip_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'among', 'che', 'per', 'con', 'del', 'della', 'dei', 'delle', 'una', 'uno', 'gli', 'le', 'il', 'la', 'di', 'da', 'in', 'su', 'tra', 'fra'}
+                
+                for word in words:
+                    if len(word) > 4 and word not in skip_words:
+                        word_count[word] = word_count.get(word, 0) + 1
+                
+                # Get top topics
+                sorted_words = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
+                important_topics = [word.title() for word, count in sorted_words[:4] if count > 1]
+                
+                branches = []
+                for i, topic in enumerate(important_topics[:3], 1):
+                    branches.append({
+                        "title": f"{topic}",
+                        "description": f"Aspetti relativi a {topic} nel contesto del documento",
+                        "expanded": False,
+                        "sub_branches": [
+                            {
+                                "title": f"Caratteristiche di {topic}",
+                                "description": f"Elementi distintivi e proprietà di {topic}",
+                                "expanded": False,
+                                "nodes": [
+                                    {"title": f"Proprietà base", "description": f"Caratteristiche fondamentali"},
+                                    {"title": f"Aspetti specifici", "description": f"Dettagli particolari"}
+                                ]
+                            },
+                            {
+                                "title": f"Implicazioni di {topic}",
+                                "description": f"Conseguenze e relazioni di {topic}",
+                                "expanded": False,
+                                "nodes": [
+                                    {"title": f"Effetti diretti", "description": f"Conseguenze immediate"},
+                                    {"title": f"Relazioni", "description": f"Collegamenti con altri concetti"}
+                                ]
+                            }
+                        ]
+                    })
+                
+                # Fallback if no meaningful topics found
+                if not branches:
+                    branches = [{
+                        "title": "Contenuto Principale",
+                        "description": "Temi centrali del documento analizzato",
+                        "expanded": False,
+                        "sub_branches": [
+                            {
+                                "title": "Primo Argomento",
+                                "description": "Aspetto principale identificato nel documento",
+                                "expanded": False,
+                                "nodes": [
+                                    {"title": "Dettaglio A", "description": "Primo aspetto rilevante"},
+                                    {"title": "Dettaglio B", "description": "Secondo aspetto importante"}
+                                ]
+                            },
+                            {
+                                "title": "Secondo Argomento", 
+                                "description": "Tema secondario rilevante nel contesto",
+                                "expanded": False,
+                                "nodes": [
+                                    {"title": "Elemento 1", "description": "Prima componente significativa"},
+                                    {"title": "Elemento 2", "description": "Seconda componente chiave"}
+                                ]
+                            }
+                        ]
+                    }]
+            
+            # Create dashboard structure from extracted content
+            dashboard_data = {
+                "document_info": {
+                    "title": document_name or "Documento",
+                    "main_theme": central_title,
+                    "complexity": config['depth']
+                },
+                "key_concepts": [],
+                "structural_map": [],
+                "connections": [],
+                "key_excerpts": []
+            }
+            
+            # Convert branches to concepts and structural map
+            for i, branch in enumerate(branches[:6]):
+                concept_id = f"concept_{i+1}"
+                dashboard_data["key_concepts"].append({
+                    "id": concept_id,
+                    "title": branch["title"],
+                    "description": branch["description"],
+                    "importance": "high" if i < 2 else "medium" if i < 4 else "low",
+                    "category": f"Tema {i+1}",
+                    "related_concepts": [f"concept_{j+1}" for j in range(len(branches)) if j != i][:2]
+                })
+                
+                # Create structural map entry
+                subsections = []
+                for sub in branch.get("sub_branches", []):
+                    subsections.append({
+                        "id": f"sub_{i}_{len(subsections)}",
+                        "title": sub["title"],
+                        "level": 2,
+                        "description": sub["description"],
+                        "key_points": [node["title"] for node in sub.get("nodes", [])][:3]
+                    })
+                
+                dashboard_data["structural_map"].append({
+                    "id": f"section_{i+1}",
+                    "title": branch["title"],
+                    "level": 1,
+                    "description": branch["description"],
+                    "subsections": subsections
+                })
+        
+        # Generate Dashboard HTML
+        document_title = settings.get("current_document", "Documento")
+        dashboard_metadata = {
+            "Documento": document_title,
+            "Complessità": depth_display,
+            "Tempo generazione": f"{elapsed_time:.1f}s",
+            "Data": time.strftime("%d/%m/%Y alle %H:%M"),
+            "Concetti": str(len(dashboard_data.get('key_concepts', []))),
+            "Sezioni": str(len(dashboard_data.get('structural_map', []))),
+            "Collegamenti": str(len(dashboard_data.get('connections', [])))
+        }
+        
+        # Generate HTML
+        dashboard_html = generate_study_dashboard_html(
+            dashboard_data=dashboard_data,
+            document_title=f"Dashboard di Studio - {document_title}",
+            metadata=dashboard_metadata
+        )
+        
+        # Save HTML file
+        output_dir = Path("outputs/dashboards")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        html_file = output_dir / f"dashboard_{user.id}_{int(time.time())}.html"
+        
+        with open(html_file, 'w', encoding='utf-8') as f:
+            f.write(dashboard_html)
+        
+        # Send only success message - use HTML instead of Markdown to avoid escaping issues
+        success_message = (
+            "✅ <b>Dashboard di Studio Professionale Generato!</b>\n"
+            "═══════════════════════════════════════\n\n"
+            f"📄 Documento: {document_title}\n"
+            f"🎯 Complessità: {depth_display}\n"
+            f"⏱️ Tempo: {elapsed_time:.1f}s\n"
+            f"💡 Concetti: {len(dashboard_data.get('key_concepts', []))}\n"
+            f"📊 Sezioni: {len(dashboard_data.get('structural_map', []))}\n"
+            f"🔗 Collegamenti: {len(dashboard_data.get('connections', []))}\n\n"
+            "🚀 <b>Funzionalità Professionali:</b>\n"
+            "• 💡 Cards concetti interattive\n"
+            "• 📊 Mappa strutturale navigabile\n"
+            "• 🔗 Rete collegamenti intelligenti\n"
+            "• 📝 Estratti chiave dal documento\n"
+            "• 🔍 Ricerca globale avanzata\n"
+            "• 📄 Export PDF ottimizzato\n"
+            "• 🎓 Funzioni per lo studio"
+        )
+        
+        await query.edit_message_text(success_message, parse_mode='HTML')
+        
+        # Send HTML file
+        with open(html_file, 'rb') as file:
+            await query.message.reply_document(
+                document=file,
+                filename=f"dashboard_{document_title.replace(' ', '_').replace('/', '_')}.html",
+                caption="🚀 <b>Dashboard Professionale - Apri nel browser per studiare!</b>",
+                parse_mode='HTML'
+            )
+        
+        # Enhanced beta mode statistics
+        if settings.get("beta_mode", False) and "error" not in metadata:
+            usage = metadata.get("usage", {})
+            debug_message = (
+                "*📊 Statistiche Dettagliate*\n"
+                "═════════════════════\n"
+                f"🔢 Token totali: `{usage.get('total_tokens', 'N/A')}`\n"
+                f"📥 Prompt: `{usage.get('prompt_tokens', 'N/A')}`\n"
+                f"📤 Risposta: `{usage.get('completion_tokens', 'N/A')}`\n"
+                f"⏱️ Generazione: `{elapsed_time:.2f}s`\n"
+                f"⚡ Velocità: `{usage.get('completion_tokens', 0) / max(elapsed_time, 0.1):.1f} token/s`"
+            )
+            await query.message.reply_text(debug_message, parse_mode='Markdown')
+        
+        # Suggestions for next steps
+        suggestions = (
+            "\n💡 *Suggerimenti:*\n"
+            "• Usa `/outline` per uno schema gerarchico dettagliato\n"
+            "• Usa `/quiz` per verificare la comprensione dei concetti\n"
+            "• Usa `/analyze` per un'analisi approfondita dei temi"
+        )
+        await query.message.reply_text(suggestions, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error generating mindmap: {e}", exc_info=True)
+        error_msg = (
+            "❌ *Errore nella Generazione*\n\n"
+            f"Si è verificato un problema: {str(e)[:100]}\n\n"
+            "💡 Prova a:\n"
+            "• Ridurre la profondità della mappa\n"
+            "• Verificare la selezione del documento\n"
+            "• Contattare il supporto se il problema persiste"
+        )
+        await query.message.reply_text(error_msg, parse_mode='Markdown')
+    
+    return ConversationHandler.END
+
+
+async def summary_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handler for /summary command - generate summary."""
+    user = update.effective_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    
+    if not settings.get("current_document"):
+        await update.message.reply_text(
+            "❌ Nessun documento selezionato. Usa /select per scegliere un documento."
+        )
+        return ConversationHandler.END
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("📄 Breve", callback_data="summary_type:brief"),
+            InlineKeyboardButton("📋 Medio", callback_data="summary_type:medium")
+        ],
+        [
+            InlineKeyboardButton("📚 Esteso", callback_data="summary_type:extended"),
+            InlineKeyboardButton("📑 Per Sezioni", callback_data="summary_type:by_sections")
+        ],
+        [
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📝 *Generazione Riassunto*\n\n"
+        "Scegli il tipo di riassunto:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    
+    context.user_data['summary_config'] = {
+        'type': None
+    }
+    
+    return SUMMARY_CONFIG
+
+
+async def summary_type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle summary type selection and generate summary."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Generazione riassunto annullata.")
+        return ConversationHandler.END
+    
+    summary_type = query.data.split(":")[1]
+    context.user_data['summary_config']['type'] = summary_type
+    
+    await query.edit_message_text("⏳ Generazione del riassunto in corso...")
+    
+    user = query.from_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    config = context.user_data['summary_config']
+    
+    summary_prompt = generate_summary_prompt(
+        summary_type=config['type']
+    )
+    
+    try:
+        response, metadata = process_query(
+            user_id=user.id,
+            user_first_name=user.first_name,
+            user_last_name=user.last_name,
+            user_username=user.username,
+            query=summary_prompt,
+            document_id=settings.get("current_document"),
+            include_history=False
+        )
+        
+        # Don't use Markdown to avoid parsing errors
+        await send_long_message(update, f"✅ Riassunto generato!\n\n{response}", parse_mode=None, context=context)
+        
+        if settings.get("beta_mode", False) and "error" not in metadata:
+            usage = metadata.get("usage", {})
+            debug_message = f"*📊 Token usati:* `{usage.get('total_tokens', 'N/A')}`"
+            await query.message.reply_text(debug_message, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error generating summary: {e}", exc_info=True)
+        await query.message.reply_text(f"❌ Errore: {str(e)}")
+    
+    return ConversationHandler.END
+
+
+async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handler for /analyze command - perform deep analysis."""
+    user = update.effective_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    
+    if not settings.get("current_document"):
+        await update.message.reply_text(
+            "❌ Nessun documento selezionato. Usa /select per scegliere un documento."
+        )
+        return ConversationHandler.END
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🎨 Tematica", callback_data="analysis_type:thematic"),
+            InlineKeyboardButton("💭 Argomentativa", callback_data="analysis_type:argumentative")
+        ],
+        [
+            InlineKeyboardButton("🔍 Critica", callback_data="analysis_type:critical"),
+            InlineKeyboardButton("⚖️ Comparativa", callback_data="analysis_type:comparative")
+        ],
+        [
+            InlineKeyboardButton("🌐 Contestuale", callback_data="analysis_type:contextual")
+        ],
+        [
+            InlineKeyboardButton("Annulla", callback_data="cancel")
+        ]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🔬 *Analisi Approfondita*\n\n"
+        "Scegli il tipo di analisi da effettuare:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    
+    context.user_data['analysis_config'] = {
+        'type': None,
+        'depth': 'profonda'
+    }
+    
+    return ANALYSIS_CONFIG
+
+
+async def outline_export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle outline export button clicks."""
+    query = update.callback_query
+    await query.answer()
+    
+    export_type = query.data.split(":")[1]
+    
+    # Get stored outline
+    outline_data = context.user_data.get('last_outline')
+    if not outline_data:
+        await query.edit_message_text("❌ Errore: Schema non trovato. Genera un nuovo schema con /outline")
+        return
+    
+    user = query.from_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    doc_name = settings.get("current_document", "Documento")
+    
+    try:
+        if export_type == "inline":
+            # Send full content inline
+            await query.edit_message_text("📤 Invio dello schema completo...")
+            full_content = outline_data['content']
+            await send_long_message(update, full_content, parse_mode=None, context=context)
+            
+            # Suggestions
+            suggestions = (
+                "\n💡 *Suggerimenti:*\n"
+                "• Usa `/mindmap` per una visualizzazione grafica\n"
+                "• Usa `/quiz` per testare la comprensione\n"
+                "• Usa `/summary` per un riassunto conciso"
+            )
+            await query.message.reply_text(suggestions, parse_mode='Markdown')
+            
+        elif export_type in ["txt", "html", "both"]:
+            await query.edit_message_text("⏳ Preparazione file...")
+            
+            # Prepare metadata
+            metadata = {
+                'Documento': doc_name,
+                'Tipo': outline_data['type'],
+                'Dettaglio': outline_data['detail'],
+                'Tempo generazione': f"{outline_data['time']:.1f}s"
+            }
+            
+            # Generate and send files
+            files_sent = []
+            
+            if export_type in ["txt", "both"]:
+                # Generate TXT
+                txt_content = format_as_txt(
+                    content=outline_data['content'],
+                    title=f"SCHEMA - {doc_name}",
+                    metadata=metadata
+                )
+                txt_path = save_temp_file(txt_content, f"schema_{doc_name}", "txt")
+                
+                # Send TXT file
+                with open(txt_path, 'rb') as f:
+                    await query.message.reply_document(
+                        document=f,
+                        filename=f"schema_{doc_name}.txt",
+                        caption="📄 *Schema in formato TXT*\n\nFile di testo semplice, leggibile ovunque!",
+                        parse_mode='Markdown'
+                    )
+                files_sent.append("TXT")
+            
+            if export_type in ["html", "both"]:
+                # Generate HTML
+                html_content = format_as_html(
+                    content=outline_data['content'],
+                    title=f"SCHEMA - {doc_name}",
+                    metadata=metadata
+                )
+                html_path = save_temp_file(html_content, f"schema_{doc_name}", "html")
+                
+                # Send HTML file
+                with open(html_path, 'rb') as f:
+                    await query.message.reply_document(
+                        document=f,
+                        filename=f"schema_{doc_name}.html",
+                        caption="🌐 *Schema in formato HTML*\n\nApri con il browser per una visualizzazione ottimale!",
+                        parse_mode='Markdown'
+                    )
+                files_sent.append("HTML")
+            
+            # Success message
+            await query.edit_message_text(
+                f"✅ File {'e '.join(files_sent)} inviati con successo!\n\n"
+                f"💾 I file sono pronti per il download."
+            )
+            
+            # Suggestions
+            suggestions = (
+                "\n💡 *Prossimi passi:*\n"
+                "• Usa `/mindmap` per una mappa concettuale\n"
+                "• Usa `/quiz` per testare la comprensione\n"
+                "• Usa `/summary` per un riassunto"
+            )
+            await query.message.reply_text(suggestions, parse_mode='Markdown')
+            
+            # Cleanup old exports
+            cleanup_old_exports()
+            
+    except Exception as e:
+        logger.error(f"Error exporting outline: {e}", exc_info=True)
+        await query.message.reply_text(
+            f"❌ Errore durante l'esportazione: {str(e)[:100]}\n\n"
+            "Riprova o contatta il supporto."
+        )
+
+
+async def analysis_type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle analysis type selection and perform analysis."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel":
+        await query.edit_message_text("❌ Analisi annullata.")
+        return ConversationHandler.END
+    
+    analysis_type = query.data.split(":")[1]
+    context.user_data['analysis_config']['type'] = analysis_type
+    
+    await query.edit_message_text("⏳ Analisi in corso... Questo potrebbe richiedere un po' di tempo.")
+    
+    user = query.from_user
+    settings = user_settings_manager.get_user_settings(user.id)
+    config = context.user_data['analysis_config']
+    
+    analysis_prompt = generate_analysis_prompt(
+        analysis_type=config['type'],
+        depth=config.get('depth', 'profonda')
+    )
+    
+    try:
+        response, metadata = process_query(
+            user_id=user.id,
+            user_first_name=user.first_name,
+            user_last_name=user.last_name,
+            user_username=user.username,
+            query=analysis_prompt,
+            document_id=settings.get("current_document"),
+            include_history=False
+        )
+        
+        # Don't use Markdown to avoid parsing errors
+        await send_long_message(update, f"✅ Analisi completata!\n\n{response}", parse_mode=None, context=context)
+        
+        if settings.get("beta_mode", False) and "error" not in metadata:
+            usage = metadata.get("usage", {})
+            debug_message = f"*📊 Token usati:* `{usage.get('total_tokens', 'N/A')}`"
+            await query.message.reply_text(debug_message, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error performing analysis: {e}", exc_info=True)
+        await query.message.reply_text(f"❌ Errore: {str(e)}")
+    
+    return ConversationHandler.END

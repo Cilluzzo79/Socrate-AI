@@ -1,0 +1,13 @@
+Pipeline Debug Patches
+Created at: 2025-09-30 14:44:26.771133
+
+This patch adds extensive logging to key functions in the retrieval and LLM pipeline.
+The logs will be saved in the 'full_pipeline_debug' directory.
+
+Patched functions:
+- core.memvid_retriever.get_context_for_query
+- core.memvid_retriever.format_context_for_llm
+- core.rag_pipeline.perform_hybrid_search
+- core.rag_pipeline.process_query
+- core.llm_client.generate_chat_response
+

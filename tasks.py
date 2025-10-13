@@ -1,0 +1,307 @@
+"""
+Celery Tasks for Async Document Processing
+Handles document encoding, processing, and cleanup
+"""
+
+import os
+import sys
+import json
+import traceback
+from pathlib import Path
+from datetime import datetime
+import logging
+
+from celery_config import celery_app
+from core.database import SessionLocal
+from core.document_operations import get_document_by_id, update_document_status
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+
+@celery_app.task(bind=True, name='tasks.process_document_task')
+def process_document_task(self, document_id: str, user_id: str):
+    """
+    Process uploaded document with memvid encoder
+
+    Args:
+        document_id: Document UUID
+        user_id: User UUID (for ownership verification)
+
+    Returns:
+        dict: Processing result with status and metadata
+    """
+    logger.info(f"Starting document processing: {document_id} for user {user_id}")
+
+    # Update task state
+    self.update_state(
+        state='PROCESSING',
+        meta={'status': 'Initializing', 'progress': 0}
+    )
+
+    try:
+        # 1. Get document from database
+        doc = get_document_by_id(document_id, user_id)
+        if not doc:
+            logger.error(f"Document {document_id} not found or unauthorized")
+            return {
+                'success': False,
+                'error': 'Document not found or unauthorized'
+            }
+
+        logger.info(f"Processing document: {doc.filename} ({doc.file_path})")
+
+        # Update document status to processing
+        update_document_status(
+            document_id,
+            user_id,
+            status='processing',
+            processing_progress=5
+        )
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Reading file', 'progress': 10}
+        )
+
+        # 2. Verify file exists
+        if not os.path.exists(doc.file_path):
+            logger.error(f"File not found: {doc.file_path}")
+            update_document_status(
+                document_id,
+                user_id,
+                status='failed',
+                error_message='File not found on disk'
+            )
+            return {
+                'success': False,
+                'error': 'File not found on disk'
+            }
+
+        # 3. Prepare output directory
+        output_dir = os.path.dirname(doc.file_path)
+        base_name = os.path.splitext(os.path.basename(doc.file_path))[0]
+
+        logger.info(f"Output directory: {output_dir}")
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Running memvid encoder', 'progress': 20}
+        )
+
+        # 4. Run memvid encoder
+        try:
+            # Add memvidBeta to path
+            memvid_beta_path = Path(__file__).parent / 'memvidBeta' / 'encoder_app'
+            sys.path.insert(0, str(memvid_beta_path))
+
+            from memvid_sections import process_file_in_sections
+
+            logger.info("Starting memvid encoder...")
+
+            # Process with memvid encoder (JSON only for faster processing)
+            success = process_file_in_sections(
+                file_path=doc.file_path,
+                chunk_size=1200,
+                overlap=200,
+                output_format='json',  # JSON only, no video
+                max_pages=None,  # Process all pages
+                max_chunks=None  # No chunk limit
+            )
+
+            if not success:
+                logger.error("Memvid encoder failed")
+                update_document_status(
+                    document_id,
+                    user_id,
+                    status='failed',
+                    error_message='Memvid encoder failed'
+                )
+                return {
+                    'success': False,
+                    'error': 'Memvid encoder failed'
+                }
+
+            logger.info("Memvid encoder completed successfully")
+
+        except Exception as e:
+            logger.error(f"Error in memvid encoder: {e}")
+            logger.error(traceback.format_exc())
+            update_document_status(
+                document_id,
+                user_id,
+                status='failed',
+                error_message=f'Encoding error: {str(e)}'
+            )
+            return {
+                'success': False,
+                'error': f'Encoding error: {str(e)}'
+            }
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Saving metadata', 'progress': 80}
+        )
+
+        # 5. Verify output files exist
+        metadata_file = os.path.join(output_dir, f"{base_name}_sections_metadata.json")
+
+        if not os.path.exists(metadata_file):
+            # Try alternative location (memvid encoder outputs/ directory)
+            alt_metadata = Path(__file__).parent / 'memvidBeta' / 'encoder_app' / 'outputs' / f"{base_name}_sections_metadata.json"
+            if alt_metadata.exists():
+                # Move to correct location
+                import shutil
+                shutil.copy(str(alt_metadata), metadata_file)
+
+                # Also copy index if exists
+                alt_index = alt_metadata.parent / f"{base_name}_sections_index.json"
+                if alt_index.exists():
+                    index_file = os.path.join(output_dir, f"{base_name}_sections_index.json")
+                    shutil.copy(str(alt_index), index_file)
+            else:
+                logger.error(f"Metadata file not found: {metadata_file}")
+                update_document_status(
+                    document_id,
+                    user_id,
+                    status='failed',
+                    error_message='Output files not generated'
+                )
+                return {
+                    'success': False,
+                    'error': 'Output files not generated'
+                }
+
+        # 6. Load metadata to extract info
+        try:
+            with open(metadata_file, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+
+            total_chunks = metadata.get('chunks_count', 0)
+            total_tokens = sum(len(chunk['text'].split()) for chunk in metadata.get('chunks', []))
+
+            # Detect language (simple heuristic)
+            sample_text = ' '.join([
+                chunk['text'][:100]
+                for chunk in metadata.get('chunks', [])[:5]
+            ])
+            language = detect_language(sample_text)
+
+        except Exception as e:
+            logger.warning(f"Error loading metadata: {e}")
+            total_chunks = 0
+            total_tokens = 0
+            language = 'unknown'
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Finalizing', 'progress': 90}
+        )
+
+        # 7. Update document in database
+        index_file = os.path.join(output_dir, f"{base_name}_sections_index.json")
+
+        update_document_status(
+            document_id,
+            user_id,
+            status='ready',
+            processing_progress=100,
+            total_chunks=total_chunks,
+            total_tokens=total_tokens,
+            language=language,
+            doc_metadata={
+                'metadata_file': metadata_file,
+                'index_file': index_file if os.path.exists(index_file) else None,
+                'processed_at': datetime.utcnow().isoformat(),
+                'encoder_version': 'memvid_sections',
+                'chunk_size': 1200,
+                'overlap': 200
+            }
+        )
+
+        logger.info(f"Document processing completed: {document_id}")
+
+        return {
+            'success': True,
+            'document_id': document_id,
+            'total_chunks': total_chunks,
+            'total_tokens': total_tokens,
+            'language': language
+        }
+
+    except Exception as e:
+        logger.error(f"Unexpected error in document processing: {e}")
+        logger.error(traceback.format_exc())
+
+        # Update document status
+        try:
+            update_document_status(
+                document_id,
+                user_id,
+                status='failed',
+                error_message=f'Processing error: {str(e)}'
+            )
+        except:
+            pass
+
+        return {
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }
+
+
+@celery_app.task(name='tasks.cleanup_old_documents')
+def cleanup_old_documents():
+    """
+    Periodic task to cleanup old temporary files
+    Run daily via celery beat
+    """
+    logger.info("Starting cleanup of old documents")
+
+    # TODO: Implement cleanup logic
+    # - Delete documents marked for deletion
+    # - Clean up orphaned files
+    # - Archive old sessions
+
+    return {'cleaned': 0}
+
+
+def detect_language(text: str) -> str:
+    """
+    Simple language detection heuristic
+
+    Args:
+        text: Sample text
+
+    Returns:
+        str: Language code (it, en, es, etc.)
+    """
+    # Simple heuristic based on common words
+    text_lower = text.lower()
+
+    italian_words = ['il', 'la', 'di', 'che', 'è', 'per', 'una', 'del', 'alla']
+    english_words = ['the', 'of', 'and', 'to', 'in', 'is', 'for', 'that', 'with']
+
+    italian_count = sum(1 for word in italian_words if f' {word} ' in f' {text_lower} ')
+    english_count = sum(1 for word in english_words if f' {word} ' in f' {text_lower} ')
+
+    if italian_count > english_count:
+        return 'it'
+    elif english_count > 0:
+        return 'en'
+    else:
+        return 'unknown'
+
+
+# Task success/failure handlers
+@celery_app.task(bind=True)
+def on_task_failure(self, exc, task_id, args, kwargs, einfo):
+    """Called when a task fails"""
+    logger.error(f"Task {task_id} failed: {exc}")
+    logger.error(f"Args: {args}, Kwargs: {kwargs}")
+    logger.error(f"Exception info: {einfo}")

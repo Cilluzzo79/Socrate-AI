@@ -1,0 +1,532 @@
+"""
+Socrate AI - Multi-tenant REST API Server
+Flask API with Telegram Login Widget Authentication
+"""
+
+from flask import Flask, request, redirect, session, jsonify, render_template, send_file
+from flask_cors import CORS
+import hashlib
+import hmac
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
+import logging
+
+# Add project root to path
+sys.path.append(str(Path(__file__).parent))
+
+from core.database import get_or_create_user, get_user_by_id, init_db
+from core.document_operations import (
+    get_user_documents,
+    get_document_by_id,
+    create_document,
+    update_document_status,
+    delete_document,
+    create_chat_session,
+    update_chat_session,
+    get_user_stats
+)
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
+app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-CHANGE-IN-PRODUCTION')
+CORS(app, supports_credentials=True)
+
+# Telegram Bot credentials
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+BOT_USERNAME = os.getenv('BOT_USERNAME', 'SocrateAIBot')
+
+# Storage path
+STORAGE_PATH = os.getenv('STORAGE_PATH', './storage')
+
+
+# ============================================================================
+# AUTHENTICATION HELPERS
+# ============================================================================
+
+def verify_telegram_auth(auth_data: dict) -> bool:
+    """
+    Verify Telegram Login Widget authentication
+    https://core.telegram.org/widgets/login#checking-authorization
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN not configured")
+        return False
+
+    check_hash = auth_data.pop('hash', None)
+    if not check_hash:
+        return False
+
+    # Create verification string
+    data_check_string = '\n'.join([
+        f"{k}={v}" for k, v in sorted(auth_data.items())
+    ])
+
+    # Calculate hash with bot token
+    secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
+    calculated_hash = hmac.new(
+        secret_key,
+        data_check_string.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    return calculated_hash == check_hash
+
+
+def require_auth(f):
+    """Decorator to require authentication"""
+    from functools import wraps
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def get_current_user_id() -> Optional[str]:
+    """Get current user ID from session"""
+    return session.get('user_id')
+
+
+# ============================================================================
+# WEB ROUTES
+# ============================================================================
+
+@app.route('/')
+def index():
+    """Landing page with Telegram Login Widget"""
+    if 'user_id' in session:
+        return redirect('/dashboard')
+
+    return render_template('index.html', bot_username=BOT_USERNAME)
+
+
+@app.route('/dashboard')
+@require_auth
+def dashboard():
+    """Main dashboard (after login)"""
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id)
+
+    if not user:
+        session.clear()
+        return redirect('/')
+
+    stats = get_user_stats(user_id)
+
+    return render_template('dashboard.html', user=user, stats=stats)
+
+
+@app.route('/auth/telegram/callback')
+def telegram_auth_callback():
+    """
+    Telegram Login Widget callback
+    Receives: id, first_name, last_name, username, photo_url, auth_date, hash
+    """
+    auth_data = request.args.to_dict()
+
+    # 1. Verify authenticity
+    if not verify_telegram_auth(auth_data.copy()):
+        logger.warning(f"Failed authentication attempt: {auth_data.get('id')}")
+        return "❌ Authentication failed - Invalid signature", 403
+
+    # 2. Get or create user
+    try:
+        user = get_or_create_user(
+            telegram_id=int(auth_data['id']),
+            first_name=auth_data['first_name'],
+            last_name=auth_data.get('last_name'),
+            username=auth_data.get('username'),
+            photo_url=auth_data.get('photo_url')
+        )
+
+        # 3. Create session
+        session['user_id'] = str(user.id)
+        session['telegram_id'] = user.telegram_id
+        session['first_name'] = user.first_name
+
+        logger.info(f"User logged in: {user.telegram_id} ({user.first_name})")
+
+        # 4. Redirect to dashboard
+        return redirect('/dashboard')
+
+    except Exception as e:
+        logger.error(f"Error in auth callback: {e}")
+        return f"❌ Authentication error: {str(e)}", 500
+
+
+@app.route('/logout')
+def logout():
+    """Logout user"""
+    session.clear()
+    return redirect('/')
+
+
+# ============================================================================
+# USER API
+# ============================================================================
+
+@app.route('/api/user/profile')
+@require_auth
+def get_user_profile():
+    """Get current user profile"""
+    user_id = get_current_user_id()
+    user = get_user_by_id(user_id)
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    return jsonify({
+        'id': str(user.id),
+        'telegram_id': user.telegram_id,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'photo_url': user.photo_url,
+        'subscription_tier': user.subscription_tier,
+        'storage_used_mb': round(user.storage_used_mb, 2),
+        'storage_quota_mb': user.storage_quota_mb,
+        'created_at': user.created_at.isoformat() if user.created_at else None,
+        'last_login': user.last_login.isoformat() if user.last_login else None
+    })
+
+
+@app.route('/api/user/stats')
+@require_auth
+def get_stats():
+    """Get user statistics"""
+    user_id = get_current_user_id()
+    stats = get_user_stats(user_id)
+    return jsonify(stats)
+
+
+# ============================================================================
+# DOCUMENT API
+# ============================================================================
+
+@app.route('/api/documents', methods=['GET'])
+@require_auth
+def list_documents():
+    """List user's documents"""
+    user_id = get_current_user_id()
+    status_filter = request.args.get('status')
+
+    documents = get_user_documents(user_id, status=status_filter)
+
+    return jsonify({
+        'documents': [
+            {
+                'id': str(doc.id),
+                'filename': doc.filename,
+                'mime_type': doc.mime_type,
+                'file_size': doc.file_size,
+                'status': doc.status,
+                'processing_progress': doc.processing_progress,
+                'total_chunks': doc.total_chunks,
+                'created_at': doc.created_at.isoformat() if doc.created_at else None,
+                'updated_at': doc.updated_at.isoformat() if doc.updated_at else None
+            }
+            for doc in documents
+        ]
+    })
+
+
+@app.route('/api/documents/<document_id>', methods=['GET'])
+@require_auth
+def get_document(document_id: str):
+    """Get specific document with processing status"""
+    user_id = get_current_user_id()
+    doc = get_document_by_id(document_id, user_id)
+
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+
+    # Get task status if available
+    task_status = None
+    task_info = None
+
+    if doc.doc_metadata and 'task_id' in doc.doc_metadata:
+        try:
+            from celery.result import AsyncResult
+            task = AsyncResult(doc.doc_metadata['task_id'])
+
+            task_status = task.state
+            if task.info:
+                task_info = task.info if isinstance(task.info, dict) else {'message': str(task.info)}
+        except:
+            pass
+
+    return jsonify({
+        'id': str(doc.id),
+        'filename': doc.filename,
+        'original_filename': doc.original_filename,
+        'mime_type': doc.mime_type,
+        'file_size': doc.file_size,
+        'status': doc.status,
+        'processing_progress': doc.processing_progress,
+        'error_message': doc.error_message,
+        'language': doc.language,
+        'total_chunks': doc.total_chunks,
+        'total_tokens': doc.total_tokens,
+        'duration_seconds': doc.duration_seconds,
+        'page_count': doc.page_count,
+        'created_at': doc.created_at.isoformat() if doc.created_at else None,
+        'processing_completed_at': doc.processing_completed_at.isoformat() if doc.processing_completed_at else None,
+        'doc_metadata': doc.doc_metadata,
+        'task_status': task_status,
+        'task_info': task_info
+    })
+
+
+@app.route('/api/documents/<document_id>/status', methods=['GET'])
+@require_auth
+def get_document_status(document_id: str):
+    """
+    Get processing status for a document
+    Lightweight endpoint for polling
+    """
+    user_id = get_current_user_id()
+    doc = get_document_by_id(document_id, user_id)
+
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+
+    # Get task status
+    task_state = 'UNKNOWN'
+    task_progress = doc.processing_progress or 0
+    task_message = ''
+
+    if doc.doc_metadata and 'task_id' in doc.doc_metadata:
+        try:
+            from celery.result import AsyncResult
+            task = AsyncResult(doc.doc_metadata['task_id'])
+
+            task_state = task.state
+
+            if task.info and isinstance(task.info, dict):
+                task_progress = task.info.get('progress', task_progress)
+                task_message = task.info.get('status', '')
+        except:
+            pass
+
+    return jsonify({
+        'document_id': str(doc.id),
+        'status': doc.status,
+        'progress': task_progress,
+        'task_state': task_state,
+        'message': task_message or doc.error_message or '',
+        'total_chunks': doc.total_chunks,
+        'ready': doc.status == 'ready'
+    })
+
+
+@app.route('/api/documents/upload', methods=['POST'])
+@require_auth
+def upload_document():
+    """Upload new document"""
+    user_id = get_current_user_id()
+
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'No file provided'}), 400
+
+    try:
+        # Read file
+        file_content = file.read()
+        file_size = len(file_content)
+        filename = file.filename
+        mime_type = file.mimetype
+
+        # Create user storage directory
+        user_storage = Path(STORAGE_PATH) / user_id
+        user_storage.mkdir(parents=True, exist_ok=True)
+
+        # Generate unique document ID
+        import uuid
+        doc_id = str(uuid.uuid4())
+        doc_storage = user_storage / doc_id
+        doc_storage.mkdir(exist_ok=True)
+
+        # Save file
+        file_path = doc_storage / filename
+        with open(file_path, 'wb') as f:
+            f.write(file_content)
+
+        # Create document record
+        doc = create_document(
+            user_id=user_id,
+            filename=filename,
+            original_filename=filename,
+            file_path=str(file_path),
+            file_size=file_size,
+            mime_type=mime_type
+        )
+
+        logger.info(f"Document uploaded: {doc.id} by user {user_id}")
+
+        # Trigger async processing with Celery
+        try:
+            from tasks import process_document_task
+            task = process_document_task.delay(str(doc.id), user_id)
+
+            logger.info(f"Processing task queued: {task.id} for document {doc.id}")
+
+            # Store task ID in document metadata (optional, for tracking)
+            from core.document_operations import update_document_status
+            update_document_status(
+                str(doc.id),
+                user_id,
+                status='processing',
+                doc_metadata={'task_id': task.id}
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to queue processing task: {e}")
+            # Document will remain in 'processing' status
+            # User can retry or admin can check
+
+        return jsonify({
+            'success': True,
+            'document_id': str(doc.id),
+            'filename': doc.filename,
+            'status': 'processing',
+            'message': 'Document uploaded and queued for processing'
+        }), 201
+
+    except ValueError as e:
+        # Storage quota exceeded
+        return jsonify({'error': str(e)}), 413
+    except Exception as e:
+        logger.error(f"Error uploading document: {e}")
+        return jsonify({'error': 'Upload failed'}), 500
+
+
+@app.route('/api/documents/<document_id>', methods=['DELETE'])
+@require_auth
+def delete_document_endpoint(document_id: str):
+    """Delete document"""
+    user_id = get_current_user_id()
+
+    success = delete_document(document_id, user_id)
+
+    if not success:
+        return jsonify({'error': 'Document not found'}), 404
+
+    # TODO: Also delete physical files
+
+    logger.info(f"Document deleted: {document_id} by user {user_id}")
+
+    return jsonify({'success': True})
+
+
+# ============================================================================
+# CONTENT GENERATION API (simplified for now)
+# ============================================================================
+
+@app.route('/api/query', methods=['POST'])
+@require_auth
+def custom_query():
+    """
+    Custom query endpoint
+    Body: { "document_id": "...", "query": "...", "command_type": "quiz|summary|..." }
+    """
+    user_id = get_current_user_id()
+    data = request.json
+
+    document_id = data.get('document_id')
+    query = data.get('query')
+    command_type = data.get('command_type', 'query')
+
+    if not document_id or not query:
+        return jsonify({'error': 'document_id and query required'}), 400
+
+    # Verify document ownership
+    doc = get_document_by_id(document_id, user_id)
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+
+    if doc.status != 'ready':
+        return jsonify({'error': f'Document not ready (status: {doc.status})'}), 400
+
+    # Create chat session
+    chat_session = create_chat_session(
+        user_id=user_id,
+        document_id=document_id,
+        command_type=command_type,
+        request_data={'query': query},
+        channel='web_app'
+    )
+
+    # TODO: Integrate with memvid RAG pipeline
+    # For now, return placeholder
+    response = {
+        'answer': f"[TODO] Process query: {query} for document {doc.filename}",
+        'sources': []
+    }
+
+    # Update session with response
+    update_chat_session(
+        session_id=str(chat_session.id),
+        response_data=response,
+        success=True
+    )
+
+    return jsonify({
+        'success': True,
+        'session_id': str(chat_session.id),
+        **response
+    })
+
+
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
+
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'Socrate AI Multi-tenant API',
+        'version': '1.0.0'
+    })
+
+
+# ============================================================================
+# INITIALIZATION
+# ============================================================================
+
+@app.before_first_request
+def initialize():
+    """Initialize database on first request"""
+    logger.info("Initializing Socrate AI API...")
+    init_db()
+    logger.info("✅ Initialization complete")
+
+
+if __name__ == '__main__':
+    # Get port from environment (Railway provides this)
+    port = int(os.getenv('PORT', 5000))
+
+    logger.info(f"🚀 Starting Socrate AI API server on port {port}")
+    logger.info(f"   Bot Username: {BOT_USERNAME}")
+    logger.info(f"   Storage Path: {STORAGE_PATH}")
+
+    # Run server
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    )

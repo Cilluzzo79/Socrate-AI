@@ -1,0 +1,2 @@
+memvid
+gradio>=4.0.0

@@ -1,0 +1,79 @@
+# Docker Compose for Local Development
+# Run: docker-compose -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  # Redis for Celery
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # PostgreSQL for development (optional)
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: socrate_dev
+      POSTGRES_USER: socrate
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Flask API
+  api:
+    build: .
+    command: python api_server.py
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://socrate:dev_password@postgres:5432/socrate_dev
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_DEBUG=True
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./storage_test:/app/storage
+    depends_on:
+      - redis
+      - postgres
+
+  # Celery Worker
+  worker:
+    build: .
+    command: celery -A celery_config worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://socrate:dev_password@postgres:5432/socrate_dev
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./storage_test:/app/storage
+    depends_on:
+      - redis
+      - postgres
+
+  # Celery Beat (optional - for scheduled tasks)
+  beat:
+    build: .
+    command: celery -A celery_config beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://socrate:dev_password@postgres:5432/socrate_dev
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - postgres
+
+volumes:
+  redis_data:
+  postgres_data:
