@@ -1,5 +1,5 @@
-# Procfile for Celery Worker
+# Procfile for Celery Worker with Healthcheck
 # Railway: Add this as separate service for workers
 
-worker: celery -A celery_config worker --loglevel=info --concurrency=2
+worker: bash start_worker.sh
 beat: celery -A celery_config beat --loglevel=info
