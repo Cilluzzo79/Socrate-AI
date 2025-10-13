@@ -72,14 +72,17 @@ def verify_telegram_auth(auth_data: dict) -> bool:
     ])
 
     # Calculate hash with bot token
-    secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
-    calculated_hash = hmac.new(
-        secret_key,
-        data_check_string.encode(),
-        hashlib.sha256
-    ).hexdigest()
-
-    return calculated_hash == check_hash
+    try:
+        secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
+        calculated_hash = hmac.new(
+            secret_key,
+            data_check_string.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        return calculated_hash == check_hash
+    except Exception as e:
+        logger.error(f"Error verifying Telegram auth: {e}")
+        return False
 
 
 def require_auth(f):
@@ -508,12 +511,21 @@ def health_check():
 # INITIALIZATION
 # ============================================================================
 
-@app.before_first_request
 def initialize():
-    """Initialize database on first request"""
+    """Initialize database and app resources"""
     logger.info("Initializing Socrate AI API...")
-    init_db()
-    logger.info("✅ Initialization complete")
+    try:
+        init_db()
+        logger.info("Database initialization complete")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        logger.warning("Application will continue but database operations may fail")
+
+# Initialize at module load time (for gunicorn workers)
+try:
+    initialize()
+except Exception as e:
+    logger.error(f"Initialization error: {e}")
 
 
 if __name__ == '__main__':
