@@ -3,8 +3,8 @@ Multi-tenant Database Models for Socrate AI
 SQLAlchemy models for PostgreSQL on Railway
 """
 
-from sqlalchemy import create_engine, Column, String, Integer, BigInteger, Text, TIMESTAMP, ForeignKey, Boolean, JSON
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import create_engine, Column, String, Integer, BigInteger, Text, TIMESTAMP, ForeignKey, Boolean, JSON, TypeDecorator, CHAR
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import uuid
@@ -24,6 +24,44 @@ Base = declarative_base()
 
 
 # ============================================================================
+# CROSS-DATABASE UUID TYPE
+# ============================================================================
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+    Uses PostgreSQL's UUID type, otherwise uses CHAR(36), storing as stringified hex values.
+    """
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        elif dialect.name == 'postgresql':
+            return value
+        else:
+            if not isinstance(value, uuid.UUID):
+                return str(uuid.UUID(value))
+            else:
+                return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        else:
+            if not isinstance(value, uuid.UUID):
+                return uuid.UUID(value)
+            else:
+                return value
+
+
+# ============================================================================
 # MODELS
 # ============================================================================
 
@@ -31,7 +69,7 @@ class User(Base):
     """User model - linked to Telegram account"""
     __tablename__ = 'users'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
     telegram_id = Column(BigInteger, unique=True, nullable=False, index=True)
     username = Column(String(255), index=True)
     first_name = Column(String(255), nullable=False)
@@ -63,8 +101,8 @@ class Document(Base):
     """Document model - user-owned files"""
     __tablename__ = 'documents'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
 
     # File information
     filename = Column(String(255), nullable=False)
@@ -106,9 +144,9 @@ class ChatSession(Base):
     """Chat session - tracks all user interactions"""
     __tablename__ = 'chat_sessions'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    document_id = Column(UUID(as_uuid=True), ForeignKey('documents.id', ondelete='SET NULL'), index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    document_id = Column(GUID, ForeignKey('documents.id', ondelete='SET NULL'), index=True)
 
     # Request information
     command_type = Column(String(20), nullable=False, index=True)  # quiz, summary, analyze, outline, mindmap
