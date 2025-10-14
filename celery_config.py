@@ -13,9 +13,18 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 celery_app = Celery(
     'socrate_ai',
     broker=REDIS_URL,
-    backend=REDIS_URL,
-    include=['tasks']  # Import tasks module
+    backend=REDIS_URL
 )
+
+# Manually import tasks to catch any errors
+try:
+    import tasks
+    print(f"[Celery] Successfully imported tasks module")
+    print(f"[Celery] Tasks found: {[name for name in dir(tasks) if not name.startswith('_')]}")
+except Exception as e:
+    print(f"[Celery] ERROR importing tasks: {e}")
+    import traceback
+    traceback.print_exc()
 
 # Celery configuration
 celery_app.conf.update(
