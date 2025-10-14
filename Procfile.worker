@@ -1,5 +1,5 @@
 # Procfile for Celery Worker with Healthcheck
 # Railway: Add this as separate service for workers
 
-worker: bash start_worker.sh
+worker: python worker_healthcheck.py & celery -A celery_config worker --loglevel=info --concurrency=2 --queues=documents,maintenance,celery
 beat: celery -A celery_config beat --loglevel=info
