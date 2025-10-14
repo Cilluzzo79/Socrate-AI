@@ -2,4 +2,4 @@
 # Railway: Add this as separate service for workers
 # Use 'web' type so Railway assigns a port and does healthcheck
 
-web: python worker_healthcheck.py & celery -A celery_config worker --loglevel=info --concurrency=2 --queues=documents,maintenance,celery
+web: python start_worker_wrapper.py
