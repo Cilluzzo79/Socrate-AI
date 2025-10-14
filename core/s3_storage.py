@@ -26,19 +26,35 @@ def get_s3_client():
     global s3_client
 
     if s3_client is None:
+        # Detailed logging for debugging
+        logger.info("Initializing S3 client for R2...")
+        logger.info(f"  R2_ACCESS_KEY_ID: {'SET' if R2_ACCESS_KEY else 'MISSING'}")
+        logger.info(f"  R2_SECRET_ACCESS_KEY: {'SET' if R2_SECRET_KEY else 'MISSING'}")
+        logger.info(f"  R2_ENDPOINT_URL: {R2_ENDPOINT if R2_ENDPOINT else 'MISSING'}")
+        logger.info(f"  R2_BUCKET_NAME: {R2_BUCKET}")
+
         if not all([R2_ACCESS_KEY, R2_SECRET_KEY, R2_ENDPOINT]):
             logger.error("R2 credentials not configured")
+            logger.error("Required environment variables:")
+            logger.error("  - R2_ACCESS_KEY_ID")
+            logger.error("  - R2_SECRET_ACCESS_KEY")
+            logger.error("  - R2_ENDPOINT_URL")
+            logger.error("  - R2_BUCKET_NAME (optional, defaults to 'socrate-ai-storage')")
             raise ValueError("R2 credentials missing in environment variables")
 
-        s3_client = boto3.client(
-            's3',
-            endpoint_url=R2_ENDPOINT,
-            aws_access_key_id=R2_ACCESS_KEY,
-            aws_secret_access_key=R2_SECRET_KEY,
-            config=Config(signature_version='s3v4'),
-            region_name='auto'  # R2 uses 'auto' region
-        )
-        logger.info(f"S3 client initialized for R2: {R2_ENDPOINT}")
+        try:
+            s3_client = boto3.client(
+                's3',
+                endpoint_url=R2_ENDPOINT,
+                aws_access_key_id=R2_ACCESS_KEY,
+                aws_secret_access_key=R2_SECRET_KEY,
+                config=Config(signature_version='s3v4'),
+                region_name='auto'  # R2 uses 'auto' region
+            )
+            logger.info(f"✅ S3 client initialized successfully for R2: {R2_ENDPOINT}")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize S3 client: {e}")
+            raise
 
     return s3_client
 
@@ -69,10 +85,15 @@ def upload_file(file_data: bytes, file_key: str, content_type: str = 'applicatio
         return True
 
     except ClientError as e:
-        logger.error(f"Error uploading to R2: {e}")
+        error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+        error_message = e.response.get('Error', {}).get('Message', str(e))
+        logger.error(f"R2 ClientError uploading '{file_key}': {error_code} - {error_message}")
+        logger.error(f"Full error: {e}")
         return False
     except Exception as e:
-        logger.error(f"Unexpected error uploading to R2: {e}")
+        logger.error(f"Unexpected error uploading to R2 '{file_key}': {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 
