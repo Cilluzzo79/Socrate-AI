@@ -352,27 +352,28 @@ def upload_document():
         filename = file.filename
         mime_type = file.mimetype
 
-        # Create user storage directory
-        user_storage = Path(STORAGE_PATH) / user_id
-        user_storage.mkdir(parents=True, exist_ok=True)
-
         # Generate unique document ID
         import uuid
         doc_id = str(uuid.uuid4())
-        doc_storage = user_storage / doc_id
-        doc_storage.mkdir(exist_ok=True)
 
-        # Save file
-        file_path = doc_storage / filename
-        with open(file_path, 'wb') as f:
-            f.write(file_content)
+        # Upload to R2
+        from core.s3_storage import upload_file, generate_file_key
+
+        file_key = generate_file_key(user_id, doc_id, filename)
+        upload_success = upload_file(file_content, file_key, mime_type)
+
+        if not upload_success:
+            logger.error(f"Failed to upload file to R2: {filename}")
+            return jsonify({'error': 'Upload to cloud storage failed'}), 500
+
+        logger.info(f"File uploaded to R2: {file_key}")
 
         # Create document record
         doc = create_document(
             user_id=user_id,
             filename=filename,
             original_filename=filename,
-            file_path=str(file_path),
+            file_path=file_key,  # Store R2 key instead of local path
             file_size=file_size,
             mime_type=mime_type
         )

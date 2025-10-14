@@ -65,23 +65,38 @@ def process_document_task(self, document_id: str, user_id: str):
             meta={'status': 'Reading file', 'progress': 10}
         )
 
-        # 2. Verify file exists
-        if not os.path.exists(doc.file_path):
-            logger.error(f"File not found: {doc.file_path}")
+        # 2. Download file from R2
+        from core.s3_storage import download_file
+
+        logger.info(f"Downloading file from R2: {doc.file_path}")
+        file_data = download_file(doc.file_path)  # file_path contains R2 key
+
+        if not file_data:
+            logger.error(f"File not found in R2: {doc.file_path}")
             update_document_status(
                 document_id,
                 user_id,
                 status='failed',
-                error_message='File not found on disk'
+                error_message='File not found in cloud storage'
             )
             return {
                 'success': False,
-                'error': 'File not found on disk'
+                'error': 'File not found in cloud storage'
             }
 
-        # 3. Prepare output directory
-        output_dir = os.path.dirname(doc.file_path)
-        base_name = os.path.splitext(os.path.basename(doc.file_path))[0]
+        # 3. Save temporarily for processing
+        import tempfile
+        temp_dir = tempfile.mkdtemp()
+        temp_file_path = os.path.join(temp_dir, doc.filename)
+
+        with open(temp_file_path, 'wb') as f:
+            f.write(file_data)
+
+        logger.info(f"File downloaded to temp: {temp_file_path}")
+
+        # 4. Prepare output directory (use temp dir)
+        output_dir = temp_dir
+        base_name = os.path.splitext(doc.filename)[0]
 
         logger.info(f"Output directory: {output_dir}")
 
@@ -91,7 +106,7 @@ def process_document_task(self, document_id: str, user_id: str):
             meta={'status': 'Running memvid encoder', 'progress': 20}
         )
 
-        # 4. Run memvid encoder
+        # 5. Run memvid encoder
         try:
             # Add memvidBeta to path
             memvid_beta_path = Path(__file__).parent / 'memvidBeta' / 'encoder_app'
@@ -103,7 +118,7 @@ def process_document_task(self, document_id: str, user_id: str):
 
             # Process with memvid encoder (JSON only for faster processing)
             success = process_file_in_sections(
-                file_path=doc.file_path,
+                file_path=temp_file_path,  # Use temp file path
                 chunk_size=1200,
                 overlap=200,
                 output_format='json',  # JSON only, no video
@@ -224,6 +239,14 @@ def process_document_task(self, document_id: str, user_id: str):
         )
 
         logger.info(f"Document processing completed: {document_id}")
+
+        # 8. Cleanup temporary files
+        try:
+            import shutil
+            shutil.rmtree(temp_dir)
+            logger.info(f"Temporary files cleaned up: {temp_dir}")
+        except Exception as e:
+            logger.warning(f"Error cleaning temp files: {e}")
 
         return {
             'success': True,
