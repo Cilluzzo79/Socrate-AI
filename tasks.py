@@ -103,7 +103,31 @@ def process_document_task(self, document_id: str, user_id: str):
         # Update task state
         self.update_state(
             state='PROCESSING',
-            meta={'status': 'Running memvid encoder', 'progress': 20}
+            meta={'status': 'Calculating optimal configuration', 'progress': 15}
+        )
+
+        # 4.5. Calculate optimal chunk configuration based on document size
+        page_count = count_document_pages(temp_file_path)
+        logger.info(f"Document has {page_count} pages")
+
+        # Get user tier (default to 'free' for now - TODO: get from user model)
+        user_tier = 'free'  # TODO: Retrieve from user.subscription_tier
+
+        # Calculate optimal configuration
+        optimal_config = calculate_optimal_config(page_count, user_tier)
+
+        logger.info(f"Using optimal config: {optimal_config}")
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={
+                'status': 'Running memvid encoder',
+                'progress': 20,
+                'page_count': page_count,
+                'chunk_size': optimal_config['chunk_size'],
+                'overlap': optimal_config['overlap']
+            }
         )
 
         # 5. Run memvid encoder
@@ -116,14 +140,14 @@ def process_document_task(self, document_id: str, user_id: str):
 
             logger.info("Starting memvid encoder...")
 
-            # Process with memvid encoder (JSON only for faster processing)
+            # Process with memvid encoder using optimal configuration
             success = process_file_in_sections(
-                file_path=temp_file_path,  # Use temp file path
-                chunk_size=1200,
-                overlap=200,
+                file_path=temp_file_path,
+                chunk_size=optimal_config['chunk_size'],
+                overlap=optimal_config['overlap'],
                 output_format='json',  # JSON only, no video
                 max_pages=None,  # Process all pages
-                max_chunks=None  # No chunk limit
+                max_chunks=optimal_config['max_chunks']
             )
 
             if not success:
@@ -233,8 +257,12 @@ def process_document_task(self, document_id: str, user_id: str):
                 'index_file': index_file if os.path.exists(index_file) else None,
                 'processed_at': datetime.utcnow().isoformat(),
                 'encoder_version': 'memvid_sections',
-                'chunk_size': 1200,
-                'overlap': 200
+                'page_count': optimal_config['page_count'],
+                'chunk_size': optimal_config['chunk_size'],
+                'overlap': optimal_config['overlap'],
+                'max_chunks': optimal_config['max_chunks'],
+                'strategy': optimal_config['strategy'],
+                'user_tier': optimal_config['tier']
             }
         )
 
@@ -292,6 +320,119 @@ def cleanup_old_documents():
     # - Archive old sessions
 
     return {'cleaned': 0}
+
+
+def count_document_pages(file_path: str) -> int:
+    """
+    Count pages in a document
+
+    Args:
+        file_path: Path to document file
+
+    Returns:
+        int: Number of pages (for PDFs) or estimated pages (for text files)
+    """
+    file_extension = os.path.splitext(file_path)[1].lower()
+
+    # PDF files - count actual pages
+    if file_extension == '.pdf':
+        try:
+            import PyPDF2
+            with open(file_path, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                return len(reader.pages)
+        except Exception as e:
+            logger.warning(f"Error counting PDF pages: {e}")
+            # Fallback: estimate based on file size (rough estimate: 50KB per page)
+            file_size = os.path.getsize(file_path)
+            return max(1, file_size // 50000)
+
+    # Text files - estimate pages based on file size
+    # Assume ~3000 characters per page
+    else:
+        try:
+            file_size = os.path.getsize(file_path)
+            return max(1, file_size // 3000)
+        except Exception as e:
+            logger.warning(f"Error estimating pages: {e}")
+            return 50  # Default fallback
+
+
+def calculate_optimal_config(page_count: int, user_tier: str = 'free') -> dict:
+    """
+    Calculate optimal chunk_size and overlap based on document page count
+
+    Strategy:
+    - Small documents (≤50 pages): smaller chunks for precision
+    - Medium documents (51-200 pages): balanced chunks
+    - Large documents (>200 pages): larger chunks for efficiency
+
+    Tier multipliers:
+    - Free: 0.8x (reduced processing)
+    - Pro: 1.0x (standard)
+    - Enterprise: 1.2x (enhanced processing)
+
+    Args:
+        page_count: Number of pages in document
+        user_tier: User subscription tier ('free', 'pro', 'enterprise')
+
+    Returns:
+        dict: Configuration with chunk_size, overlap, max_chunks
+    """
+    logger.info(f"Calculating optimal config for {page_count} pages, tier: {user_tier}")
+
+    # Base configurations by page range
+    if page_count <= 50:
+        # Small documents: precision-focused
+        base_chunk_size = 1000
+        base_overlap = 200
+        max_chunks = None  # No limit for small docs
+
+    elif page_count <= 200:
+        # Medium documents: balanced
+        base_chunk_size = 1500
+        base_overlap = 250
+        max_chunks = None
+
+    else:
+        # Large documents: efficiency-focused
+        base_chunk_size = 2000
+        base_overlap = 300
+        # For very large documents, consider a reasonable limit
+        max_chunks = 10000 if page_count > 500 else None
+
+    # Apply tier multipliers
+    tier_multipliers = {
+        'free': 0.8,      # Free tier: reduced chunk size
+        'pro': 1.0,       # Pro tier: standard
+        'enterprise': 1.2 # Enterprise: enhanced
+    }
+
+    multiplier = tier_multipliers.get(user_tier.lower(), 1.0)
+
+    # Calculate final values
+    chunk_size = int(base_chunk_size * multiplier)
+    overlap = int(base_overlap * multiplier)
+
+    # Ensure overlap is not too large (max 25% of chunk_size)
+    overlap = min(overlap, chunk_size // 4)
+
+    # Ensure minimum values
+    chunk_size = max(800, chunk_size)
+    overlap = max(150, overlap)
+
+    config = {
+        'chunk_size': chunk_size,
+        'overlap': overlap,
+        'max_chunks': max_chunks,
+        'page_count': page_count,
+        'tier': user_tier,
+        'strategy': 'small' if page_count <= 50 else 'medium' if page_count <= 200 else 'large'
+    }
+
+    logger.info(f"Optimal config: chunk_size={chunk_size}, overlap={overlap}, max_chunks={max_chunks}, strategy={config['strategy']}")
+
+    return config
 
 
 def detect_language(text: str) -> str:
