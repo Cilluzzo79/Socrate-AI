@@ -8,19 +8,15 @@ from pathlib import Path
 import sys
 import json
 import time
+import os
 from typing import List, Dict, Any, Optional, Union
 import requests
 
-# Add the project root to the Python path
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Import configuration
-from config.config import (
-    OPENROUTER_API_KEY, 
-    MODEL_NAME, 
-    MAX_TOKENS, 
-    TEMPERATURE
-)
+# Configuration from environment variables
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+MODEL_NAME = os.getenv('MODEL_NAME', 'openai/gpt-5-nano')
+MAX_TOKENS = int(os.getenv('MAX_TOKENS', '1500'))
+TEMPERATURE = float(os.getenv('TEMPERATURE', '0.7'))
 
 # Socrates system prompt with enhanced structural awareness
 SOCRATES_SYSTEM_PROMPT = """
