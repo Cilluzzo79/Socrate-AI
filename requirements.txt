@@ -21,15 +21,15 @@ botocore==1.34.10
 
 # Memvid and its dependencies
 memvid==0.1.3
-faiss-cpu==1.8.0
-sentence-transformers==2.2.2
-numpy==1.24.3
+faiss-cpu>=1.9.0  # Updated for Python 3.11 compatibility
+sentence-transformers>=2.2.2  # Use latest compatible version
+numpy>=1.24.3,<2.0  # Compatible with Python 3.11
 PyPDF2==3.0.1
-Pillow==10.1.0
-opencv-python-headless==4.8.1.78
+Pillow>=10.1.0
+opencv-python-headless>=4.8.1.78
 python-dotenv==1.0.0
-tqdm==4.66.1
-qrcode==7.4.2
+tqdm>=4.66.1
+qrcode>=7.4.2
 
 # Optional (for Gradio interface - not used in production)
 # gradio>=4.0.0
