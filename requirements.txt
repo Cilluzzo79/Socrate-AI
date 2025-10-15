@@ -1,3 +1,7 @@
+# Build tools (needed for Python 3.12+)
+setuptools>=65.0.0
+wheel
+
 # Core dependencies for Flask API
 Flask==3.0.0
 Werkzeug==3.0.1
