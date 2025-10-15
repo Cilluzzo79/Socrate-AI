@@ -93,16 +93,17 @@ class OpenRouterClient:
     def __init__(self, api_key: str = None, model: str = None):
         """
         Initialize the OpenRouter client.
-        
+
         Args:
             api_key: API key for OpenRouter (defaults to config)
             model: Model to use (defaults to config)
         """
         self.api_key = api_key or OPENROUTER_API_KEY
-        # Use the correct model name as specified
-        self.model = "anthropic/claude-3.7-sonnet"
+        # Changed to GPT-5 Nano for cost optimization
+        # Previous: Claude 3.7 Sonnet (Input: $3.00/1M, Output: $15.00/1M)
+        self.model = model or "openai/gpt-5-nano"
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
-        
+
         if not self.api_key:
             raise ValueError("OpenRouter API key is required")
     
