@@ -5,13 +5,22 @@
 
 ## 🎯 DOVE SIAMO ADESSO
 
-### Deployment Status
-- ✅ **Railway Deploy**: Completato (15 ottobre mattina)
+### Deployment Status (Aggiornato: 15 Ottobre 2025 - Pomeriggio)
+- ✅ **Railway Deploy**: Risolti 5 problemi critici (vedi TROUBLESHOOTING_DEPLOYMENT_15_OTT.md)
 - ✅ **URL Produzione**: https://web-production-38b1c.up.railway.app/
 - ✅ **Servizi Attivi**: Web Service + Worker Service + PostgreSQL + Redis
-- ✅ **Cloudflare R2**: Configurato (bucket: socrate-ai-storage)
+- ✅ **Cloudflare R2**: Configurato e funzionante (bucket: socrate-ai-storage)
 - ✅ **Telegram Auth**: Configurato (@SocrateAIBot)
-- 🧪 **Test Upload**: DA FARE (prossimo step)
+- ✅ **Upload File**: Funziona (file arrivano su R2)
+- 🔄 **Worker Processing**: Build in corso (fix faiss-cpu applicato)
+- 🧪 **Test End-to-End**: IN ATTESA (dopo build Worker completato)
+
+### Problemi Risolti Oggi (15 Ottobre)
+1. ✅ **nixpacks.toml**: Errore "externally-managed-environment" risolto
+2. ✅ **Celery**: Import circolare risolto, task ora registrati
+3. ✅ **memvid_sections.py**: Reso memvid opzionale (nessun crash)
+4. ✅ **requirements.txt**: faiss-cpu aggiornato per Python 3.11
+5. ✅ **Documentazione**: Report troubleshooting creato
 
 ### Configurazione Completata
 - ✅ Variabili d'ambiente Railway (8 variabili)
@@ -19,6 +28,7 @@
 - ✅ Database PostgreSQL (schema creato)
 - ✅ Redis queue per Celery
 - ✅ GitHub repo: https://github.com/Cilluzzo79/Socrate-AI.git
+- ✅ Python 3.11 forzato su Railway (nixpacks.toml)
 
 ---
 
@@ -176,21 +186,49 @@ D:\railway\memvid\
 
 ## 🐛 PROBLEMI NOTI E SOLUZIONI
 
-### Upload R2 fallisce con "NoSuchBucket"
+### ✅ RISOLTI (15 Ottobre 2025)
+
+#### nixpacks Build Error
+**Errore**: `externally-managed-environment`
+**Soluzione**: Semplificato `nixpacks.toml`, rimossi comandi pip manuali
+**Commit**: `0a23215`
+
+#### Celery Tasks Non Registrati
+**Errore**: `[Celery] Registered tasks: []`
+**Soluzione**: Rimosso import circolare in `celery_config.py`
+**Commit**: `de303c5`
+
+#### Worker Crash "memvid non installato"
+**Errore**: `Process exited with exitcode 1`
+**Soluzione**: Reso memvid opzionale in `memvid_sections.py`
+**Commit**: `a8207f7`
+
+#### faiss-cpu Version Error
+**Errore**: `Could not find version faiss-cpu==1.8.0`
+**Soluzione**: Aggiornato a `faiss-cpu>=1.9.0` in `requirements.txt`
+**Commit**: `b639569`
+
+**📄 Report Completo**: Vedi `TROUBLESHOOTING_DEPLOYMENT_15_OTT.md`
+
+---
+
+### 🔧 PROBLEMI POSSIBILI (DA MONITORARE)
+
+#### Upload R2 fallisce con "NoSuchBucket"
 **Soluzione**: Verificare variabili d'ambiente su Railway:
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 - `R2_ENDPOINT_URL` (deve essere quello specifico account)
 - `R2_BUCKET_NAME=socrate-ai-storage`
 
-### Worker non processa task
+#### Worker non processa task
 **Sintomo**: Documento resta in "processing" per sempre
 **Debug**:
 1. Controllare logs Worker Service
 2. Verificare Redis connesso: `redis.railway.internal:6379`
 3. Controllare task in coda: logs Celery
 
-### Database UUID error (SQLite vs PostgreSQL)
+#### Database UUID error (SQLite vs PostgreSQL)
 **Soluzione**: Usare classe `GUID` in `database.py` (già implementato)
 
 ---
@@ -240,5 +278,7 @@ R2_BUCKET_NAME=socrate-ai-storage
 
 ---
 
-**Ultima sessione**: 15 ottobre 2025 (dopo riavvio PC)
-**Prossimo obiettivo**: Test upload file su produzione
+**Ultima sessione**: 15 ottobre 2025 (pomeriggio - troubleshooting deployment)
+**Prossimo obiettivo**: Test upload end-to-end + verifica processing completo
+**Problemi risolti**: 5/5 (nixpacks, celery, memvid, faiss-cpu, documentazione)
+**Status build**: Worker in redeploy (fix faiss-cpu in corso)
