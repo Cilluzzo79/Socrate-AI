@@ -238,6 +238,30 @@ def process_document_task(self, document_id: str, user_id: str):
         # Update task state
         self.update_state(
             state='PROCESSING',
+            meta={'status': 'Uploading metadata to cloud', 'progress': 85}
+        )
+
+        # 6.5. Upload metadata JSON to R2 for persistence
+        from core.s3_storage import upload_file
+
+        metadata_r2_key = f"users/{user_id}/documents/{document_id}/metadata.json"
+
+        try:
+            with open(metadata_file, 'rb') as f:
+                metadata_content = f.read()
+
+            upload_success = upload_file(metadata_content, metadata_r2_key, 'application/json')
+
+            if not upload_success:
+                logger.warning("Failed to upload metadata to R2, but continuing...")
+                metadata_r2_key = None
+        except Exception as e:
+            logger.warning(f"Error uploading metadata to R2: {e}")
+            metadata_r2_key = None
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
             meta={'status': 'Finalizing', 'progress': 90}
         )
 
@@ -253,7 +277,8 @@ def process_document_task(self, document_id: str, user_id: str):
             total_tokens=total_tokens,
             language=language,
             doc_metadata={
-                'metadata_file': metadata_file,
+                'metadata_r2_key': metadata_r2_key,  # R2 key instead of local path
+                'metadata_file': metadata_file,  # Keep for backwards compatibility
                 'index_file': index_file if os.path.exists(index_file) else None,
                 'processed_at': datetime.utcnow().isoformat(),
                 'encoder_version': 'memvid_sections',

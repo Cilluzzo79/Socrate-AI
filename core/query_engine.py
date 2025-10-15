@@ -39,25 +39,39 @@ class SimpleQueryEngine:
         else:
             self.model = None
 
-    def load_document_metadata(self, metadata_file: str) -> Optional[Dict[str, Any]]:
+    def load_document_metadata(self, metadata_source: str, is_r2_key: bool = False) -> Optional[Dict[str, Any]]:
         """
-        Load document metadata from JSON file
+        Load document metadata from JSON file or R2
 
         Args:
-            metadata_file: Path to metadata JSON file
+            metadata_source: Path to metadata JSON file or R2 key
+            is_r2_key: True if metadata_source is an R2 key, False if local path
 
         Returns:
             Metadata dict or None if error
         """
         try:
-            with open(metadata_file, 'r', encoding='utf-8') as f:
-                metadata = json.load(f)
+            if is_r2_key:
+                # Download from R2
+                from core.s3_storage import download_file
+                logger.info(f"Downloading metadata from R2: {metadata_source}")
+
+                metadata_bytes = download_file(metadata_source)
+                if not metadata_bytes:
+                    logger.error(f"Failed to download metadata from R2: {metadata_source}")
+                    return None
+
+                metadata = json.loads(metadata_bytes.decode('utf-8'))
+            else:
+                # Load from local file
+                with open(metadata_source, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
 
             logger.info(f"Loaded metadata: {metadata.get('chunks_count', 0)} chunks")
             return metadata
 
         except Exception as e:
-            logger.error(f"Error loading metadata from {metadata_file}: {e}")
+            logger.error(f"Error loading metadata from {metadata_source}: {e}")
             return None
 
     def find_relevant_chunks(
@@ -157,7 +171,8 @@ class SimpleQueryEngine:
     def query_document(
         self,
         query: str,
-        metadata_file: str,
+        metadata_file: str = None,
+        metadata_r2_key: str = None,
         top_k: int = 3,
         max_tokens: int = 500,
         temperature: float = 0.7,
@@ -168,7 +183,8 @@ class SimpleQueryEngine:
 
         Args:
             query: User's question
-            metadata_file: Path to document metadata JSON
+            metadata_file: Path to document metadata JSON (local)
+            metadata_r2_key: R2 key for metadata JSON (cloud)
             top_k: Number of chunks to retrieve
             max_tokens: Max tokens in LLM response
             temperature: LLM temperature
@@ -188,8 +204,19 @@ class SimpleQueryEngine:
 
         logger.info(f"Processing query (tier: {user_tier}, top_k: {top_k}): {query}")
 
-        # Load document metadata
-        metadata = self.load_document_metadata(metadata_file)
+        # Load document metadata (prefer R2, fallback to local)
+        if metadata_r2_key:
+            metadata = self.load_document_metadata(metadata_r2_key, is_r2_key=True)
+        elif metadata_file:
+            metadata = self.load_document_metadata(metadata_file, is_r2_key=False)
+        else:
+            logger.error("No metadata source provided (neither R2 key nor local file)")
+            return {
+                'success': False,
+                'answer': 'Configurazione documento non valida',
+                'sources': [],
+                'metadata': {'error': 'no_metadata_source'}
+            }
         if not metadata:
             return {
                 'success': False,

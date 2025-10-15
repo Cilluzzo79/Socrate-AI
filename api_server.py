@@ -478,11 +478,12 @@ def custom_query():
     )
 
     try:
-        # Get metadata file path from document
+        # Get metadata source from document (prefer R2, fallback to local path)
+        metadata_r2_key = doc.doc_metadata.get('metadata_r2_key') if doc.doc_metadata else None
         metadata_file = doc.doc_metadata.get('metadata_file') if doc.doc_metadata else None
 
-        if not metadata_file:
-            logger.error(f"No metadata_file in document {document_id}")
+        if not metadata_r2_key and not metadata_file:
+            logger.error(f"No metadata source in document {document_id}")
             return jsonify({
                 'error': 'Document metadata not found',
                 'help': 'Document may need to be reprocessed'
@@ -494,6 +495,7 @@ def custom_query():
         result = query_document(
             query=query,
             metadata_file=metadata_file,
+            metadata_r2_key=metadata_r2_key,
             top_k=top_k,
             user_tier=user_tier
         )
