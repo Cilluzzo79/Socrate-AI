@@ -1,0 +1,323 @@
+"""
+Query Engine for Document Q&A
+Uses metadata JSON from memvid processing + sentence-transformers for retrieval
+"""
+
+import os
+import json
+import logging
+from typing import List, Dict, Any, Optional
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+# Try to import sentence-transformers for embeddings
+try:
+    from sentence_transformers import SentenceTransformer
+    import numpy as np
+    EMBEDDINGS_AVAILABLE = True
+    logger.info("✅ sentence-transformers available")
+except ImportError:
+    EMBEDDINGS_AVAILABLE = False
+    logger.warning("⚠️ sentence-transformers not available - using simple keyword matching")
+
+# Import LLM client
+from core.llm_client import generate_chat_response
+
+
+class SimpleQueryEngine:
+    """
+    Simple query engine using metadata JSON and embeddings
+    """
+
+    def __init__(self):
+        """Initialize query engine with embedding model"""
+        if EMBEDDINGS_AVAILABLE:
+            # Use lightweight model for speed
+            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            logger.info("Embedding model loaded: all-MiniLM-L6-v2")
+        else:
+            self.model = None
+
+    def load_document_metadata(self, metadata_file: str) -> Optional[Dict[str, Any]]:
+        """
+        Load document metadata from JSON file
+
+        Args:
+            metadata_file: Path to metadata JSON file
+
+        Returns:
+            Metadata dict or None if error
+        """
+        try:
+            with open(metadata_file, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+
+            logger.info(f"Loaded metadata: {metadata.get('chunks_count', 0)} chunks")
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Error loading metadata from {metadata_file}: {e}")
+            return None
+
+    def find_relevant_chunks(
+        self,
+        query: str,
+        chunks: List[Dict[str, Any]],
+        top_k: int = 3
+    ) -> List[Dict[str, Any]]:
+        """
+        Find most relevant chunks for a query
+
+        Args:
+            query: User query
+            chunks: List of chunk dictionaries
+            top_k: Number of chunks to return
+
+        Returns:
+            List of most relevant chunks with scores
+        """
+
+        if not chunks:
+            return []
+
+        # If embeddings not available, use simple keyword matching
+        if not EMBEDDINGS_AVAILABLE or self.model is None:
+            return self._keyword_matching(query, chunks, top_k)
+
+        try:
+            # Encode query
+            query_embedding = self.model.encode(query, convert_to_tensor=False)
+
+            # Encode all chunks
+            chunk_texts = [chunk['text'] for chunk in chunks]
+            chunk_embeddings = self.model.encode(chunk_texts, convert_to_tensor=False)
+
+            # Calculate cosine similarity
+            similarities = np.dot(chunk_embeddings, query_embedding) / (
+                np.linalg.norm(chunk_embeddings, axis=1) * np.linalg.norm(query_embedding)
+            )
+
+            # Get top-k indices
+            top_indices = np.argsort(similarities)[-top_k:][::-1]
+
+            # Build results
+            results = []
+            for idx in top_indices:
+                chunk = chunks[idx].copy()
+                chunk['similarity_score'] = float(similarities[idx])
+                results.append(chunk)
+
+            logger.info(f"Found {len(results)} relevant chunks (scores: {[r['similarity_score'] for r in results]})")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in embedding-based retrieval: {e}")
+            # Fallback to keyword matching
+            return self._keyword_matching(query, chunks, top_k)
+
+    def _keyword_matching(
+        self,
+        query: str,
+        chunks: List[Dict[str, Any]],
+        top_k: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Simple keyword-based chunk matching (fallback)
+
+        Args:
+            query: User query
+            chunks: List of chunks
+            top_k: Number to return
+
+        Returns:
+            Top matching chunks
+        """
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+
+        # Score each chunk by keyword overlap
+        scored_chunks = []
+        for chunk in chunks:
+            text_lower = chunk['text'].lower()
+            chunk_words = set(text_lower.split())
+
+            # Simple overlap score
+            overlap = len(query_words & chunk_words)
+
+            chunk_copy = chunk.copy()
+            chunk_copy['similarity_score'] = overlap
+            scored_chunks.append(chunk_copy)
+
+        # Sort by score and return top-k
+        scored_chunks.sort(key=lambda x: x['similarity_score'], reverse=True)
+
+        return scored_chunks[:top_k]
+
+    def query_document(
+        self,
+        query: str,
+        metadata_file: str,
+        top_k: int = 3,
+        max_tokens: int = 500,
+        temperature: float = 0.7,
+        user_tier: str = 'free'
+    ) -> Dict[str, Any]:
+        """
+        Query a document using RAG pipeline
+
+        Args:
+            query: User's question
+            metadata_file: Path to document metadata JSON
+            top_k: Number of chunks to retrieve
+            max_tokens: Max tokens in LLM response
+            temperature: LLM temperature
+            user_tier: User subscription tier (affects limits)
+
+        Returns:
+            Dict with answer, sources, and metadata
+        """
+
+        # Adjust top_k based on tier
+        tier_limits = {
+            'free': 3,
+            'pro': 5,
+            'enterprise': 10
+        }
+        top_k = min(top_k, tier_limits.get(user_tier, 3))
+
+        logger.info(f"Processing query (tier: {user_tier}, top_k: {top_k}): {query}")
+
+        # Load document metadata
+        metadata = self.load_document_metadata(metadata_file)
+        if not metadata:
+            return {
+                'success': False,
+                'answer': 'Impossibile caricare i metadati del documento',
+                'sources': [],
+                'metadata': {'error': 'metadata_load_failed'}
+            }
+
+        # Get chunks
+        chunks = metadata.get('chunks', [])
+        if not chunks:
+            return {
+                'success': False,
+                'answer': 'Documento senza contenuto processato',
+                'sources': [],
+                'metadata': {'error': 'no_chunks'}
+            }
+
+        # Find relevant chunks
+        relevant_chunks = self.find_relevant_chunks(query, chunks, top_k)
+
+        if not relevant_chunks:
+            return {
+                'success': False,
+                'answer': 'Nessun contenuto rilevante trovato nel documento',
+                'sources': [],
+                'metadata': {'error': 'no_relevant_chunks'}
+            }
+
+        # Build context from relevant chunks
+        context_parts = []
+        sources = []
+
+        for i, chunk in enumerate(relevant_chunks):
+            chunk_metadata = chunk.get('metadata', {})
+            page = chunk_metadata.get('page', '?')
+            section = chunk_metadata.get('section', '?')
+
+            context_parts.append(
+                f"[Chunk {i+1} - Pagina {page}, Sezione {section}]\n{chunk['text']}\n"
+            )
+
+            sources.append({
+                'chunk_index': chunk_metadata.get('index', i),
+                'page': page,
+                'section': section,
+                'similarity_score': chunk.get('similarity_score', 0),
+                'preview': chunk['text'][:200] + '...' if len(chunk['text']) > 200 else chunk['text']
+            })
+
+        context = "\n\n".join(context_parts)
+
+        logger.info(f"Built context from {len(relevant_chunks)} chunks ({len(context)} chars)")
+
+        # Call LLM
+        try:
+            llm_response = generate_chat_response(
+                query=query,
+                context=context,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                document_metadata={
+                    'file': metadata.get('file'),
+                    'chunks_count': metadata.get('chunks_count'),
+                    'sections_count': metadata.get('sections_count')
+                }
+            )
+
+            # Extract usage info for cost tracking
+            usage = llm_response.get('metadata', {}).get('usage', {})
+
+            return {
+                'success': True,
+                'answer': llm_response.get('text', 'Errore nella generazione della risposta'),
+                'sources': sources,
+                'metadata': {
+                    'chunks_retrieved': len(relevant_chunks),
+                    'context_length': len(context),
+                    'model': llm_response.get('metadata', {}).get('model', 'unknown'),
+                    'input_tokens': usage.get('prompt_tokens', 0),
+                    'output_tokens': usage.get('completion_tokens', 0),
+                    'total_tokens': usage.get('total_tokens', 0),
+                    'finish_reason': llm_response.get('metadata', {}).get('finish_reason')
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error calling LLM: {e}", exc_info=True)
+            return {
+                'success': False,
+                'answer': f'Errore nella generazione della risposta: {str(e)}',
+                'sources': sources,
+                'metadata': {
+                    'error': str(e),
+                    'chunks_retrieved': len(relevant_chunks)
+                }
+            }
+
+
+# Create global instance
+query_engine = SimpleQueryEngine()
+
+
+# Helper function for easy use
+def query_document(
+    query: str,
+    metadata_file: str,
+    top_k: int = 3,
+    user_tier: str = 'free',
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    Convenience function to query a document
+
+    Args:
+        query: User question
+        metadata_file: Path to metadata JSON
+        top_k: Number of chunks to retrieve
+        user_tier: User subscription tier
+        **kwargs: Additional parameters for query_document
+
+    Returns:
+        Query result dict
+    """
+    return query_engine.query_document(
+        query=query,
+        metadata_file=metadata_file,
+        top_k=top_k,
+        user_tier=user_tier,
+        **kwargs
+    )

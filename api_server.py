@@ -443,15 +443,15 @@ def delete_document_endpoint(document_id: str):
 @require_auth
 def custom_query():
     """
-    Custom query endpoint
-    Body: { "document_id": "...", "query": "...", "command_type": "quiz|summary|..." }
+    Custom query endpoint with RAG pipeline
+    Body: { "document_id": "...", "query": "...", "top_k": 3 }
     """
     user_id = get_current_user_id()
     data = request.json
 
     document_id = data.get('document_id')
     query = data.get('query')
-    command_type = data.get('command_type', 'query')
+    top_k = data.get('top_k', 3)
 
     if not document_id or not query:
         return jsonify({'error': 'document_id and query required'}), 400
@@ -464,34 +464,105 @@ def custom_query():
     if doc.status != 'ready':
         return jsonify({'error': f'Document not ready (status: {doc.status})'}), 400
 
+    # Get user for tier info
+    user = get_user_by_id(user_id)
+    user_tier = user.subscription_tier if user else 'free'
+
     # Create chat session
     chat_session = create_chat_session(
         user_id=user_id,
         document_id=document_id,
-        command_type=command_type,
-        request_data={'query': query},
+        command_type='query',
+        request_data={'query': query, 'top_k': top_k},
         channel='web_app'
     )
 
-    # TODO: Integrate with memvid RAG pipeline
-    # For now, return placeholder
-    response = {
-        'answer': f"[TODO] Process query: {query} for document {doc.filename}",
-        'sources': []
+    try:
+        # Get metadata file path from document
+        metadata_file = doc.doc_metadata.get('metadata_file') if doc.doc_metadata else None
+
+        if not metadata_file:
+            logger.error(f"No metadata_file in document {document_id}")
+            return jsonify({
+                'error': 'Document metadata not found',
+                'help': 'Document may need to be reprocessed'
+            }), 500
+
+        # Process query using RAG pipeline
+        from core.query_engine import query_document
+
+        result = query_document(
+            query=query,
+            metadata_file=metadata_file,
+            top_k=top_k,
+            user_tier=user_tier
+        )
+
+        # Update session with response
+        update_chat_session(
+            session_id=str(chat_session.id),
+            response_data={'answer': result['answer'], 'sources': result.get('sources', [])},
+            success=result['success'],
+            input_tokens=result.get('metadata', {}).get('input_tokens'),
+            output_tokens=result.get('metadata', {}).get('output_tokens'),
+            cost_usd=calculate_cost(
+                result.get('metadata', {}).get('input_tokens', 0),
+                result.get('metadata', {}).get('output_tokens', 0),
+                'gpt-5-nano'
+            ),
+            model_used=result.get('metadata', {}).get('model', 'gpt-5-nano')
+        )
+
+        return jsonify({
+            'success': result['success'],
+            'session_id': str(chat_session.id),
+            'answer': result['answer'],
+            'sources': result.get('sources', []),
+            'metadata': result.get('metadata', {})
+        })
+
+    except Exception as e:
+        logger.error(f"Error processing query: {e}", exc_info=True)
+
+        # Update session with error
+        update_chat_session(
+            session_id=str(chat_session.id),
+            response_data={'error': str(e)},
+            success=False
+        )
+
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'session_id': str(chat_session.id)
+        }), 500
+
+
+def calculate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
+    """
+    Calculate cost for a query based on token usage
+
+    Args:
+        input_tokens: Number of input tokens
+        output_tokens: Number of output tokens
+        model: Model name
+
+    Returns:
+        Cost in USD
+    """
+    # Pricing per million tokens (update as needed)
+    pricing = {
+        'gpt-5-nano': {'input': 0.10, 'output': 0.30},  # Placeholder - update with real pricing
+        'gpt-4o-mini': {'input': 0.15, 'output': 0.60},
+        'gpt-4o': {'input': 2.50, 'output': 10.00}
     }
 
-    # Update session with response
-    update_chat_session(
-        session_id=str(chat_session.id),
-        response_data=response,
-        success=True
-    )
+    model_pricing = pricing.get(model, pricing['gpt-4o-mini'])
 
-    return jsonify({
-        'success': True,
-        'session_id': str(chat_session.id),
-        **response
-    })
+    cost_input = (input_tokens / 1_000_000) * model_pricing['input']
+    cost_output = (output_tokens / 1_000_000) * model_pricing['output']
+
+    return cost_input + cost_output
 
 
 # ============================================================================
