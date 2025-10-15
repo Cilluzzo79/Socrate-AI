@@ -17,22 +17,6 @@ celery_app = Celery(
     include=['tasks']  # IMPORTANT: Tell Celery to include tasks module
 )
 
-# Manually import tasks to catch any errors and verify registration
-try:
-    import tasks
-    print(f"[Celery] Successfully imported tasks module")
-
-    # Show registered Celery tasks (not just module attributes)
-    registered_tasks = [name for name in celery_app.tasks.keys() if not name.startswith('celery.')]
-    print(f"[Celery] Registered tasks: {registered_tasks}")
-
-    if not registered_tasks:
-        print(f"[Celery] WARNING: No tasks registered! Check task decorators.")
-except Exception as e:
-    print(f"[Celery] ERROR importing tasks: {e}")
-    import traceback
-    traceback.print_exc()
-
 # Celery configuration
 celery_app.conf.update(
     # Task settings
