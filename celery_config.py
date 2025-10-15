@@ -17,6 +17,17 @@ celery_app = Celery(
     include=['tasks']  # IMPORTANT: Tell Celery to include tasks module
 )
 
+# Debug: Force import tasks and show what's registered
+print("[Celery Config] Attempting to import tasks module...")
+try:
+    from tasks import process_document_task, cleanup_old_documents
+    print(f"[Celery Config] ✅ Tasks imported successfully")
+    print(f"[Celery Config] Available task functions: process_document_task, cleanup_old_documents")
+except ImportError as e:
+    print(f"[Celery Config] ❌ Failed to import tasks: {e}")
+    import traceback
+    traceback.print_exc()
+
 # Celery configuration
 celery_app.conf.update(
     # Task settings
