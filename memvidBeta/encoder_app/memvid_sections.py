@@ -19,12 +19,14 @@ activity_timestamp = time.time()
 current_activity = "Inizializzazione"
 last_positions = []  # Per rilevare loop di posizione
 
-# Verifica se memvid è installato
+# Verifica se memvid è installato (solo per output video)
+# Per JSON-only mode, memvid non è necessario
 try:
     from memvid import MemvidEncoder
+    MEMVID_AVAILABLE = True
 except ImportError:
-    print("ERRORE: memvid non è installato. Installalo con 'pip install memvid'")
-    sys.exit(1)
+    MEMVID_AVAILABLE = False
+    print("⚠️ memvid non disponibile - solo output JSON sarà supportato")
 
 # Funzione per aggiornare l'attività corrente
 def update_activity(activity):
@@ -544,9 +546,14 @@ def process_file_in_sections(file_path, chunk_size, overlap, output_format="mp4"
             return True
         
         # Altrimenti, crea il video Memvid
+        if not MEMVID_AVAILABLE:
+            print("❌ memvid non disponibile - impossibile generare video MP4")
+            print("✅ File JSON generato con successo")
+            return True
+
         output_video = os.path.join(output_dir, f"{base_name}_sections.mp4")
         output_index = os.path.join(output_dir, f"{base_name}_sections_index.json")
-        
+
         # Crea l'encoder
         update_activity("Creazione dell'encoder Memvid...")
         print("Creazione dell'encoder Memvid...")
