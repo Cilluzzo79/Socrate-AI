@@ -182,10 +182,13 @@ class SimpleQueryEngine:
         query: str,
         metadata_file: str = None,
         metadata_r2_key: str = None,
+        embeddings_r2_key: str = None,
+        faiss_r2_key: str = None,
         top_k: int = 3,
         max_tokens: int = 500,
         temperature: float = 0.7,
-        user_tier: str = 'free'
+        user_tier: str = 'free',
+        query_type: str = 'simple'
     ) -> Dict[str, Any]:
         """
         Query a document using RAG pipeline
@@ -203,15 +206,18 @@ class SimpleQueryEngine:
             Dict with answer, sources, and metadata
         """
 
-        # Adjust top_k based on tier
+        # Adjust top_k based on tier AND query type
         tier_limits = {
-            'free': 3,
-            'pro': 5,
-            'enterprise': 10
+            'free': {'simple': 5, 'summary': 20, 'analysis': 30},
+            'pro': {'simple': 10, 'summary': 50, 'analysis': 100},
+            'enterprise': {'simple': 20, 'summary': 100, 'analysis': 200}
         }
-        top_k = min(top_k, tier_limits.get(user_tier, 3))
 
-        logger.info(f"Processing query (tier: {user_tier}, top_k: {top_k}): {query}")
+        tier_config = tier_limits.get(user_tier, tier_limits['free'])
+        max_chunks = tier_config.get(query_type, tier_config['simple'])
+        top_k = min(top_k, max_chunks)
+
+        logger.info(f"Processing query (tier: {user_tier}, type: {query_type}, top_k: {top_k}): {query}")
 
         # Load document metadata (prefer R2, fallback to local)
         if metadata_r2_key:

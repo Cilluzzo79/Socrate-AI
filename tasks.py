@@ -238,10 +238,50 @@ def process_document_task(self, document_id: str, user_id: str):
         # Update task state
         self.update_state(
             state='PROCESSING',
-            meta={'status': 'Uploading metadata to cloud', 'progress': 85}
+            meta={'status': 'Generating embeddings and index', 'progress': 80}
         )
 
-        # 6.5. Upload metadata JSON to R2 for persistence
+        # 6.5. Generate embeddings and FAISS index for fast retrieval
+        embeddings_r2_key = None
+        faiss_r2_key = None
+
+        try:
+            from core.embedding_generator import generate_and_save_embeddings
+
+            logger.info("Generating embeddings for all chunks...")
+
+            embeddings_file, faiss_file = generate_and_save_embeddings(
+                metadata_file=metadata_file,
+                output_dir=output_dir,
+                document_id=document_id
+            )
+
+            # Upload embeddings and FAISS index to R2
+            from core.s3_storage import upload_file
+
+            if embeddings_file and os.path.exists(embeddings_file):
+                embeddings_r2_key = f"users/{user_id}/documents/{document_id}/embeddings.npy"
+                with open(embeddings_file, 'rb') as f:
+                    upload_file(f.read(), embeddings_r2_key, 'application/octet-stream')
+                logger.info(f"Embeddings uploaded to R2: {embeddings_r2_key}")
+
+            if faiss_file and os.path.exists(faiss_file):
+                faiss_r2_key = f"users/{user_id}/documents/{document_id}/index.faiss"
+                with open(faiss_file, 'rb') as f:
+                    upload_file(f.read(), faiss_r2_key, 'application/octet-stream')
+                logger.info(f"FAISS index uploaded to R2: {faiss_r2_key}")
+
+        except Exception as e:
+            logger.warning(f"Error generating embeddings/index: {e}")
+            logger.warning("Continuing without pre-computed embeddings (will use on-demand)")
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Uploading metadata to cloud', 'progress': 90}
+        )
+
+        # 6.6. Upload metadata JSON to R2 for persistence
         from core.s3_storage import upload_file
 
         metadata_r2_key = f"users/{user_id}/documents/{document_id}/metadata.json"
@@ -277,17 +317,20 @@ def process_document_task(self, document_id: str, user_id: str):
             total_tokens=total_tokens,
             language=language,
             doc_metadata={
-                'metadata_r2_key': metadata_r2_key,  # R2 key instead of local path
+                'metadata_r2_key': metadata_r2_key,  # R2 key for metadata JSON
+                'embeddings_r2_key': embeddings_r2_key,  # R2 key for embeddings
+                'faiss_r2_key': faiss_r2_key,  # R2 key for FAISS index
                 'metadata_file': metadata_file,  # Keep for backwards compatibility
                 'index_file': index_file if os.path.exists(index_file) else None,
                 'processed_at': datetime.utcnow().isoformat(),
-                'encoder_version': 'memvid_sections',
+                'encoder_version': 'memvid_sections_v2',  # Updated version
                 'page_count': optimal_config['page_count'],
                 'chunk_size': optimal_config['chunk_size'],
                 'overlap': optimal_config['overlap'],
                 'max_chunks': optimal_config['max_chunks'],
                 'strategy': optimal_config['strategy'],
-                'user_tier': optimal_config['tier']
+                'user_tier': optimal_config['tier'],
+                'has_precomputed_embeddings': embeddings_r2_key is not None
             }
         )
 
