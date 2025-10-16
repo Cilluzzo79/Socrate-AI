@@ -109,8 +109,7 @@ class Document(Base):
     original_filename = Column(String(255))
     mime_type = Column(String(50))
     file_size = Column(BigInteger)  # bytes
-    file_path = Column(Text)  # /storage/{user_id}/{doc_id}/file.ext (deprecated - use file_data)
-    file_data = Column(LargeBinary)  # Binary file content (for Railway deployment)
+    file_path = Column(Text)  # /storage/{user_id}/{doc_id}/file.ext
 
     # Processing status
     status = Column(String(20), default='processing')  # uploading, processing, ready, failed
