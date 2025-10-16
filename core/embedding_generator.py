@@ -27,8 +27,8 @@ def generate_and_save_embeddings(
     output_dir: str,
     document_id: str,
     model_name: str = 'all-MiniLM-L6-v2',
-    batch_size: int = 16,  # Reduced from 32 to 16 for memory
-    max_chunks_per_batch: int = 100  # Process in smaller groups
+    batch_size: int = 8,  # Very small batches for low memory
+    max_chunks_per_batch: int = 50  # Process in very small groups
 ) -> Tuple[Optional[str], Optional[str]]:
     """
     Generate embeddings for all chunks and create FAISS index
