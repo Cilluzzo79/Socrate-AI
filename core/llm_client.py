@@ -11,12 +11,15 @@ import time
 import os
 from typing import List, Dict, Any, Optional, Union
 import requests
+import logging
 
 # Configuration from environment variables
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-MODEL_NAME = os.getenv('MODEL_NAME', 'openai/gpt-5-nano')
-MAX_TOKENS = int(os.getenv('MAX_TOKENS', '1500'))
+MODEL_NAME = os.getenv('MODEL_NAME', 'anthropic/claude-haiku-4.5')
+MAX_TOKENS = int(os.getenv('MAX_TOKENS', '2048'))
 TEMPERATURE = float(os.getenv('TEMPERATURE', '0.7'))
+
+logger = logging.getLogger(__name__)
 
 # Socrates system prompt with enhanced structural awareness
 SOCRATES_SYSTEM_PROMPT = """
@@ -95,9 +98,10 @@ class OpenRouterClient:
             model: Model to use (defaults to config)
         """
         self.api_key = api_key or OPENROUTER_API_KEY
-        # Changed to GPT-5 Nano for cost optimization
-        # Previous: Claude 3.7 Sonnet (Input: $3.00/1M, Output: $15.00/1M)
-        self.model = model or "openai/gpt-5-nano"
+        # Changed to Claude Haiku 4.5 for better reliability and speed
+        # Claude Haiku: fast, reliable, good balance of cost/performance
+        # Input: ~$0.80/1M, Output: ~$4.00/1M
+        self.model = model or "anthropic/claude-haiku-4.5"
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
 
         if not self.api_key:
@@ -149,32 +153,39 @@ class OpenRouterClient:
             data["presence_penalty"] = presence_penalty
         
         try:
-            # Print the request data for debugging
-            print(f"Sending request to OpenRouter API:\nURL: {self.api_url}\nModel: {self.model}\nMessages: {len(messages)} messages")
-            
+            payload_preview = {
+                "model": self.model,
+                "messages": len(messages),
+                "max_tokens": data["max_tokens"],
+                "temperature": data.get("temperature")
+            }
+            logger.info("Calling OpenRouter API", extra={"payload_preview": payload_preview})
             response = requests.post(self.api_url, headers=headers, json=data)
-            
-            # Print response status for debugging
-            print(f"OpenRouter API response status: {response.status_code}")
-            
+            logger.info("OpenRouter API response", extra={"status_code": response.status_code})
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             error_message = str(e)
+            error_payload = None
             try:
                 error_data = response.json()
+                error_payload = error_data
                 if "error" in error_data:
                     error_message = error_data["error"].get("message", str(e))
-                print(f"API Error Response: {json.dumps(error_data, indent=2)}")
-            except:
-                print(f"Failed to parse error response: {response.text if hasattr(response, 'text') else 'No response text'}")
-            
-            print(f"Error calling OpenRouter API: {error_message}")
+            except Exception:
+                error_payload = getattr(response, "text", "")
+            logger.error("Error calling OpenRouter API", extra={"message": error_message, "response": error_payload})
             return {
                 "error": True,
                 "message": error_message
             }
-    
+        except Exception as e:
+            logger.exception("Unexpected error calling OpenRouter API")
+            return {
+                "error": True,
+                "message": str(e)
+            }
+```}    
     def chat(
         self, 
         query: str, 
@@ -230,17 +241,27 @@ class OpenRouterClient:
         
         # Extract the generated text
         try:
-            generated_text = response_data["choices"][0]["message"]["content"]
-            
-            # Build response
+            generated_text = response_data["choices"][0]["message"].get("content", "")
+            metadata = {
+                "model": response_data.get("model", self.model),
+                "finish_reason": response_data["choices"][0].get("finish_reason"),
+                "usage": response_data.get("usage", {}),
+                "created": response_data.get("created", time.time())
+            }
+
+            logger.debug("LLM raw response", extra={
+                "finish_reason": metadata["finish_reason"],
+                "usage": metadata["usage"],
+                "text_length": len(generated_text or "")
+            })
+
+            normalized_text = (generated_text or "").strip()
+            if not normalized_text:
+                normalized_text = "Non è stato possibile generare una risposta. Riprova con una domanda più specifica."
+
             return {
-                "text": generated_text,
-                "metadata": {
-                    "model": response_data.get("model", self.model),
-                    "finish_reason": response_data["choices"][0].get("finish_reason"),
-                    "usage": response_data.get("usage", {}),
-                    "created": response_data.get("created", time.time())
-                }
+                "text": normalized_text,
+                "metadata": metadata
             }
         except (KeyError, IndexError) as e:
             return {

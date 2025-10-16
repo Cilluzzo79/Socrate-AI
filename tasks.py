@@ -245,58 +245,66 @@ def process_document_task(self, document_id: str, user_id: str):
         embeddings_r2_key = None
         faiss_r2_key = None
 
-        try:
-            from core.embedding_generator import generate_and_save_embeddings
-            import time
+        # TEMPORARY: Skip embedding generation to avoid OOM
+        # TODO: Re-enable when Railway memory is increased or processing is optimized further
+        ENABLE_EMBEDDINGS = os.getenv('ENABLE_EMBEDDINGS', 'false').lower() == 'true'
 
-            # Estimate processing time based on chunks
-            # ~0.5 seconds per chunk for embedding generation
-            estimated_time_minutes = int((total_chunks * 0.5) / 60)
-            if estimated_time_minutes < 1:
-                estimated_time_minutes = 1
+        if ENABLE_EMBEDDINGS:
+            try:
+                from core.embedding_generator import generate_and_save_embeddings
+                import time
 
-            logger.info(f"Generating embeddings for {total_chunks} chunks...")
-            logger.info(f"Estimated time: {estimated_time_minutes} minutes")
+                # Estimate processing time based on chunks
+                # ~0.5 seconds per chunk for embedding generation
+                estimated_time_minutes = int((total_chunks * 0.5) / 60)
+                if estimated_time_minutes < 1:
+                    estimated_time_minutes = 1
 
-            self.update_state(
-                state='PROCESSING',
-                meta={
-                    'status': f'Generating embeddings ({estimated_time_minutes} min estimated)',
-                    'progress': 80,
-                    'total_chunks': total_chunks,
-                    'estimated_minutes': estimated_time_minutes
-                }
-            )
+                logger.info(f"Generating embeddings for {total_chunks} chunks...")
+                logger.info(f"Estimated time: {estimated_time_minutes} minutes")
 
-            start_time = time.time()
+                self.update_state(
+                    state='PROCESSING',
+                    meta={
+                        'status': f'Generating embeddings ({estimated_time_minutes} min estimated)',
+                        'progress': 80,
+                        'total_chunks': total_chunks,
+                        'estimated_minutes': estimated_time_minutes
+                    }
+                )
 
-            embeddings_file, faiss_file = generate_and_save_embeddings(
-                metadata_file=metadata_file,
-                output_dir=output_dir,
-                document_id=document_id
-            )
+                start_time = time.time()
 
-            elapsed_time = int((time.time() - start_time) / 60)
-            logger.info(f"Embeddings generated in {elapsed_time} minutes (estimated: {estimated_time_minutes})")
+                embeddings_file, faiss_file = generate_and_save_embeddings(
+                    metadata_file=metadata_file,
+                    output_dir=output_dir,
+                    document_id=document_id
+                )
 
-            # Upload embeddings and FAISS index to R2
-            from core.s3_storage import upload_file
+                elapsed_time = int((time.time() - start_time) / 60)
+                logger.info(f"Embeddings generated in {elapsed_time} minutes (estimated: {estimated_time_minutes})")
 
-            if embeddings_file and os.path.exists(embeddings_file):
-                embeddings_r2_key = f"users/{user_id}/documents/{document_id}/embeddings.npy"
-                with open(embeddings_file, 'rb') as f:
-                    upload_file(f.read(), embeddings_r2_key, 'application/octet-stream')
-                logger.info(f"Embeddings uploaded to R2: {embeddings_r2_key}")
+                # Upload embeddings and FAISS index to R2
+                from core.s3_storage import upload_file
 
-            if faiss_file and os.path.exists(faiss_file):
-                faiss_r2_key = f"users/{user_id}/documents/{document_id}/index.faiss"
-                with open(faiss_file, 'rb') as f:
-                    upload_file(f.read(), faiss_r2_key, 'application/octet-stream')
-                logger.info(f"FAISS index uploaded to R2: {faiss_r2_key}")
+                if embeddings_file and os.path.exists(embeddings_file):
+                    embeddings_r2_key = f"users/{user_id}/documents/{document_id}/embeddings.npy"
+                    with open(embeddings_file, 'rb') as f:
+                        upload_file(f.read(), embeddings_r2_key, 'application/octet-stream')
+                    logger.info(f"Embeddings uploaded to R2: {embeddings_r2_key}")
 
-        except Exception as e:
-            logger.warning(f"Error generating embeddings/index: {e}")
-            logger.warning("Continuing without pre-computed embeddings (will use on-demand)")
+                if faiss_file and os.path.exists(faiss_file):
+                    faiss_r2_key = f"users/{user_id}/documents/{document_id}/index.faiss"
+                    with open(faiss_file, 'rb') as f:
+                        upload_file(f.read(), faiss_r2_key, 'application/octet-stream')
+                    logger.info(f"FAISS index uploaded to R2: {faiss_r2_key}")
+
+            except Exception as e:
+                logger.warning(f"Error generating embeddings/index: {e}")
+                logger.warning("Continuing without pre-computed embeddings (will use on-demand)")
+        else:
+            logger.info("⚠️ Embedding generation DISABLED (set ENABLE_EMBEDDINGS=true to enable)")
+            logger.info("Documents will use on-demand embedding generation during queries")
 
         # Update task state
         self.update_state(

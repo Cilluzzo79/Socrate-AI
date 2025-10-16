@@ -344,7 +344,18 @@ function hideLoading() {
     document.getElementById('global-loader')?.remove();
 }
 
+function sanitizeContent(rawContent) {
+    const div = document.createElement('div');
+    div.textContent = rawContent;
+    return div.innerHTML;
+}
+
 function showResult(content, type) {
+    const normalized = (content || '').trim();
+    const displayContent = normalized.length > 0
+        ? normalized
+        : 'Non è stato possibile generare una risposta. Riprova con una domanda più specifica.';
+
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.innerHTML = `
@@ -357,7 +368,7 @@ function showResult(content, type) {
                 margin: 1rem 0;
                 white-space: pre-wrap;
                 font-family: monospace;
-            ">${content}</div>
+            ">${sanitizeContent(displayContent)}</div>
             <button onclick="this.closest('.modal').remove()" class="primary-btn" style="width: 100%;">
                 Chiudi
             </button>
@@ -368,7 +379,7 @@ function showResult(content, type) {
     };
     document.body.appendChild(modal);
 }
-
+```}
 // Poll document processing status
 async function pollDocumentStatus(documentId, progressFill, progressText, maxAttempts = 120) {
     let attempts = 0;

@@ -3,7 +3,7 @@ Multi-tenant Database Models for Socrate AI
 SQLAlchemy models for PostgreSQL on Railway
 """
 
-from sqlalchemy import create_engine, Column, String, Integer, BigInteger, Text, TIMESTAMP, ForeignKey, Boolean, JSON, TypeDecorator, CHAR
+from sqlalchemy import create_engine, Column, String, Integer, BigInteger, Text, TIMESTAMP, ForeignKey, Boolean, JSON, TypeDecorator, CHAR, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -109,7 +109,8 @@ class Document(Base):
     original_filename = Column(String(255))
     mime_type = Column(String(50))
     file_size = Column(BigInteger)  # bytes
-    file_path = Column(Text)  # /storage/{user_id}/{doc_id}/file.ext
+    file_path = Column(Text)  # /storage/{user_id}/{doc_id}/file.ext (deprecated - use file_data)
+    file_data = Column(LargeBinary)  # Binary file content (for Railway deployment)
 
     # Processing status
     status = Column(String(20), default='processing')  # uploading, processing, ready, failed
