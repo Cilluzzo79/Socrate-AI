@@ -31,13 +31,22 @@ class SimpleQueryEngine:
     """
 
     def __init__(self):
-        """Initialize query engine with embedding model"""
-        if EMBEDDINGS_AVAILABLE:
-            # Use lightweight model for speed
-            self.model = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("Embedding model loaded: all-MiniLM-L6-v2")
-        else:
-            self.model = None
+        """Initialize query engine (lazy load embedding model)"""
+        self._model = None  # Lazy loaded
+        self.model_name = 'all-MiniLM-L6-v2'
+
+    @property
+    def model(self):
+        """Lazy load embedding model only when needed"""
+        if not EMBEDDINGS_AVAILABLE:
+            return None
+
+        if self._model is None:
+            logger.info(f"Loading embedding model: {self.model_name}...")
+            self._model = SentenceTransformer(self.model_name)
+            logger.info("Embedding model loaded successfully")
+
+        return self._model
 
     def load_document_metadata(self, metadata_source: str, is_r2_key: bool = False) -> Optional[Dict[str, Any]]:
         """
