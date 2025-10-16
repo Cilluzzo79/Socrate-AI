@@ -100,6 +100,9 @@ class User(Base):
 class Document(Base):
     """Document model - user-owned files"""
     __tablename__ = 'documents'
+    __mapper_args__ = {
+        'exclude_properties': ['file_data']  # Ignore file_data column in DB
+    }
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(GUID, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
