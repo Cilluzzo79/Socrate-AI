@@ -271,6 +271,10 @@ def get_document(document_id: str):
         except:
             pass
 
+    # Debug info for metadata availability
+    has_r2_metadata = bool(doc.doc_metadata and doc.doc_metadata.get('metadata_r2_key'))
+    has_local_metadata = bool(doc.doc_metadata and doc.doc_metadata.get('metadata_file'))
+
     return jsonify({
         'id': str(doc.id),
         'filename': doc.filename,
@@ -289,7 +293,12 @@ def get_document(document_id: str):
         'processing_completed_at': doc.processing_completed_at.isoformat() if doc.processing_completed_at else None,
         'doc_metadata': doc.doc_metadata,
         'task_status': task_status,
-        'task_info': task_info
+        'task_info': task_info,
+        'debug': {
+            'has_r2_metadata': has_r2_metadata,
+            'has_local_metadata': has_local_metadata,
+            'query_ready': has_r2_metadata or has_local_metadata
+        }
     })
 
 
