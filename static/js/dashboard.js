@@ -379,7 +379,7 @@ function showResult(content, type) {
     };
     document.body.appendChild(modal);
 }
-```}
+
 // Poll document processing status
 async function pollDocumentStatus(documentId, progressFill, progressText, maxAttempts = 120) {
     let attempts = 0;
