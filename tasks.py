@@ -247,14 +247,37 @@ def process_document_task(self, document_id: str, user_id: str):
 
         try:
             from core.embedding_generator import generate_and_save_embeddings
+            import time
 
-            logger.info("Generating embeddings for all chunks...")
+            # Estimate processing time based on chunks
+            # ~0.5 seconds per chunk for embedding generation
+            estimated_time_minutes = int((total_chunks * 0.5) / 60)
+            if estimated_time_minutes < 1:
+                estimated_time_minutes = 1
+
+            logger.info(f"Generating embeddings for {total_chunks} chunks...")
+            logger.info(f"Estimated time: {estimated_time_minutes} minutes")
+
+            self.update_state(
+                state='PROCESSING',
+                meta={
+                    'status': f'Generating embeddings ({estimated_time_minutes} min estimated)',
+                    'progress': 80,
+                    'total_chunks': total_chunks,
+                    'estimated_minutes': estimated_time_minutes
+                }
+            )
+
+            start_time = time.time()
 
             embeddings_file, faiss_file = generate_and_save_embeddings(
                 metadata_file=metadata_file,
                 output_dir=output_dir,
                 document_id=document_id
             )
+
+            elapsed_time = int((time.time() - start_time) / 60)
+            logger.info(f"Embeddings generated in {elapsed_time} minutes (estimated: {estimated_time_minutes})")
 
             # Upload embeddings and FAISS index to R2
             from core.s3_storage import upload_file

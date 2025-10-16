@@ -28,8 +28,8 @@ celery_app.conf.update(
 
     # Task execution
     task_track_started=True,
-    task_time_limit=3600,  # 1 hour max per task
-    task_soft_time_limit=3000,  # 50 minutes soft limit
+    task_time_limit=7200,  # 2 hours max per task (increased for large docs)
+    task_soft_time_limit=6600,  # 110 minutes soft limit
 
     # Result backend
     result_expires=86400,  # Results expire after 24 hours

@@ -27,7 +27,8 @@ def generate_and_save_embeddings(
     output_dir: str,
     document_id: str,
     model_name: str = 'all-MiniLM-L6-v2',
-    batch_size: int = 32
+    batch_size: int = 16,  # Reduced from 32 to 16 for memory
+    max_chunks_per_batch: int = 100  # Process in smaller groups
 ) -> Tuple[Optional[str], Optional[str]]:
     """
     Generate embeddings for all chunks and create FAISS index
@@ -60,21 +61,48 @@ def generate_and_save_embeddings(
         num_chunks = len(chunks)
         logger.info(f"Generating embeddings for {num_chunks} chunks...")
 
-        # Extract chunk texts
-        chunk_texts = [chunk['text'] for chunk in chunks]
-
         # Load model
         logger.info(f"Loading sentence transformer model: {model_name}")
         model = SentenceTransformer(model_name)
 
-        # Generate embeddings with progress
-        logger.info(f"Encoding {num_chunks} chunks in batches of {batch_size}...")
-        embeddings = model.encode(
-            chunk_texts,
-            batch_size=batch_size,
-            show_progress_bar=True,
-            convert_to_numpy=True
-        )
+        # Process in smaller groups to avoid OOM
+        all_embeddings = []
+        num_groups = (num_chunks + max_chunks_per_batch - 1) // max_chunks_per_batch
+
+        logger.info(f"Processing {num_chunks} chunks in {num_groups} groups of max {max_chunks_per_batch}")
+
+        for group_idx in range(num_groups):
+            start_idx = group_idx * max_chunks_per_batch
+            end_idx = min(start_idx + max_chunks_per_batch, num_chunks)
+
+            logger.info(f"Group {group_idx + 1}/{num_groups}: Processing chunks {start_idx}-{end_idx}")
+
+            # Extract chunk texts for this group
+            chunk_texts_group = [chunks[i]['text'] for i in range(start_idx, end_idx)]
+
+            # Generate embeddings for this group
+            embeddings_group = model.encode(
+                chunk_texts_group,
+                batch_size=batch_size,
+                show_progress_bar=True,
+                convert_to_numpy=True
+            )
+
+            all_embeddings.append(embeddings_group)
+
+            # Force garbage collection after each group
+            import gc
+            chunk_texts_group = None
+            embeddings_group = None
+            gc.collect()
+
+            logger.info(f"Group {group_idx + 1}/{num_groups} completed, memory cleaned")
+
+        # Combine all embeddings
+        embeddings = np.vstack(all_embeddings)
+        all_embeddings = None  # Free memory
+        import gc
+        gc.collect()
 
         logger.info(f"Generated embeddings shape: {embeddings.shape}")
 
