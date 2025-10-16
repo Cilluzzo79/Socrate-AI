@@ -185,7 +185,7 @@ class OpenRouterClient:
                 "error": True,
                 "message": str(e)
             }
-```}    
+
     def chat(
         self, 
         query: str, 
