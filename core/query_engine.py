@@ -21,8 +21,15 @@ except ImportError:
     EMBEDDINGS_AVAILABLE = False
     logger.warning("⚠️ sentence-transformers not available - using simple keyword matching")
 
-# Import LLM client
+# Import LLM client and content generators
 from core.llm_client import generate_chat_response
+from core.content_generators import (
+    generate_quiz_prompt,
+    generate_outline_prompt,
+    generate_mindmap_prompt,
+    generate_summary_prompt,
+    generate_analysis_prompt
+)
 
 
 class SimpleQueryEngine:
@@ -185,39 +192,47 @@ class SimpleQueryEngine:
         embeddings_r2_key: str = None,
         faiss_r2_key: str = None,
         top_k: int = 3,
-        max_tokens: int = 500,
+        max_tokens: int = 2048,
         temperature: float = 0.7,
         user_tier: str = 'free',
-        query_type: str = 'simple'
+        query_type: str = 'query',
+        command_params: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """
-        Query a document using RAG pipeline
+        Query a document using RAG pipeline with support for specialized commands
 
         Args:
-            query: User's question
+            query: User's question or command
             metadata_file: Path to document metadata JSON (local)
             metadata_r2_key: R2 key for metadata JSON (cloud)
             top_k: Number of chunks to retrieve
             max_tokens: Max tokens in LLM response
             temperature: LLM temperature
             user_tier: User subscription tier (affects limits)
+            query_type: Type of query (query, quiz, summary, outline, mindmap, analyze)
+            command_params: Additional parameters for specialized commands
 
         Returns:
             Dict with answer, sources, and metadata
         """
+        command_params = command_params or {}
 
-        # Adjust top_k based on tier AND query type
+        # Adjust top_k and max_tokens based on tier AND query type
         tier_limits = {
-            'free': {'simple': 5, 'summary': 20, 'analysis': 30},
-            'pro': {'simple': 10, 'summary': 50, 'analysis': 100},
-            'enterprise': {'simple': 20, 'summary': 100, 'analysis': 200}
+            'free': {'query': 5, 'summary': 20, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 30},
+            'pro': {'query': 10, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 100},
+            'enterprise': {'query': 20, 'summary': 100, 'quiz': 100, 'outline': 100, 'mindmap': 50, 'analyze': 200}
         }
 
         tier_config = tier_limits.get(user_tier, tier_limits['free'])
-        max_chunks = tier_config.get(query_type, tier_config['simple'])
+        max_chunks = tier_config.get(query_type, tier_config['query'])
         top_k = min(top_k, max_chunks)
 
-        logger.info(f"Processing query (tier: {user_tier}, type: {query_type}, top_k: {top_k}): {query}")
+        # Increase max_tokens for structured outputs
+        if query_type in ['quiz', 'summary', 'outline', 'mindmap', 'analyze']:
+            max_tokens = 4096  # Allow longer responses for structured content
+
+        logger.info(f"Processing {query_type} (tier: {user_tier}, top_k: {top_k}): {query[:100]}")
 
         # Load document metadata (prefer R2, fallback to local)
         if metadata_r2_key:
@@ -286,10 +301,44 @@ class SimpleQueryEngine:
 
         logger.info(f"Built context from {len(relevant_chunks)} chunks ({len(context)} chars)")
 
+        # Generate specialized prompt based on command type
+        final_query = query
+        if query_type == 'quiz':
+            final_query = generate_quiz_prompt(
+                quiz_type=command_params.get('quiz_type', 'multiple_choice'),
+                num_questions=command_params.get('num_questions', 10),
+                difficulty=command_params.get('difficulty', 'medium'),
+                focus_area=command_params.get('focus_area')
+            )
+        elif query_type == 'outline':
+            final_query = generate_outline_prompt(
+                outline_type=command_params.get('outline_type', 'hierarchical'),
+                detail_level=command_params.get('detail_level', 'medium'),
+                focus_area=command_params.get('focus_area')
+            )
+        elif query_type == 'mindmap':
+            final_query = generate_mindmap_prompt(
+                central_concept=command_params.get('central_concept'),
+                depth_level=command_params.get('depth_level', 3),
+                focus_area=command_params.get('focus_area')
+            )
+        elif query_type == 'summary':
+            final_query = generate_summary_prompt(
+                summary_type=command_params.get('summary_type', 'medium'),
+                length=command_params.get('length', '3-5 paragrafi'),
+                focus_area=command_params.get('focus_area')
+            )
+        elif query_type == 'analyze':
+            final_query = generate_analysis_prompt(
+                analysis_type=command_params.get('analysis_type', 'thematic'),
+                focus_area=command_params.get('focus_area'),
+                depth=command_params.get('depth', 'profonda')
+            )
+
         # Call LLM
         try:
             llm_response = generate_chat_response(
-                query=query,
+                query=final_query,
                 context=context,
                 max_tokens=max_tokens,
                 temperature=temperature,

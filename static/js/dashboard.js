@@ -239,17 +239,57 @@ async function useTool(documentId, toolType) {
     // Close tools modal
     document.querySelector('.modal')?.remove();
 
-    const prompts = {
-        quiz: 'Genera un quiz di 10 domande su questo documento',
-        summary: 'Crea un riassunto dettagliato di questo documento',
-        mindmap: 'Crea una mappa mentale dei concetti chiave',
-        outline: 'Crea uno schema gerarchico del contenuto',
-        analyze: 'Analizza i temi principali del documento',
-        query: prompt('Inserisci la tua domanda:')
+    // Define prompts and parameters for each tool type
+    const toolConfigs = {
+        quiz: {
+            query: 'Genera un quiz completo basato sul documento',
+            command_type: 'quiz',
+            command_params: {
+                quiz_type: 'multiple_choice',
+                num_questions: 10,
+                difficulty: 'medium'
+            }
+        },
+        summary: {
+            query: 'Crea un riassunto del documento',
+            command_type: 'summary',
+            command_params: {
+                summary_type: 'medium',
+                length: '3-5 paragrafi'
+            }
+        },
+        mindmap: {
+            query: 'Crea una mappa concettuale',
+            command_type: 'mindmap',
+            command_params: {
+                depth_level: 3
+            }
+        },
+        outline: {
+            query: 'Crea uno schema gerarchico',
+            command_type: 'outline',
+            command_params: {
+                outline_type: 'hierarchical',
+                detail_level: 'medium'
+            }
+        },
+        analyze: {
+            query: 'Analizza i temi principali',
+            command_type: 'analyze',
+            command_params: {
+                analysis_type: 'thematic',
+                depth: 'profonda'
+            }
+        },
+        query: {
+            query: prompt('Inserisci la tua domanda:'),
+            command_type: 'query',
+            command_params: {}
+        }
     };
 
-    const query = prompts[toolType];
-    if (!query) return;
+    const config = toolConfigs[toolType];
+    if (!config || !config.query) return;
 
     // Show loading
     showLoading(`Generazione ${toolType} in corso...`);
@@ -263,8 +303,10 @@ async function useTool(documentId, toolType) {
             credentials: 'include',
             body: JSON.stringify({
                 document_id: documentId,
-                query: query,
-                command_type: toolType
+                query: config.query,
+                command_type: config.command_type,
+                command_params: config.command_params,
+                top_k: 10
             })
         });
 

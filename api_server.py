@@ -452,15 +452,23 @@ def delete_document_endpoint(document_id: str):
 @require_auth
 def custom_query():
     """
-    Custom query endpoint with RAG pipeline
-    Body: { "document_id": "...", "query": "...", "top_k": 3 }
+    Custom query endpoint with RAG pipeline and specialized commands
+    Body: {
+        "document_id": "...",
+        "query": "...",
+        "command_type": "query|quiz|summary|outline|mindmap|analyze",
+        "command_params": {...},
+        "top_k": 3
+    }
     """
     user_id = get_current_user_id()
     data = request.json
 
     document_id = data.get('document_id')
     query = data.get('query')
-    top_k = data.get('top_k', 3)
+    command_type = data.get('command_type', 'query')
+    command_params = data.get('command_params', {})
+    top_k = data.get('top_k', 5)
 
     if not document_id or not query:
         return jsonify({'error': 'document_id and query required'}), 400
@@ -481,8 +489,8 @@ def custom_query():
     chat_session = create_chat_session(
         user_id=user_id,
         document_id=document_id,
-        command_type='query',
-        request_data={'query': query, 'top_k': top_k},
+        command_type=command_type,
+        request_data={'query': query, 'top_k': top_k, 'command_params': command_params},
         channel='web_app'
     )
 
@@ -506,7 +514,9 @@ def custom_query():
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
             top_k=top_k,
-            user_tier=user_tier
+            user_tier=user_tier,
+            query_type=command_type,
+            command_params=command_params
         )
 
         # Update session with response
