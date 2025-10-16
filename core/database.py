@@ -3,7 +3,7 @@ Multi-tenant Database Models for Socrate AI
 SQLAlchemy models for PostgreSQL on Railway
 """
 
-from sqlalchemy import create_engine, Column, String, Integer, BigInteger, Text, TIMESTAMP, ForeignKey, Boolean, JSON, TypeDecorator, CHAR, LargeBinary
+from sqlalchemy import create_engine, Column, String, Integer, BigInteger, Text, TIMESTAMP, ForeignKey, Boolean, JSON, TypeDecorator, CHAR
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
