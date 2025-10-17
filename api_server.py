@@ -474,12 +474,17 @@ def custom_query():
         return jsonify({'error': 'document_id and query required'}), 400
 
     # Verify document ownership
+    logger.info(f"🔍 Query request for document: {document_id}")
     doc = get_document_by_id(document_id, user_id)
     if not doc:
+        logger.error(f"❌ Document not found: {document_id} for user {user_id}")
         return jsonify({'error': 'Document not found'}), 404
 
     if doc.status != 'ready':
+        logger.warning(f"⚠️  Document not ready: {document_id} (status: {doc.status})")
         return jsonify({'error': f'Document not ready (status: {doc.status})'}), 400
+
+    logger.info(f"✅ Document found: {doc.filename} ({doc.id}) - metadata_r2_key: {bool(doc.doc_metadata.get('metadata_r2_key') if doc.doc_metadata else False)}")
 
     # Get user for tier info
     user = get_user_by_id(user_id)
