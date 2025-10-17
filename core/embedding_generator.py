@@ -210,3 +210,92 @@ def search_similar_chunks(
     except Exception as e:
         logger.error(f"Error searching FAISS index: {e}")
         return [], []
+
+
+def generate_and_save_embeddings_inline(
+    metadata_file: str,
+    model_name: str = 'all-MiniLM-L6-v2',
+    batch_size: int = 8,
+    max_chunks_per_batch: int = 50
+) -> bool:
+    """
+    Generate embeddings and save them INLINE in metadata.json
+
+    This solves the OOM problem by pre-calculating embeddings during processing,
+    allowing queries to use cached embeddings instead of recalculating 1448+ embeddings
+    on every query (which causes 2+ minute delays and worker crashes).
+
+    Args:
+        metadata_file: Path to metadata JSON (modified in-place)
+        model_name: Sentence transformer model
+        batch_size: Batch size for encoding
+        max_chunks_per_batch: Process in small groups to avoid OOM
+
+    Returns:
+        bool: True if successful
+    """
+    if not EMBEDDINGS_AVAILABLE:
+        logger.warning("Embeddings libraries not available, skipping")
+        return False
+
+    try:
+        # Load metadata
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+
+        chunks = metadata.get('chunks', [])
+        if not chunks:
+            logger.warning("No chunks found in metadata")
+            return False
+
+        num_chunks = len(chunks)
+        logger.info(f"Generating inline embeddings for {num_chunks} chunks...")
+
+        # Load model
+        logger.info(f"Loading sentence transformer: {model_name}")
+        model = SentenceTransformer(model_name)
+
+        # Process in groups to avoid OOM
+        num_groups = (num_chunks + max_chunks_per_batch - 1) // max_chunks_per_batch
+        logger.info(f"Processing {num_chunks} chunks in {num_groups} groups")
+
+        for group_idx in range(num_groups):
+            start_idx = group_idx * max_chunks_per_batch
+            end_idx = min(start_idx + max_chunks_per_batch, num_chunks)
+
+            logger.info(f"Group {group_idx + 1}/{num_groups}: chunks {start_idx}-{end_idx}")
+
+            # Extract texts
+            chunk_texts = [chunks[i]['text'] for i in range(start_idx, end_idx)]
+
+            # Generate embeddings
+            embeddings = model.encode(
+                chunk_texts,
+                batch_size=batch_size,
+                show_progress_bar=True,
+                convert_to_numpy=True
+            )
+
+            # Add embeddings inline to each chunk
+            for local_idx, chunk_idx in enumerate(range(start_idx, end_idx)):
+                chunks[chunk_idx]['embedding'] = embeddings[local_idx].tolist()
+
+            # Cleanup memory
+            import gc
+            chunk_texts = None
+            embeddings = None
+            gc.collect()
+
+            logger.info(f"Group {group_idx + 1}/{num_groups} completed")
+
+        # Save modified metadata
+        logger.info(f"Saving metadata with inline embeddings: {metadata_file}")
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"✅ Saved {num_chunks} chunks with inline embeddings")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error generating inline embeddings: {e}", exc_info=True)
+        return False
