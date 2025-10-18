@@ -101,7 +101,7 @@ class SimpleQueryEngine:
 
         Args:
             query: User query
-            chunks: List of chunk dictionaries
+            chunks: List of chunk dictionaries (may contain precomputed embeddings)
             top_k: Number of chunks to return
 
         Returns:
@@ -119,9 +119,18 @@ class SimpleQueryEngine:
             # Encode query
             query_embedding = self.model.encode(query, convert_to_tensor=False)
 
-            # Encode all chunks
-            chunk_texts = [chunk['text'] for chunk in chunks]
-            chunk_embeddings = self.model.encode(chunk_texts, convert_to_tensor=False)
+            # Check if chunks have precomputed embeddings inline
+            has_inline_embeddings = all('embedding' in chunk for chunk in chunks)
+
+            if has_inline_embeddings:
+                # Use precomputed embeddings (FAST!)
+                logger.info(f"Using precomputed inline embeddings for {len(chunks)} chunks")
+                chunk_embeddings = np.array([chunk['embedding'] for chunk in chunks])
+            else:
+                # Fallback: compute embeddings on-demand (SLOW)
+                logger.warning(f"No inline embeddings found, computing on-demand for {len(chunks)} chunks (this may be slow!)")
+                chunk_texts = [chunk['text'] for chunk in chunks]
+                chunk_embeddings = self.model.encode(chunk_texts, convert_to_tensor=False, show_progress_bar=True)
 
             # Calculate cosine similarity
             similarities = np.dot(chunk_embeddings, query_embedding) / (
