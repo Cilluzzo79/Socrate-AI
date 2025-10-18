@@ -444,6 +444,87 @@ def delete_document_endpoint(document_id: str):
     return jsonify({'success': True})
 
 
+@app.route('/api/admin/cleanup-duplicates', methods=['POST'])
+@require_auth
+def cleanup_duplicate_documents():
+    """
+    Admin endpoint to delete all duplicate documents except the most recent one
+    Keeps only the latest document for the current user
+    """
+    user_id = get_current_user_id()
+
+    try:
+        from core.database import SessionLocal, Document
+        from sqlalchemy import desc
+
+        db = SessionLocal()
+
+        try:
+            # Get all documents for user, sorted by created_at descending
+            all_docs = db.query(Document).filter_by(
+                user_id=user_id
+            ).order_by(desc(Document.created_at)).all()
+
+            logger.info(f"Cleanup request: Found {len(all_docs)} documents for user {user_id}")
+
+            if len(all_docs) <= 1:
+                db.close()
+                return jsonify({
+                    'success': True,
+                    'message': f'Only {len(all_docs)} document(s) found, nothing to delete',
+                    'deleted_count': 0,
+                    'remaining_count': len(all_docs)
+                })
+
+            # Keep latest, delete the rest
+            doc_to_keep = all_docs[0]
+            docs_to_delete = all_docs[1:]
+
+            logger.info(f"Keeping latest document: {doc_to_keep.id} ({doc_to_keep.filename})")
+            logger.info(f"Deleting {len(docs_to_delete)} old document(s)")
+
+            # Delete old documents
+            deleted_ids = []
+            for doc in docs_to_delete:
+                try:
+                    logger.info(f"Deleting: {doc.id} ({doc.filename}) - created: {doc.created_at}")
+                    db.delete(doc)
+                    deleted_ids.append(str(doc.id))
+                except Exception as e:
+                    logger.error(f"Error deleting {doc.id}: {e}")
+
+            db.commit()
+
+            logger.info(f"Successfully deleted {len(deleted_ids)} document(s)")
+
+            return jsonify({
+                'success': True,
+                'message': f'Deleted {len(deleted_ids)} old document(s)',
+                'deleted_count': len(deleted_ids),
+                'deleted_ids': deleted_ids,
+                'remaining_count': 1,
+                'kept_document': {
+                    'id': str(doc_to_keep.id),
+                    'filename': doc_to_keep.filename,
+                    'created_at': doc_to_keep.created_at.isoformat() if doc_to_keep.created_at else None
+                }
+            })
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error during cleanup: {e}")
+            raise
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"Cleanup failed: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 # ============================================================================
 # CONTENT GENERATION API (simplified for now)
 # ============================================================================
