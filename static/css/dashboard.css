@@ -47,8 +47,8 @@
 
 .logo-owl-container {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 96px;
+  height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,14 +58,14 @@
 }
 
 @keyframes owlPulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(0, 217, 192, 0.4); }
-  50% { box-shadow: 0 0 40px rgba(0, 217, 192, 0.6); }
+  0%, 100% { box-shadow: 0 0 30px rgba(0, 217, 192, 0.5); }
+  50% { box-shadow: 0 0 50px rgba(0, 217, 192, 0.7); }
 }
 
 .logo-owl-icon {
-  width: 56px;
-  height: 56px;
-  filter: drop-shadow(0 0 15px rgba(0, 217, 192, 0.6));
+  width: 84px;
+  height: 84px;
+  filter: drop-shadow(0 0 20px rgba(0, 217, 192, 0.7));
 }
 
 .logo-text-container {
@@ -76,37 +76,37 @@
 
 .logo-brand {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 38px;
   font-weight: var(--font-extrabold);
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   background: linear-gradient(135deg, var(--color-accent-gold), var(--color-accent-bronze));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+  text-shadow: 0 0 40px rgba(212, 175, 55, 0.4);
 }
 
 .logo-ai {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 38px;
   font-weight: var(--font-extrabold);
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   background: linear-gradient(135deg, var(--color-primary-cyan), var(--color-primary-cyan-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 0 30px rgba(0, 217, 192, 0.4);
+  text-shadow: 0 0 40px rgba(0, 217, 192, 0.5);
   margin-left: var(--space-2);
 }
 
 .logo-tagline {
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: var(--font-medium);
-  letter-spacing: 3px;
+  letter-spacing: 4px;
   text-transform: uppercase;
   color: var(--color-text-tertiary);
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 /* Dashboard Actions */
