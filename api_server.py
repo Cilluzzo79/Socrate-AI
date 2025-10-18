@@ -800,6 +800,191 @@ def cleanup_orphaned_r2():
         }), 500
 
 
+@app.route('/api/admin/check-r2-storage', methods=['GET'])
+@require_auth
+def check_r2_storage():
+    """
+    Admin endpoint to diagnose R2 storage usage
+    Checks for object versions, delete markers, and incomplete multipart uploads
+    """
+    user_id = get_current_user_id()
+
+    try:
+        from core.s3_storage import get_s3_client, R2_BUCKET_NAME
+        from botocore.exceptions import ClientError
+
+        client = get_s3_client()
+
+        logger.info(f"🔍 Checking R2 storage for bucket: {R2_BUCKET_NAME}")
+
+        # Check 1: List all object versions (current + old versions)
+        logger.info("Step 1: Listing all object versions...")
+
+        current_objects = []
+        old_versions = []
+        delete_markers = []
+        total_size = 0
+
+        try:
+            paginator = client.get_paginator('list_object_versions')
+
+            for page in paginator.paginate(Bucket=R2_BUCKET_NAME):
+                # Current and old versions
+                if 'Versions' in page:
+                    for version in page['Versions']:
+                        size_mb = version['Size'] / (1024 * 1024)
+                        total_size += version['Size']
+
+                        obj_info = {
+                            'key': version['Key'],
+                            'version_id': version['VersionId'],
+                            'is_latest': version['IsLatest'],
+                            'size': version['Size'],
+                            'size_mb': round(size_mb, 2),
+                            'last_modified': version['LastModified'].isoformat()
+                        }
+
+                        if version['IsLatest']:
+                            current_objects.append(obj_info)
+                        else:
+                            old_versions.append(obj_info)
+
+                # Delete markers
+                if 'DeleteMarkers' in page:
+                    for marker in page['DeleteMarkers']:
+                        delete_markers.append({
+                            'key': marker['Key'],
+                            'version_id': marker['VersionId'],
+                            'is_latest': marker['IsLatest'],
+                            'last_modified': marker['LastModified'].isoformat()
+                        })
+
+            logger.info(f"✅ Found {len(current_objects)} current objects, {len(old_versions)} old versions, {len(delete_markers)} delete markers")
+
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            if error_code == 'NoSuchBucket':
+                return jsonify({
+                    'success': False,
+                    'error': 'Bucket not found',
+                    'bucket_name': R2_BUCKET_NAME
+                }), 404
+            elif error_code == 'NotImplemented':
+                logger.warning("Object versioning API not available - checking simple listing")
+                # Fallback: versioning not enabled, use simple listing
+                old_versions = []
+                delete_markers = []
+                # Will be populated from simple list below
+
+        # Check 2: List incomplete multipart uploads
+        logger.info("Step 2: Checking incomplete multipart uploads...")
+
+        incomplete_uploads = []
+        try:
+            multipart_paginator = client.get_paginator('list_multipart_uploads')
+
+            for page in multipart_paginator.paginate(Bucket=R2_BUCKET_NAME):
+                if 'Uploads' in page:
+                    for upload in page['Uploads']:
+                        incomplete_uploads.append({
+                            'key': upload['Key'],
+                            'upload_id': upload['UploadId'],
+                            'initiated': upload['Initiated'].isoformat() if 'Initiated' in upload else None
+                        })
+
+            logger.info(f"✅ Found {len(incomplete_uploads)} incomplete multipart uploads")
+
+        except ClientError as e:
+            logger.warning(f"Could not list multipart uploads: {e}")
+
+        # Check 3: Simple object listing (for comparison)
+        if not current_objects:  # If versioning check failed, use simple listing
+            logger.info("Step 3: Using simple object listing...")
+
+            simple_paginator = client.get_paginator('list_objects_v2')
+            for page in simple_paginator.paginate(Bucket=R2_BUCKET_NAME):
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        size_mb = obj['Size'] / (1024 * 1024)
+                        total_size += obj['Size']
+
+                        current_objects.append({
+                            'key': obj['Key'],
+                            'size': obj['Size'],
+                            'size_mb': round(size_mb, 2),
+                            'last_modified': obj['LastModified'].isoformat()
+                        })
+
+        # Calculate totals
+        total_size_mb = total_size / (1024 * 1024)
+        current_size = sum(obj['size'] for obj in current_objects)
+        current_size_mb = current_size / (1024 * 1024)
+        old_versions_size = sum(obj['size'] for obj in old_versions)
+        old_versions_size_mb = old_versions_size / (1024 * 1024)
+
+        # Summary
+        summary = {
+            'total_objects': len(current_objects),
+            'total_old_versions': len(old_versions),
+            'total_delete_markers': len(delete_markers),
+            'total_incomplete_uploads': len(incomplete_uploads),
+            'current_size_mb': round(current_size_mb, 2),
+            'old_versions_size_mb': round(old_versions_size_mb, 2),
+            'total_size_mb': round(total_size_mb, 2)
+        }
+
+        # Recommendations
+        recommendations = []
+
+        if old_versions:
+            recommendations.append({
+                'issue': 'Old object versions detected',
+                'count': len(old_versions),
+                'size_mb': round(old_versions_size_mb, 2),
+                'solution': 'Object versioning is enabled. Old versions are kept after deletion.',
+                'action': 'Run cleanup script to delete old versions or disable versioning in Cloudflare dashboard'
+            })
+
+        if delete_markers:
+            recommendations.append({
+                'issue': 'Delete markers found',
+                'count': len(delete_markers),
+                'solution': 'These are versioning markers that indicate deleted files (but old versions remain)',
+                'action': 'Delete these markers and their associated old versions'
+            })
+
+        if incomplete_uploads:
+            recommendations.append({
+                'issue': 'Incomplete multipart uploads',
+                'count': len(incomplete_uploads),
+                'solution': 'These are failed/incomplete uploads that consume storage',
+                'action': 'Run abort_incomplete_multipart_uploads to clean them up'
+            })
+
+        return jsonify({
+            'success': True,
+            'bucket_name': R2_BUCKET_NAME,
+            'summary': summary,
+            'recommendations': recommendations,
+            'current_objects': current_objects[:20],  # Limit to first 20
+            'old_versions': old_versions[:20],
+            'delete_markers': delete_markers[:20],
+            'incomplete_uploads': incomplete_uploads,
+            'help': {
+                'current_objects_shown': min(20, len(current_objects)),
+                'old_versions_shown': min(20, len(old_versions)),
+                'delete_markers_shown': min(20, len(delete_markers))
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error checking R2 storage: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/health')
 def health_check():
     """Health check endpoint"""
