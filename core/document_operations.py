@@ -166,6 +166,7 @@ def update_document_status(
 def delete_document(document_id: str, user_id: str) -> bool:
     """
     Delete document and free up user storage
+    Also deletes all associated files from R2 storage
 
     Args:
         document_id: Document UUID
@@ -174,6 +175,9 @@ def delete_document(document_id: str, user_id: str) -> bool:
     Returns:
         True if deleted, False otherwise
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     db = SessionLocal()
     try:
         doc = db.query(Document).filter_by(
@@ -184,14 +188,60 @@ def delete_document(document_id: str, user_id: str) -> bool:
         if not doc:
             return False
 
+        # Collect R2 keys to delete BEFORE deleting from database
+        r2_keys_to_delete = []
+
+        # 1. Original file (PDF/document)
+        if doc.file_path:
+            r2_keys_to_delete.append(doc.file_path)
+            logger.info(f"Will delete original file: {doc.file_path}")
+
+        # 2. Metadata JSON (with embeddings)
+        if doc.doc_metadata and doc.doc_metadata.get('metadata_r2_key'):
+            r2_key = doc.doc_metadata['metadata_r2_key']
+            # Check if it's not the 'inline' marker but an actual R2 key
+            if r2_key and r2_key != 'inline' and '/' in r2_key:
+                r2_keys_to_delete.append(r2_key)
+                logger.info(f"Will delete metadata file: {r2_key}")
+
+        # 3. Video QR (if exists)
+        if doc.doc_metadata and doc.doc_metadata.get('video_r2_key'):
+            r2_keys_to_delete.append(doc.doc_metadata['video_r2_key'])
+            logger.info(f"Will delete video file: {doc.doc_metadata['video_r2_key']}")
+
+        # 4. Any other R2 artifacts
+        if doc.doc_metadata and doc.doc_metadata.get('embeddings_r2_key'):
+            r2_key = doc.doc_metadata['embeddings_r2_key']
+            if r2_key and r2_key != 'inline' and '/' in r2_key:
+                r2_keys_to_delete.append(r2_key)
+                logger.info(f"Will delete embeddings file: {r2_key}")
+
         # Get user to update storage
         user = db.query(User).filter_by(id=uuid.UUID(user_id)).first()
         if user and doc.file_size:
             file_size_mb = doc.file_size / (1024 * 1024)
             user.storage_used_mb = max(0, user.storage_used_mb - file_size_mb)
 
+        # Delete from database first
         db.delete(doc)
         db.commit()
+
+        # Then delete from R2 (after DB commit to ensure consistency)
+        if r2_keys_to_delete:
+            try:
+                from core.s3_storage import delete_file
+                for r2_key in r2_keys_to_delete:
+                    try:
+                        success = delete_file(r2_key)
+                        if success:
+                            logger.info(f"✅ Deleted from R2: {r2_key}")
+                        else:
+                            logger.warning(f"⚠️  Failed to delete from R2: {r2_key}")
+                    except Exception as e:
+                        logger.error(f"❌ Error deleting {r2_key} from R2: {e}")
+            except ImportError:
+                logger.warning("⚠️  s3_storage module not available, skipping R2 cleanup")
+
         return True
 
     finally:

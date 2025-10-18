@@ -205,3 +205,44 @@ def generate_file_key(user_id: str, document_id: str, filename: str) -> str:
     safe_filename = "".join(c for c in filename if c.isalnum() or c in ('._- ')).strip()
 
     return f"users/{user_id}/docs/{document_id}/{safe_filename}"
+
+
+def list_r2_files(prefix: str = None) -> list[str]:
+    """
+    List all files in R2 bucket
+
+    Args:
+        prefix: Optional prefix to filter files (e.g., 'users/')
+
+    Returns:
+        List of R2 keys (file paths)
+    """
+    try:
+        client = get_s3_client()
+
+        files = []
+        paginator = client.get_paginator('list_objects_v2')
+
+        page_iterator = paginator.paginate(
+            Bucket=R2_BUCKET,
+            Prefix=prefix or ''
+        )
+
+        for page in page_iterator:
+            if 'Contents' in page:
+                for obj in page['Contents']:
+                    files.append(obj['Key'])
+
+        logger.info(f"Listed {len(files)} files from R2 bucket {R2_BUCKET}")
+        return files
+
+    except ClientError as e:
+        logger.error(f"Error listing files from R2: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error listing R2 files: {e}")
+        return []
+
+
+# Export bucket name for cleanup scripts
+R2_BUCKET_NAME = R2_BUCKET

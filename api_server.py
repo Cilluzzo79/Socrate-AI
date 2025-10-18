@@ -429,15 +429,13 @@ def upload_document():
 @app.route('/api/documents/<document_id>', methods=['DELETE'])
 @require_auth
 def delete_document_endpoint(document_id: str):
-    """Delete document"""
+    """Delete document and all associated files from R2"""
     user_id = get_current_user_id()
 
     success = delete_document(document_id, user_id)
 
     if not success:
         return jsonify({'error': 'Document not found'}), 404
-
-    # TODO: Also delete physical files
 
     logger.info(f"Document deleted: {document_id} by user {user_id}")
 
@@ -483,17 +481,20 @@ def cleanup_duplicate_documents():
             logger.info(f"Keeping latest document: {doc_to_keep.id} ({doc_to_keep.filename})")
             logger.info(f"Deleting {len(docs_to_delete)} old document(s)")
 
-            # Delete old documents
+            # Delete old documents (including R2 files)
             deleted_ids = []
             for doc in docs_to_delete:
                 try:
-                    logger.info(f"Deleting: {doc.id} ({doc.filename}) - created: {doc.created_at}")
-                    db.delete(doc)
-                    deleted_ids.append(str(doc.id))
+                    doc_id = str(doc.id)
+                    logger.info(f"Deleting: {doc_id} ({doc.filename}) - created: {doc.created_at}")
+                    # Use delete_document to also delete R2 files
+                    success = delete_document(doc_id, user_id)
+                    if success:
+                        deleted_ids.append(doc_id)
+                    else:
+                        logger.error(f"Failed to delete document {doc_id}")
                 except Exception as e:
                     logger.error(f"Error deleting {doc.id}: {e}")
-
-            db.commit()
 
             logger.info(f"Successfully deleted {len(deleted_ids)} document(s)")
 
