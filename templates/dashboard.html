@@ -4,424 +4,314 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Socrate AI</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            color: #333;
-        }
-
-        .dashboard {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 250px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem 0;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .user-profile {
-            text-align: center;
-            padding: 0 1rem 2rem;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            margin-bottom: 0.5rem;
-            border: 3px solid white;
-        }
-
-        .user-profile h3 {
-            font-size: 1.2rem;
-            margin-bottom: 0.3rem;
-        }
-
-        .tier {
-            background: rgba(255,255,255,0.3);
-            padding: 0.2rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            display: inline-block;
-            text-transform: uppercase;
-        }
-
-        nav {
-            padding: 1rem 0;
-        }
-
-        nav a {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 0.8rem 1.5rem;
-            transition: background 0.3s;
-        }
-
-        nav a:hover, nav a.active {
-            background: rgba(255,255,255,0.2);
-        }
-
-        /* Main Content */
-        .content {
-            margin-left: 250px;
-            flex: 1;
-            padding: 2rem;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2rem;
-            color: #333;
-        }
-
-        .primary-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: transform 0.2s;
-        }
-
-        .primary-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        /* Storage Info */
-        .storage-info {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .storage-bar {
-            height: 20px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-
-        .storage-used {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s;
-        }
-
-        .storage-info p {
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .stat-card h3 {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        /* Documents Grid */
-        .documents-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .document-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .document-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        }
-
-        .doc-icon {
-            font-size: 3rem;
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-
-        .document-card h3 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-            color: #333;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .document-card p {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 0.5rem;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            margin-bottom: 1rem;
-        }
-
-        .status-ready { background: #4caf50; color: white; }
-        .status-processing { background: #ff9800; color: white; }
-        .status-failed { background: #f44336; color: white; }
-
-        .doc-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .doc-actions button {
-            flex: 1;
-            padding: 0.6rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: opacity 0.2s;
-        }
-
-        .doc-actions button:hover {
-            opacity: 0.8;
-        }
-
-        .btn-tools {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-delete {
-            background: #f44336;
-            color: white;
-        }
-
-        /* Upload Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .modal-content h2 {
-            margin-bottom: 1rem;
-        }
-
-        .file-input-wrapper {
-            border: 2px dashed #667eea;
-            border-radius: 8px;
-            padding: 2rem;
-            text-align: center;
-            margin: 1rem 0;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .file-input-wrapper:hover {
-            background: #f5f5f5;
-        }
-
-        .file-input-wrapper input {
-            display: none;
-        }
-
-        .upload-progress {
-            display: none;
-            margin-top: 1rem;
-        }
-
-        .progress-bar {
-            height: 30px;
-            background: #e0e0e0;
-            border-radius: 15px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #999;
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="icon" type="image/svg+xml" href="/static/images/logo-icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="user-profile">
-                <img src="{{ user.photo_url or 'https://via.placeholder.com/80' }}" alt="Profile" class="avatar">
-                <h3>{{ user.first_name }} {{ user.last_name or '' }}</h3>
-                <span class="tier">{{ user.subscription_tier }}</span>
-            </div>
+        <!-- Dashboard Header -->
+        <header class="dashboard-header">
+            <div class="dashboard-header-content">
+                <a href="/" class="dashboard-logo">
+                    <img src="/static/images/logo-full.svg" alt="Socrate AI Logo">
+                </a>
 
-            <nav>
-                <a href="#" class="active">📁 I miei Documenti</a>
-                <a href="#" onclick="alert('Coming soon!')">📜 Storico Chat</a>
-                <a href="#" onclick="alert('Coming soon!')">📊 Statistiche</a>
-                <a href="#" onclick="alert('Coming soon!')">⚙️ Impostazioni</a>
-                <a href="/logout">🚪 Logout</a>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="content">
-            <header>
-                <h1>I miei Documenti</h1>
-                <button class="primary-btn" onclick="openUploadModal()">⬆️ Carica Documento</button>
-            </header>
-
-            <!-- Storage Info -->
-            <div class="storage-info">
-                <div class="storage-bar">
-                    <div class="storage-used" style="width: {{ (user.storage_used_mb / user.storage_quota_mb * 100) | round }}%"></div>
-                </div>
-                <p>{{ user.storage_used_mb | round(2) }} MB / {{ user.storage_quota_mb }} MB utilizzati</p>
-            </div>
-
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Documenti Totali</h3>
-                    <div class="stat-value">{{ stats.documents.total }}</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Pronti</h3>
-                    <div class="stat-value">{{ stats.documents.ready }}</div>
-                </div>
-                <div class="stat-card">
-                    <h3>In Elaborazione</h3>
-                    <div class="stat-value">{{ stats.documents.processing }}</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Chat Totali</h3>
-                    <div class="stat-value">{{ stats.chat_sessions.total }}</div>
+                <div class="dashboard-user">
+                    <div class="user-info">
+                        <img src="{{ user.photo_url or 'https://via.placeholder.com/40' }}"
+                             alt="{{ user.first_name }}"
+                             class="user-avatar">
+                        <div>
+                            <div class="user-name">{{ user.first_name }} {{ user.last_name or '' }}</div>
+                            <span class="badge badge-cyan">{{ user.subscription_tier }}</span>
+                        </div>
+                    </div>
+                    <a href="/logout" class="btn btn-ghost btn-sm">Logout</a>
                 </div>
             </div>
+        </header>
 
-            <!-- Documents Grid -->
-            <div id="documents-grid" class="documents-grid">
-                <!-- Populated by JavaScript -->
+        <!-- Dashboard Main Content -->
+        <main class="dashboard-main">
+            <!-- Welcome Message -->
+            <div class="dashboard-welcome">
+                <h1>Bentornato, {{ user.first_name }}! 👋</h1>
+                <p>Gestisci i tuoi documenti, carica nuovi contenuti e interroga la tua knowledge base.</p>
             </div>
+
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-widget">
+                    <div class="stat-widget-header">
+                        <div class="stat-widget-icon">📁</div>
+                    </div>
+                    <div class="stat-widget-value">{{ stats.documents.total }}</div>
+                    <div class="stat-widget-label">Documenti Totali</div>
+                </div>
+
+                <div class="stat-widget stat-widget-bronze">
+                    <div class="stat-widget-header">
+                        <div class="stat-widget-icon">✅</div>
+                    </div>
+                    <div class="stat-widget-value">{{ stats.documents.ready }}</div>
+                    <div class="stat-widget-label">Pronti</div>
+                </div>
+
+                <div class="stat-widget">
+                    <div class="stat-widget-header">
+                        <div class="stat-widget-icon">⚙️</div>
+                    </div>
+                    <div class="stat-widget-value">{{ stats.documents.processing }}</div>
+                    <div class="stat-widget-label">In Elaborazione</div>
+                </div>
+
+                <div class="stat-widget stat-widget-bronze">
+                    <div class="stat-widget-header">
+                        <div class="stat-widget-icon">💬</div>
+                    </div>
+                    <div class="stat-widget-value">{{ stats.chat_sessions.total }}</div>
+                    <div class="stat-widget-label">Chat Totali</div>
+                </div>
+            </div>
+
+            <!-- Storage Info Card -->
+            <div class="card card-glow" style="margin-bottom: var(--space-8);">
+                <div class="card-header">
+                    <h3 class="card-title">💾 Spazio di Archiviazione</h3>
+                    <p class="card-subtitle">
+                        {{ user.storage_used_mb | round(2) }} MB / {{ user.storage_quota_mb }} MB utilizzati
+                    </p>
+                </div>
+                <div class="upload-progress-bar">
+                    <div class="upload-progress-fill"
+                         style="width: {{ (user.storage_used_mb / user.storage_quota_mb * 100) | round }}%">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <div class="section-header">
+                    <h2 class="section-title">📤 Carica Nuovo Documento</h2>
+                </div>
+
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Trascina un file qui o clicca per selezionare</div>
+                    <div class="upload-hint">Supportati: PDF, DOCX, TXT, MP4, MP3 (max {{ user.storage_quota_mb - user.storage_used_mb | round(2) }} MB disponibili)</div>
+                    <input type="file" id="file-input" accept=".pdf,.docx,.txt,.mp4,.mp3" style="display: none;">
+                </div>
+
+                <div id="upload-progress-container" class="upload-progress" style="display: none;">
+                    <div class="upload-progress-bar">
+                        <div class="upload-progress-fill" id="upload-progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="upload-progress-text" id="upload-progress-text">Caricamento...</div>
+                </div>
+            </section>
+
+            <!-- Documents Section -->
+            <section class="documents-section">
+                <div class="section-header">
+                    <h2 class="section-title">📚 I Miei Documenti</h2>
+                </div>
+
+                <div class="documents-controls">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text"
+                               id="search-input"
+                               placeholder="Cerca documenti per nome..."
+                               aria-label="Cerca documenti">
+                    </div>
+                    <button class="btn btn-outline" onclick="loadDocuments()">
+                        <span>🔄</span>
+                        <span>Aggiorna</span>
+                    </button>
+                </div>
+
+                <!-- Documents Grid -->
+                <div id="documents-grid" class="documents-grid">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">📭</div>
+                    <h3 class="empty-state-title">Nessun documento caricato</h3>
+                    <p class="empty-state-text">
+                        Carica il tuo primo documento per iniziare a usare Socrate AI
+                    </p>
+                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                        <span>📤</span>
+                        <span>Carica Documento</span>
+                    </button>
+                </div>
+            </section>
         </main>
     </div>
 
-    <!-- Upload Modal -->
-    <div id="upload-modal" class="modal">
-        <div class="modal-content">
-            <h2>Carica Documento</h2>
-            <form id="upload-form">
-                <div class="file-input-wrapper" onclick="document.getElementById('file-input').click()">
-                    <p>📄 Clicca per selezionare un file</p>
-                    <p style="font-size: 0.8rem; color: #999; margin-top: 0.5rem;">
-                        Formati supportati: PDF, DOCX, TXT, MP4, MP3
-                    </p>
-                    <input type="file" id="file-input" accept=".pdf,.docx,.txt,.mp4,.mp3">
-                </div>
-                <div class="upload-progress" id="upload-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progress-fill"></div>
-                    </div>
-                    <p id="progress-text">Caricamento...</p>
-                </div>
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                    <button type="submit" class="primary-btn" style="flex: 1;">Carica</button>
-                    <button type="button" onclick="closeUploadModal()" style="flex: 1; background: #ccc;">Annulla</button>
-                </div>
-            </form>
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="background: var(--color-bg-card); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); padding: var(--space-6); max-width: 500px;">
+            <h2 style="color: var(--color-text-primary); margin-bottom: var(--space-4);">⚠️ Conferma Eliminazione</h2>
+            <p style="color: var(--color-text-secondary); margin-bottom: var(--space-6);">
+                Sei sicuro di voler eliminare questo documento? Questa azione non può essere annullata.
+            </p>
+            <div style="display: flex; gap: var(--space-3);">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()" style="flex: 1;">Annulla</button>
+                <button class="btn btn-primary" onclick="confirmDelete()" style="flex: 1; background: var(--color-error);">Elimina</button>
+            </div>
         </div>
     </div>
 
     <script src="/static/js/dashboard.js"></script>
     <script>
+        let documentToDelete = null;
+
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
             loadDocuments();
+            setupUploadHandlers();
+        });
+
+        // Setup drag & drop upload
+        function setupUploadHandlers() {
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+
+            // Click to upload
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // Drag & drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragging');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragging');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragging');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileUpload(files[0]);
+                }
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+        }
+
+        // Handle file upload
+        async function handleFileUpload(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const progressContainer = document.getElementById('upload-progress-container');
+            const progressFill = document.getElementById('upload-progress-fill');
+            const progressText = document.getElementById('upload-progress-text');
+
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent = 'Caricamento...';
+
+            try {
+                const xhr = new XMLHttpRequest();
+
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progressFill.style.width = percentComplete + '%';
+                        progressText.textContent = `Caricamento: ${Math.round(percentComplete)}%`;
+                    }
+                });
+
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        progressText.textContent = '✅ Caricamento completato! Il documento è in elaborazione...';
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                            document.getElementById('file-input').value = '';
+                            loadDocuments();
+                        }, 2000);
+                    } else {
+                        progressText.textContent = '❌ Errore durante il caricamento';
+                        console.error('Upload failed:', xhr.responseText);
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    progressText.textContent = '❌ Errore di rete';
+                });
+
+                xhr.open('POST', '/api/documents/upload');
+                xhr.send(formData);
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                progressText.textContent = '❌ Errore durante il caricamento';
+            }
+        }
+
+        // Delete modal functions
+        function openDeleteModal(documentId) {
+            documentToDelete = documentId;
+            document.getElementById('delete-modal').style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            documentToDelete = null;
+            document.getElementById('delete-modal').style.display = 'none';
+        }
+
+        async function confirmDelete() {
+            if (!documentToDelete) return;
+
+            try {
+                const response = await fetch(`/api/documents/${documentToDelete}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    closeDeleteModal();
+                    loadDocuments();
+                } else {
+                    alert('Errore durante l\'eliminazione del documento');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Errore durante l\'eliminazione del documento');
+            }
+        }
+
+        // Search functionality
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const documentCards = document.querySelectorAll('.document-card');
+
+            documentCards.forEach(card => {
+                const title = card.querySelector('.document-title').textContent.toLowerCase();
+                if (title.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         });
     </script>
 </body>

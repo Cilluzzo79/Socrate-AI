@@ -4,152 +4,173 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socrate AI - Knowledge Management System</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-        }
-
-        .landing-container {
-            max-width: 900px;
-            padding: 2rem;
-            text-align: center;
-        }
-
-        .hero {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            font-size: 3.5rem;
-            margin-bottom: 0.5rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .tagline {
-            font-size: 1.3rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin: 3rem 0;
-        }
-
-        .feature {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 1.5rem;
-            border-radius: 15px;
-            transition: transform 0.3s ease;
-        }
-
-        .feature:hover {
-            transform: translateY(-5px);
-        }
-
-        .icon {
-            font-size: 3rem;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .feature h3 {
-            font-size: 1.2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .feature p {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .cta {
-            margin-top: 3rem;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-        }
-
-        .cta h2 {
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .cta p {
-            margin-bottom: 1.5rem;
-            opacity: 0.9;
-        }
-
-        #telegram-login-container {
-            display: inline-block;
-            margin: 1rem auto;
-        }
-
-        .info-section {
-            margin-top: 2rem;
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .info-section ul {
-            list-style: none;
-            margin-top: 1rem;
-        }
-
-        .info-section li {
-            margin: 0.5rem 0;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/landing.css">
+    <link rel="icon" type="image/svg+xml" href="/static/images/logo-icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="landing-container">
-        <div class="hero">
-            <h1>🤖 Socrate AI</h1>
-            <p class="tagline">Il tuo assistente AI per documenti e video</p>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="/" class="navbar-logo">
+                <img src="/static/images/logo-full.svg" alt="Socrate AI Logo">
+            </a>
+            <ul class="navbar-nav">
+                <li><a href="#features" class="navbar-link">Funzionalità</a></li>
+                <li><a href="#cta" class="navbar-link">Inizia Ora</a></li>
+                <li class="navbar-cta">
+                    <a href="/dashboard" class="btn btn-outline btn-sm">Accedi</a>
+                </li>
+            </ul>
+            <button class="navbar-toggle" aria-label="Toggle menu">☰</button>
+        </div>
+    </nav>
 
-            <div class="features">
-                <div class="feature">
-                    <span class="icon">📝</span>
-                    <h3>Quiz Interattivi</h3>
-                    <p>Genera quiz personalizzati dai tuoi documenti</p>
-                </div>
-                <div class="feature">
-                    <span class="icon">🗺️</span>
-                    <h3>Mappe Mentali</h3>
-                    <p>Visualizza i concetti chiave</p>
-                </div>
-                <div class="feature">
-                    <span class="icon">📊</span>
-                    <h3>Analisi Profonde</h3>
-                    <p>Tematica, critica, comparativa</p>
-                </div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-container">
+            <div class="hero-eyebrow">
+                <span>✨</span>
+                <span>AI-Powered Knowledge Management</span>
             </div>
 
-            <div class="cta">
-                <h2>Accedi in 1 Click</h2>
-                <p>Usa il tuo account Telegram (nessuna configurazione richiesta)</p>
+            <h1 class="hero-title">
+                Il tuo assistente AI<br>per documenti e video
+            </h1>
 
-                <!-- TELEGRAM LOGIN WIDGET -->
-                <div id="telegram-login-container">
+            <p class="hero-subtitle">
+                Trasforma qualsiasi documento o video in una knowledge base intelligente.
+                Chatta, genera quiz, crea schemi e analizza contenuti con l'intelligenza artificiale.
+            </p>
+
+            <div class="hero-cta">
+                <a href="#cta" class="btn btn-primary btn-lg">
+                    <span>🚀</span>
+                    <span>Inizia Gratuitamente</span>
+                </a>
+                <a href="#features" class="btn btn-outline btn-lg">
+                    <span>📖</span>
+                    <span>Scopri di Più</span>
+                </a>
+            </div>
+
+            <div class="hero-visual">
+                <img src="/static/images/logo-icon.svg" alt="Socrate AI Owl">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="features-header">
+                <span class="features-label">Funzionalità</span>
+                <h2 class="features-title">Tutto ciò che ti serve per gestire la conoscenza</h2>
+                <p class="features-subtitle">
+                    Socrate AI combina potenti strumenti di AI per aiutarti a studiare,
+                    analizzare e comprendere meglio i tuoi contenuti.
+                </p>
+            </div>
+
+            <div class="features-grid">
+                <!-- Feature 1: Document Upload -->
+                <div class="feature-card">
+                    <div class="feature-icon">📤</div>
+                    <h3 class="feature-title">Caricamento Intelligente</h3>
+                    <p class="feature-description">
+                        Carica PDF, DOCX, TXT, video MP4 o audio MP3.
+                        Il sistema elabora automaticamente i contenuti e crea un indice semantico.
+                    </p>
+                </div>
+
+                <!-- Feature 2: Chat -->
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3 class="feature-title">Chat con i Documenti</h3>
+                    <p class="feature-description">
+                        Fai domande ai tuoi documenti e ricevi risposte contestuali basate sui contenuti.
+                        Come avere un esperto sempre disponibile.
+                    </p>
+                </div>
+
+                <!-- Feature 3: Quiz Generation -->
+                <div class="feature-card">
+                    <div class="feature-icon">📝</div>
+                    <h3 class="feature-title">Quiz Interattivi</h3>
+                    <p class="feature-description">
+                        Genera quiz personalizzati per testare la comprensione.
+                        Perfetto per studiare ed esercitarsi.
+                    </p>
+                </div>
+
+                <!-- Feature 4: Mind Maps -->
+                <div class="feature-card">
+                    <div class="feature-icon">🗺️</div>
+                    <h3 class="feature-title">Mappe Mentali</h3>
+                    <p class="feature-description">
+                        Visualizza i concetti chiave e le loro relazioni.
+                        Ideale per comprendere strutture complesse.
+                    </p>
+                </div>
+
+                <!-- Feature 5: Summaries -->
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3 class="feature-title">Riassunti e Schemi</h3>
+                    <p class="feature-description">
+                        Crea riassunti automatici, outline tematici e schemi strutturati.
+                        Risparmia ore di lavoro manuale.
+                    </p>
+                </div>
+
+                <!-- Feature 6: Analysis -->
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">Analisi Profonde</h3>
+                    <p class="feature-description">
+                        Analisi tematica, critica e comparativa.
+                        Scopri insights nascosti nei tuoi contenuti.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Open Source</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">24/7</div>
+                    <div class="stat-label">Disponibile</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">⚡</div>
+                    <div class="stat-label">Veloce e Sicuro</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="cta" class="cta">
+        <div class="container cta-container">
+            <h2 class="cta-title">Pronto a potenziare la tua conoscenza?</h2>
+            <p class="cta-subtitle">
+                Accedi in 1 click con Telegram. Nessuna configurazione richiesta.<br>
+                Inizia subito a trasformare i tuoi documenti in knowledge base intelligenti.
+            </p>
+
+            <div class="cta-actions">
+                <!-- Telegram Login Widget -->
+                <div id="telegram-login-container" style="display: inline-block;">
                     <script async src="https://telegram.org/js/telegram-widget.js?22"
                             data-telegram-login="{{ bot_username }}"
                             data-size="large"
@@ -157,20 +178,86 @@
                             data-request-access="write">
                     </script>
                 </div>
+            </div>
 
-                <div class="info-section">
-                    <p><strong>Cosa puoi fare con Socrate AI:</strong></p>
-                    <ul>
-                        <li>📤 Carica documenti PDF e video</li>
-                        <li>💬 Chatta con i tuoi documenti</li>
-                        <li>🎯 Genera quiz per studiare</li>
-                        <li>📋 Crea riassunti e schemi</li>
-                        <li>🔍 Analizza contenuti complessi</li>
-                        <li>📱 Accedi da Web o Telegram</li>
-                    </ul>
-                </div>
+            <div style="margin-top: 2rem; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto;">
+                <p style="font-weight: 600; margin-bottom: 1rem; color: var(--color-primary-cyan);">
+                    ✨ Cosa puoi fare con Socrate AI:
+                </p>
+                <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.75rem;">
+                    <li style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--color-primary-cyan);">📤</span>
+                        <span>Carica documenti PDF e video</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--color-primary-cyan);">💬</span>
+                        <span>Chatta con i tuoi documenti</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--color-primary-cyan);">🎯</span>
+                        <span>Genera quiz per studiare</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--color-primary-cyan);">📋</span>
+                        <span>Crea riassunti e schemi</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--color-primary-cyan);">🔍</span>
+                        <span>Analizza contenuti complessi</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--color-primary-cyan);">📱</span>
+                        <span>Accedi da Web o Telegram</span>
+                    </li>
+                </ul>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="/static/images/logo-icon.svg" alt="Socrate AI">
+                    <span class="footer-brand">Socrate AI</span>
+                </div>
+
+                <ul class="footer-links">
+                    <li><a href="https://github.com/your-repo" class="footer-link" target="_blank">GitHub</a></li>
+                    <li><a href="#" class="footer-link">Documentazione</a></li>
+                    <li><a href="#" class="footer-link">Privacy Policy</a></li>
+                    <li><a href="#" class="footer-link">Termini di Servizio</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 Socrate AI. Powered by Claude Haiku 4.5 via OpenRouter.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile Menu Toggle Script -->
+    <script>
+        document.querySelector('.navbar-toggle').addEventListener('click', function() {
+            document.querySelector('.navbar-nav').classList.toggle('active');
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#' && href.length > 1) {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        // Close mobile menu if open
+                        document.querySelector('.navbar-nav').classList.remove('active');
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>
