@@ -32,26 +32,133 @@
   padding: 0 var(--space-6);
 }
 
-.dashboard-logo {
+/* Logo Hero - Brand Dominant Design */
+.dashboard-logo-hero {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
   text-decoration: none;
+  transition: all var(--transition-base);
 }
 
-.dashboard-logo img {
-  height: 36px;
-  width: auto;
-  filter: drop-shadow(0 0 10px rgba(0, 217, 192, 0.4));
+.dashboard-logo-hero:hover {
+  transform: scale(1.05);
 }
 
-.dashboard-brand {
-  font-size: var(--text-lg);
-  font-weight: var(--font-bold);
+.logo-owl-container {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(0, 217, 192, 0.15), transparent 70%);
+  border-radius: var(--radius-full);
+  animation: owlPulse 3s ease-in-out infinite;
+}
+
+@keyframes owlPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 217, 192, 0.4); }
+  50% { box-shadow: 0 0 40px rgba(0, 217, 192, 0.6); }
+}
+
+.logo-owl-icon {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 0 15px rgba(0, 217, 192, 0.6));
+}
+
+.logo-text-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.logo-brand {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: var(--font-extrabold);
+  letter-spacing: 2px;
   background: linear-gradient(135deg, var(--color-accent-gold), var(--color-accent-bronze));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+}
+
+.logo-ai {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: var(--font-extrabold);
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--color-primary-cyan), var(--color-primary-cyan-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(0, 217, 192, 0.4);
+  margin-left: var(--space-2);
+}
+
+.logo-tagline {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: var(--font-medium);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  opacity: 0.8;
+}
+
+/* Dashboard Actions */
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/* Tools Button */
+.btn-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  background: linear-gradient(135deg, rgba(0, 217, 192, 0.15), rgba(212, 175, 55, 0.15));
+  border: 2px solid var(--color-primary-cyan);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-tools::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 217, 192, 0.4), transparent);
+  transition: left var(--transition-slow);
+}
+
+.btn-tools:hover::before {
+  left: 100%;
+}
+
+.btn-tools:hover {
+  background: linear-gradient(135deg, rgba(0, 217, 192, 0.25), rgba(212, 175, 55, 0.25));
+  border-color: var(--color-primary-cyan-light);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-2px);
+}
+
+.btn-tools svg {
+  filter: drop-shadow(0 0 4px rgba(0, 217, 192, 0.6));
 }
 
 .dashboard-user {

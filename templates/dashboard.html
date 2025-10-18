@@ -16,21 +16,40 @@
         <!-- Dashboard Header -->
         <header class="dashboard-header">
             <div class="dashboard-header-content">
-                <a href="/" class="dashboard-logo">
-                    <img src="/static/images/logo-full.svg" alt="Socrate AI Logo">
+                <!-- Logo Hero Section -->
+                <a href="/" class="dashboard-logo-hero">
+                    <div class="logo-owl-container">
+                        <img src="/static/images/logo-icon.svg" alt="Socrate AI Owl" class="logo-owl-icon">
+                    </div>
+                    <div class="logo-text-container">
+                        <span class="logo-brand">SOCRATE</span>
+                        <span class="logo-ai">AI</span>
+                        <span class="logo-tagline">Knowledge Assistant</span>
+                    </div>
                 </a>
 
-                <div class="dashboard-user">
-                    <div class="user-info">
-                        <img src="{{ user.photo_url or 'https://via.placeholder.com/40' }}"
-                             alt="{{ user.first_name }}"
-                             class="user-avatar">
-                        <div>
-                            <div class="user-name">{{ user.first_name }} {{ user.last_name or '' }}</div>
-                            <span class="badge badge-cyan">{{ user.subscription_tier }}</span>
+                <!-- Actions Section -->
+                <div class="dashboard-actions">
+                    <button class="btn btn-tools" onclick="toggleToolsMenu()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 15l-3-3h6l-3 3zm0-6l3 3H9l3-3z"/>
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <span>Strumenti</span>
+                    </button>
+
+                    <div class="dashboard-user">
+                        <div class="user-info">
+                            <img src="{{ user.photo_url or 'https://via.placeholder.com/40' }}"
+                                 alt="{{ user.first_name }}"
+                                 class="user-avatar">
+                            <div>
+                                <div class="user-name">{{ user.first_name }} {{ user.last_name or '' }}</div>
+                                <span class="badge badge-gold">{{ user.subscription_tier }}</span>
+                            </div>
                         </div>
+                        <a href="/logout" class="btn btn-ghost btn-sm">Logout</a>
                     </div>
-                    <a href="/logout" class="btn btn-ghost btn-sm">Logout</a>
                 </div>
             </div>
         </header>
@@ -39,7 +58,7 @@
         <main class="dashboard-main">
             <!-- Welcome Message -->
             <div class="dashboard-welcome">
-                <h1>Bentornato, {{ user.first_name }}! 👋</h1>
+                <h1>Bentornato, {{ user.first_name }}! <span style="color: var(--color-accent-gold);">👋</span></h1>
                 <p>Gestisci i tuoi documenti, carica nuovi contenuti e interroga la tua knowledge base.</p>
             </div>
 
@@ -313,6 +332,17 @@
                 }
             });
         });
+
+        // Tools menu placeholder (per futuro sviluppo)
+        function toggleToolsMenu() {
+            // TODO: Implementare menu strumenti con opzioni:
+            // - Genera quiz
+            // - Riassunto
+            // - Mind map
+            // - Outline
+            // - Analisi avanzata
+            alert('Menu Strumenti in arrivo! Include: Quiz, Riassunti, Mind Maps, Outline e molto altro.');
+        }
     </script>
 </body>
 </html>
