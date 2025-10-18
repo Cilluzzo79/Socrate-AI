@@ -390,11 +390,21 @@ def upload_document():
         logger.info(f"Document uploaded: {doc.id} by user {user_id}")
 
         # Trigger async processing with Celery
+        # Check if this is an image that requires OCR
         try:
-            from tasks import process_document_task
-            task = process_document_task.delay(str(doc.id), user_id)
+            from core.ocr_processor import is_image_file
 
-            logger.info(f"Processing task queued: {task.id} for document {doc.id}")
+            if is_image_file(mime_type):
+                # Route to OCR task
+                logger.info(f"Image detected: {filename} ({mime_type}) - routing to OCR task")
+                from tasks import process_image_ocr_task
+                task = process_image_ocr_task.delay(str(doc.id), user_id)
+                logger.info(f"OCR task queued: {task.id} for document {doc.id}")
+            else:
+                # Route to normal document processing
+                from tasks import process_document_task
+                task = process_document_task.delay(str(doc.id), user_id)
+                logger.info(f"Processing task queued: {task.id} for document {doc.id}")
 
             # Store task ID in document metadata (optional, for tracking)
             from core.document_operations import update_document_status

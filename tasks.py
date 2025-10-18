@@ -392,6 +392,232 @@ def process_document_task(self, document_id: str, user_id: str):
         }
 
 
+@celery_app.task(bind=True, name='tasks.process_image_ocr_task')
+def process_image_ocr_task(self, document_id: str, user_id: str):
+    """
+    Process uploaded image with Google Cloud Vision OCR, then pass to normal pipeline
+
+    Flow:
+    1. Download image from R2
+    2. Extract text with Google Cloud Vision OCR
+    3. Save extracted text as .txt file
+    4. Upload .txt to R2
+    5. Update document to point to .txt file
+    6. Call process_document_task() to continue normal pipeline
+
+    Args:
+        document_id: Document UUID
+        user_id: User UUID (for ownership verification)
+
+    Returns:
+        dict: OCR result with status and metadata
+    """
+    logger.info(f"Starting OCR processing: {document_id} for user {user_id}")
+
+    # Update task state
+    self.update_state(
+        state='PROCESSING',
+        meta={'status': 'Initializing OCR', 'progress': 0}
+    )
+
+    try:
+        # 1. Get document from database
+        doc = get_document_by_id(document_id, user_id)
+        if not doc:
+            logger.error(f"Document {document_id} not found or unauthorized")
+            return {
+                'success': False,
+                'error': 'Document not found or unauthorized'
+            }
+
+        logger.info(f"Processing image: {doc.filename} ({doc.file_path})")
+
+        # Update document status to processing
+        update_document_status(
+            document_id,
+            user_id,
+            status='processing',
+            processing_progress=5
+        )
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Downloading image', 'progress': 10}
+        )
+
+        # 2. Download image from R2
+        from core.s3_storage import download_file, upload_file
+
+        logger.info(f"Downloading image from R2: {doc.file_path}")
+        image_data = download_file(doc.file_path)
+
+        if not image_data:
+            logger.error(f"Image not found in R2: {doc.file_path}")
+            update_document_status(
+                document_id,
+                user_id,
+                status='failed',
+                error_message='Image not found in cloud storage'
+            )
+            return {
+                'success': False,
+                'error': 'Image not found in cloud storage'
+            }
+
+        logger.info(f"Image downloaded: {len(image_data)} bytes")
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Extracting text with Google Cloud Vision', 'progress': 30}
+        )
+
+        # 3. Extract text with Google Cloud Vision OCR
+        from core.ocr_processor import extract_text_from_image
+
+        logger.info("Calling Google Cloud Vision OCR API...")
+        ocr_result = extract_text_from_image(image_data, doc.filename)
+
+        if not ocr_result['success']:
+            logger.error(f"OCR failed: {ocr_result.get('error', 'Unknown error')}")
+            update_document_status(
+                document_id,
+                user_id,
+                status='failed',
+                error_message=f"OCR failed: {ocr_result.get('error', 'Unknown error')}"
+            )
+            return {
+                'success': False,
+                'error': ocr_result.get('error', 'OCR processing failed')
+            }
+
+        extracted_text = ocr_result['text']
+        language = ocr_result.get('language', 'unknown')
+        char_count = len(extracted_text)
+        word_count = len(extracted_text.split())
+
+        logger.info(f"✅ OCR successful: {char_count} characters, {word_count} words, language: {language}")
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Saving extracted text', 'progress': 60}
+        )
+
+        # 4. Save extracted text as .txt file and upload to R2
+        import tempfile
+        temp_dir = tempfile.mkdtemp()
+
+        # Create text file
+        text_filename = os.path.splitext(doc.filename)[0] + '_ocr.txt'
+        temp_text_path = os.path.join(temp_dir, text_filename)
+
+        with open(temp_text_path, 'w', encoding='utf-8') as f:
+            f.write(extracted_text)
+
+        logger.info(f"Text file created: {temp_text_path}")
+
+        # Upload text file to R2
+        text_r2_key = f"users/{user_id}/documents/{document_id}/{text_filename}"
+
+        with open(temp_text_path, 'rb') as f:
+            text_data = f.read()
+
+        upload_success = upload_file(text_data, text_r2_key, 'text/plain')
+
+        if not upload_success:
+            logger.error("Failed to upload text file to R2")
+            update_document_status(
+                document_id,
+                user_id,
+                status='failed',
+                error_message='Failed to upload extracted text'
+            )
+            return {
+                'success': False,
+                'error': 'Failed to upload extracted text'
+            }
+
+        logger.info(f"Text file uploaded to R2: {text_r2_key}")
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Passing to document processor', 'progress': 80}
+        )
+
+        # 5. Update document to point to text file instead of image
+        update_document_status(
+            document_id,
+            user_id,
+            status='processing',
+            processing_progress=85,
+            doc_metadata={
+                'original_image_r2_key': doc.file_path,  # Keep reference to original image
+                'ocr_result': {
+                    'extracted_text_r2_key': text_r2_key,
+                    'char_count': char_count,
+                    'word_count': word_count,
+                    'language': language,
+                    'confidence': ocr_result.get('confidence', 1.0),
+                    'ocr_provider': 'google_cloud_vision',
+                    'processed_at': datetime.utcnow().isoformat()
+                }
+            }
+        )
+
+        # Update document file_path to point to text file for normal processing
+        from core.database import SessionLocal, Document
+        db = SessionLocal()
+        try:
+            db_doc = db.query(Document).filter_by(id=document_id).first()
+            if db_doc:
+                db_doc.file_path = text_r2_key
+                db_doc.mime_type = 'text/plain'
+                db_doc.filename = text_filename
+                db.commit()
+                logger.info(f"Document updated to use OCR text file: {text_r2_key}")
+        finally:
+            db.close()
+
+        # 6. Call normal document processing pipeline
+        logger.info("Triggering normal document processing for OCR text...")
+
+        result = process_document_task(document_id, user_id)
+
+        # Cleanup temp files
+        try:
+            import shutil
+            shutil.rmtree(temp_dir)
+            logger.info(f"Temporary files cleaned up: {temp_dir}")
+        except Exception as e:
+            logger.warning(f"Error cleaning temp files: {e}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Unexpected error in OCR processing: {e}")
+        logger.error(traceback.format_exc())
+
+        # Update document status
+        try:
+            update_document_status(
+                document_id,
+                user_id,
+                status='failed',
+                error_message=f'OCR error: {str(e)}'
+            )
+        except:
+            pass
+
+        return {
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }
+
+
 @celery_app.task(name='tasks.cleanup_old_documents')
 def cleanup_old_documents():
     """

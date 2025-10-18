@@ -102,8 +102,8 @@
                 <div class="upload-area" id="upload-area">
                     <div class="upload-icon">📄</div>
                     <div class="upload-text">Trascina un file qui o clicca per selezionare</div>
-                    <div class="upload-hint">Supportati: PDF, DOCX, TXT, MP4, MP3 (max {{ user.storage_quota_mb - user.storage_used_mb | round(2) }} MB disponibili)</div>
-                    <input type="file" id="file-input" accept=".pdf,.docx,.txt,.mp4,.mp3" style="display: none;">
+                    <div class="upload-hint">Supportati: PDF, DOCX, TXT, MP4, MP3, JPG, PNG, HEIC, WebP (max {{ user.storage_quota_mb - user.storage_used_mb | round(2) }} MB disponibili)</div>
+                    <input type="file" id="file-input" accept=".pdf,.docx,.txt,.mp4,.mp3,.jpg,.jpeg,.png,.heic,.heif,.webp,.bmp,.tiff" style="display: none;">
                 </div>
 
                 <div id="upload-progress-container" class="upload-progress" style="display: none;">

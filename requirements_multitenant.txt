@@ -47,6 +47,9 @@ redis>=5.0.0
 # Cloud Storage (S3-compatible)
 boto3>=1.28.0
 
+# OCR (Google Cloud Vision)
+google-cloud-vision==3.7.2
+
 # Utilities
 python-dotenv==1.0.0
 requests==2.31.0
