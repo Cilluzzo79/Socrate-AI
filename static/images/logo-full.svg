@@ -85,17 +85,17 @@
   <path d="M 66 88 L 64 92 M 66 88 L 68 92" stroke="url(#bronzeGradient)" stroke-width="2" stroke-linecap="round"/>
 
   <!-- Text: SOCRATE -->
-  <text x="140" y="55" font-family="'Inter', -apple-system, sans-serif" font-size="32" font-weight="700" fill="url(#bronzeGradient)" letter-spacing="1">
+  <text x="140" y="55" font-family="'Space Grotesk', 'Inter', -apple-system, sans-serif" font-size="32" font-weight="700" fill="url(#bronzeGradient)" letter-spacing="1">
     SOCRATE
   </text>
 
   <!-- Text: AI (cyan) -->
-  <text x="315" y="55" font-family="'Inter', -apple-system, sans-serif" font-size="32" font-weight="700" fill="url(#cyanGradient)" filter="url(#glow)">
+  <text x="315" y="55" font-family="'Space Grotesk', 'Inter', -apple-system, sans-serif" font-size="32" font-weight="700" fill="url(#cyanGradient)" filter="url(#glow)">
     AI
   </text>
 
   <!-- Subtitle -->
-  <text x="140" y="78" font-family="'Inter', -apple-system, sans-serif" font-size="11" font-weight="400" fill="#C9A971" opacity="0.8" letter-spacing="2">
+  <text x="140" y="78" font-family="'Manrope', 'Inter', -apple-system, sans-serif" font-size="11" font-weight="400" fill="#D4B875" opacity="0.8" letter-spacing="2">
     KNOWLEDGE ASSISTANT
   </text>
 </svg>

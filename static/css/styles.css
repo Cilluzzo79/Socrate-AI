@@ -3,6 +3,9 @@
    Cyan/Bronze Dark Theme with Neon Glow Effects
    ============================================================================= */
 
+/* Google Fonts Import - Space Grotesk (display) + Manrope (body) */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 /* -----------------------------------------------------------------------------
    CSS CUSTOM PROPERTIES (Design Tokens)
    ----------------------------------------------------------------------------- */
@@ -14,7 +17,7 @@
   --color-primary-cyan-dark: #00B8A3;
 
   /* COLORS - ACCENT (Bronze/Beige) */
-  --color-accent-bronze: #C9A971;
+  --color-accent-bronze: #D4B875; /* Improved from #C9A971 for WCAG AA contrast */
   --color-accent-gold: #D4AF37;
   --color-accent-bronze-dark: #A08757;
 
@@ -28,7 +31,7 @@
   /* COLORS - TEXT */
   --color-text-primary: #f8fafc;
   --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
+  --color-text-tertiary: #A3B3C8; /* Improved from #94a3b8 for WCAG AA contrast */
   --color-text-muted: #64748b;
 
   /* COLORS - BORDERS */
@@ -61,9 +64,10 @@
                0 10px 10px -5px rgba(0, 0, 0, 0.3);
 
   /* TYPOGRAPHY - Font Families */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-               Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --font-mono: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  --font-display: 'Space Grotesk', 'Inter', sans-serif; /* Display/Headings - modern geometric */
+  --font-sans: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; /* Body text - improved readability */
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 
   /* TYPOGRAPHY - Font Sizes (Modular Scale 1.25) */
   --text-xs: 0.75rem;      /* 12px */
@@ -85,7 +89,7 @@
   --font-extrabold: 800;
 
   /* TYPOGRAPHY - Line Heights */
-  --leading-tight: 1.25;
+  --leading-tight: 1.15; /* Improved from 1.25 for better heading density */
   --leading-normal: 1.5;
   --leading-relaxed: 1.75;
 
@@ -157,8 +161,10 @@ body {
    ----------------------------------------------------------------------------- */
 
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display); /* Use Space Grotesk for headings */
   font-weight: var(--font-bold);
   line-height: var(--leading-tight);
+  letter-spacing: -0.02em; /* Optical kerning for better readability */
   color: var(--color-text-primary);
   margin-bottom: var(--space-4);
 }
@@ -235,6 +241,12 @@ pre {
   cursor: not-allowed;
 }
 
+/* Focus States for Keyboard Navigation (WCAG 2.1 AA) */
+.btn:focus-visible {
+  outline: 3px solid var(--color-primary-cyan);
+  outline-offset: 2px;
+}
+
 /* Button Primary (Cyan with Glow) */
 .btn-primary {
   background: linear-gradient(135deg, var(--color-primary-cyan), var(--color-primary-cyan-dark));
@@ -303,8 +315,10 @@ pre {
    ----------------------------------------------------------------------------- */
 
 .card {
-  background-color: var(--color-bg-card);
-  border: 1px solid var(--color-border-subtle);
+  background: rgba(30, 34, 48, 0.7); /* Glassmorphism background */
+  backdrop-filter: blur(16px) saturate(180%); /* Glass effect */
+  -webkit-backdrop-filter: blur(16px) saturate(180%); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.18); /* Subtle glass border */
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   box-shadow: var(--shadow-md);
@@ -314,7 +328,7 @@ pre {
 .card:hover {
   border-color: var(--color-border-primary);
   box-shadow: var(--shadow-lg), var(--glow-cyan);
-  transform: translateY(-4px);
+  transform: translateY(-4px) scale(1.02); /* Subtle scale on hover */
 }
 
 .card-header {
@@ -352,6 +366,7 @@ pre {
 .card-glow {
   border-color: var(--color-primary-cyan);
   box-shadow: var(--shadow-lg), var(--glow-cyan);
+  background: rgba(0, 217, 192, 0.05); /* Subtle cyan tint */
 }
 
 /* Card with Bronze Accent */
