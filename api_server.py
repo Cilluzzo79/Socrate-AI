@@ -677,6 +677,129 @@ def calculate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
 # HEALTH CHECK
 # ============================================================================
 
+@app.route('/api/admin/cleanup-orphaned-r2', methods=['POST'])
+@require_auth
+def cleanup_orphaned_r2():
+    """
+    Admin endpoint to cleanup orphaned R2 files
+    Body: {
+        "dry_run": true  # Set to false to actually delete files
+    }
+    """
+    user_id = get_current_user_id()
+    data = request.json or {}
+    dry_run = data.get('dry_run', True)
+
+    try:
+        from core.database import SessionLocal, Document
+        from core.s3_storage import list_r2_files, delete_file
+        from typing import Set, List
+
+        logger.info(f"🧹 Cleanup orphaned R2 files - dry_run={dry_run}")
+
+        # Step 1: Get valid R2 keys from database
+        db = SessionLocal()
+        valid_keys = set()
+
+        try:
+            documents = db.query(Document).all()
+            logger.info(f"Found {len(documents)} documents in database")
+
+            for doc in documents:
+                # Collect all R2 keys from document records
+                if doc.file_path and '/' in doc.file_path:
+                    valid_keys.add(doc.file_path)
+
+                if doc.doc_metadata:
+                    metadata_r2_key = doc.doc_metadata.get('metadata_r2_key')
+                    if metadata_r2_key and metadata_r2_key != 'inline' and '/' in metadata_r2_key:
+                        valid_keys.add(metadata_r2_key)
+
+                    video_r2_key = doc.doc_metadata.get('video_r2_key')
+                    if video_r2_key and '/' in video_r2_key:
+                        valid_keys.add(video_r2_key)
+
+                    embeddings_r2_key = doc.doc_metadata.get('embeddings_r2_key')
+                    if embeddings_r2_key and embeddings_r2_key != 'inline' and '/' in embeddings_r2_key:
+                        valid_keys.add(embeddings_r2_key)
+
+            logger.info(f"Found {len(valid_keys)} valid R2 keys in database")
+        finally:
+            db.close()
+
+        # Step 2: Get all files from R2
+        logger.info("Listing all files on R2...")
+        all_files = list_r2_files()
+        logger.info(f"Found {len(all_files)} files on R2")
+
+        if not all_files:
+            return jsonify({
+                'success': True,
+                'message': 'No files found on R2',
+                'orphaned_count': 0
+            })
+
+        # Step 3: Find orphaned files
+        orphaned = []
+        for r2_key in all_files:
+            if r2_key not in valid_keys:
+                orphaned.append(r2_key)
+
+        logger.info(f"Found {len(orphaned)} orphaned files")
+
+        if not orphaned:
+            return jsonify({
+                'success': True,
+                'message': 'No orphaned files found',
+                'orphaned_count': 0,
+                'total_files': len(all_files),
+                'valid_files': len(valid_keys)
+            })
+
+        # Step 4: Delete or report
+        if dry_run:
+            return jsonify({
+                'success': True,
+                'message': f'DRY RUN: Would delete {len(orphaned)} orphaned files',
+                'orphaned_count': len(orphaned),
+                'orphaned_files': orphaned[:50],  # Limit to first 50 for response
+                'total_orphaned': len(orphaned),
+                'help': 'Set dry_run=false to actually delete these files'
+            })
+        else:
+            # Actually delete
+            deleted_count = 0
+            failed_count = 0
+
+            for r2_key in orphaned:
+                try:
+                    success = delete_file(r2_key)
+                    if success:
+                        logger.info(f"✅ Deleted: {r2_key}")
+                        deleted_count += 1
+                    else:
+                        logger.warning(f"⚠️  Failed to delete: {r2_key}")
+                        failed_count += 1
+                except Exception as e:
+                    logger.error(f"❌ Error deleting {r2_key}: {e}")
+                    failed_count += 1
+
+            return jsonify({
+                'success': True,
+                'message': f'Cleanup complete: deleted {deleted_count} files, {failed_count} failures',
+                'deleted_count': deleted_count,
+                'failed_count': failed_count,
+                'total_orphaned': len(orphaned)
+            })
+
+    except Exception as e:
+        logger.error(f"Error during orphaned R2 cleanup: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/health')
 def health_check():
     """Health check endpoint"""
