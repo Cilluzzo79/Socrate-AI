@@ -47,8 +47,8 @@
 
 .logo-owl-container {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 120px;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,8 +63,8 @@
 }
 
 .logo-owl-icon {
-  width: 84px;
-  height: 84px;
+  width: 108px;
+  height: 108px;
   filter: drop-shadow(0 0 20px rgba(0, 217, 192, 0.7));
 }
 
