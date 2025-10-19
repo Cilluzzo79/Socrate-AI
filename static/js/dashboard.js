@@ -1,10 +1,10 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: BATCH-CAMERA-RENAME-FIX-19OCT2025
+ * VERSION: GLOBAL-SCOPE-FIX-19OCT2025
  */
 
-console.log('[DASHBOARD.JS] VERSION: BATCH-CAMERA-RENAME-FIX-19OCT2025');
+console.log('[DASHBOARD.JS] VERSION: GLOBAL-SCOPE-FIX-19OCT2025');
 console.log('[DASHBOARD.JS] Rename functions available:', {
     openRenameModal: typeof openRenameModal,
     closeRenameModal: typeof closeRenameModal,
@@ -492,8 +492,9 @@ let capturedImages = []; // Array of {file, dataUrl}
 
 /**
  * Open camera input to capture photo
+ * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
-function openCamera() {
+window.openCamera = function() {
     const cameraInput = document.getElementById('camera-input');
     if (cameraInput) {
         cameraInput.click();
@@ -501,14 +502,23 @@ function openCamera() {
 }
 
 /**
- * Handle camera capture - set up event listener
+ * Setup camera event listener
+ * MOVED TO DOMContentLoaded to ensure element exists
  */
-document.getElementById('camera-input')?.addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-        handleCameraCapture(file);
+function setupCameraListener() {
+    const cameraInput = document.getElementById('camera-input');
+    if (cameraInput) {
+        cameraInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleCameraCapture(file);
+            }
+        });
+        console.log('[CAMERA] Event listener attached successfully');
+    } else {
+        console.error('[CAMERA] camera-input element not found');
     }
-});
+}
 
 /**
  * Process captured image and add to batch
@@ -609,12 +619,13 @@ function showBatchPreview() {
 
 /**
  * Remove an image from the batch
+ * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
-function removeImage(index) {
+window.removeImage = function(index) {
     capturedImages.splice(index, 1);
 
     if (capturedImages.length === 0) {
-        closePreviewModal();
+        window.closePreviewModal();
     } else {
         showBatchPreview();
     }
@@ -622,25 +633,28 @@ function removeImage(index) {
 
 /**
  * Add another photo to the batch
+ * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
-function addAnotherPhoto() {
-    openCamera();
+window.addAnotherPhoto = function() {
+    window.openCamera();
 }
 
 /**
  * Cancel batch and close modal
+ * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
-function cancelBatch() {
+window.cancelBatch = function() {
     if (confirm('Vuoi davvero annullare? Tutte le foto acquisite verranno perse.')) {
         capturedImages = [];
-        closePreviewModal();
+        window.closePreviewModal();
     }
 }
 
 /**
  * Close preview modal and reset
+ * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
-function closePreviewModal() {
+window.closePreviewModal = function() {
     const modal = document.getElementById('image-preview-modal');
     modal.style.display = 'none';
     capturedImages = [];
@@ -648,8 +662,9 @@ function closePreviewModal() {
 
 /**
  * Upload all captured images as a single PDF document
+ * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
-async function uploadBatch() {
+window.uploadBatch = async function() {
     if (capturedImages.length === 0) {
         alert('Nessuna immagine da caricare');
         return;
@@ -757,4 +772,30 @@ document.addEventListener('click', function(e) {
             console.error('openRenameModal function not found');
         }
     }
+});
+
+// ============================================================================
+// INITIALIZATION - DOMContentLoaded
+// ============================================================================
+
+/**
+ * Initialize all event listeners and global functions after DOM is ready
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[INIT] DOM Content Loaded - Setting up camera listeners');
+
+    // Setup camera event listener
+    setupCameraListener();
+
+    // Verify all global functions are accessible
+    console.log('[INIT] Global functions exposed to window:', {
+        openCamera: typeof window.openCamera,
+        addAnotherPhoto: typeof window.addAnotherPhoto,
+        cancelBatch: typeof window.cancelBatch,
+        closePreviewModal: typeof window.closePreviewModal,
+        uploadBatch: typeof window.uploadBatch,
+        removeImage: typeof window.removeImage
+    });
+
+    console.log('[INIT] Initialization complete');
 });
