@@ -605,8 +605,7 @@ function closePreviewModal() {
     cameraInput.value = '';
     capturedImageFile = null;
 
-    // Optionally reopen camera immediately
-    setTimeout(() => openCamera(), 300);
+    // User controls when to take another photo - no auto-reopen
 }
 
 /**
