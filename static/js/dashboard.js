@@ -471,10 +471,10 @@ async function pollDocumentStatus(documentId, progressFill, progressText, maxAtt
 }
 
 // ============================================================================
-// CAMERA CAPTURE FUNCTIONS
+// CAMERA CAPTURE FUNCTIONS - MULTI-PHOTO BATCH
 // ============================================================================
 
-let capturedImageFile = null;
+let capturedImages = []; // Array of {file, dataUrl}
 
 /**
  * Open camera input to capture photo
@@ -497,87 +497,223 @@ document.getElementById('camera-input')?.addEventListener('change', function(eve
 });
 
 /**
- * Process captured image and show preview
+ * Process captured image and add to batch
  */
 function handleCameraCapture(file) {
-    capturedImageFile = file;
-
     // Create preview URL
     const reader = new FileReader();
     reader.onload = function(e) {
-        showImagePreview(e.target.result);
+        // Add to captured images array
+        capturedImages.push({
+            file: file,
+            dataUrl: e.target.result
+        });
+
+        // Show batch preview modal
+        showBatchPreview();
     };
     reader.readAsDataURL(file);
+
+    // Reset camera input to allow capturing more
+    document.getElementById('camera-input').value = '';
 }
 
 /**
- * Show image preview modal with rename option
+ * Show batch preview modal with all captured images
  */
-function showImagePreview(imageDataUrl) {
+function showBatchPreview() {
     const modal = document.getElementById('image-preview-modal');
-    const previewImage = document.getElementById('preview-image');
-    const filenameInput = document.getElementById('preview-filename');
 
-    // Set preview image
-    previewImage.src = imageDataUrl;
+    // Generate preview HTML for all images
+    const previewsHTML = capturedImages.map((img, index) => `
+        <div style="position: relative; display: inline-block; margin: 0.5rem;">
+            <img src="${img.dataUrl}"
+                 style="max-width: 150px; max-height: 150px; border-radius: var(--radius-md); border: 2px solid var(--color-border-primary);">
+            <button onclick="removeImage(${index})"
+                    style="position: absolute; top: -8px; right: -8px; background: var(--color-error); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 1;">
+                ×
+            </button>
+            <div style="text-align: center; font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                Foto ${index + 1}
+            </div>
+        </div>
+    `).join('');
 
-    // Generate default filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    filenameInput.value = `foto-${timestamp}`;
+    // Update modal content
+    modal.querySelector('.modal-content').innerHTML = `
+        <h2 style="color: var(--color-text-primary); margin-bottom: var(--space-4);">📸 Foto Acquisite (${capturedImages.length})</h2>
+
+        <!-- Image Gallery -->
+        <div style="margin-bottom: var(--space-4); max-height: 300px; overflow-y: auto; text-align: center; padding: var(--space-3); background: var(--color-bg-secondary); border-radius: var(--radius-md);">
+            ${previewsHTML}
+        </div>
+
+        <!-- Document Name Input -->
+        <div style="margin-bottom: var(--space-4);">
+            <label for="batch-document-name" style="display: block; color: var(--color-text-secondary); margin-bottom: var(--space-2); font-weight: 500;">
+                Nome Documento
+            </label>
+            <input
+                type="text"
+                id="batch-document-name"
+                placeholder="documento-scansionato"
+                value="documento-${new Date().toISOString().slice(0, 10)}"
+                style="
+                    width: 100%;
+                    padding: var(--space-3);
+                    background: var(--color-bg-primary);
+                    border: 1px solid var(--color-border-subtle);
+                    border-radius: var(--radius-md);
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                "
+            />
+            <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--space-2);">
+                Tutte le ${capturedImages.length} foto saranno unite in un unico documento PDF
+            </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: var(--space-3);">
+            <button class="btn btn-secondary" onclick="addAnotherPhoto()" style="flex: 1;">
+                <span>📷</span>
+                <span>Aggiungi Foto</span>
+            </button>
+            <button class="btn btn-primary" onclick="uploadBatch()" style="flex: 1;">
+                <span>✅</span>
+                <span>Carica Tutto (${capturedImages.length})</span>
+            </button>
+        </div>
+        <button class="btn btn-secondary" onclick="cancelBatch()" style="width: 100%; margin-top: var(--space-3);">
+            Annulla
+        </button>
+    `;
 
     // Show modal
     modal.style.display = 'flex';
 }
 
 /**
- * Close preview modal and reset camera input
+ * Remove an image from the batch
  */
-function closePreviewModal() {
-    const modal = document.getElementById('image-preview-modal');
-    const cameraInput = document.getElementById('camera-input');
+function removeImage(index) {
+    capturedImages.splice(index, 1);
 
-    // Hide modal
-    modal.style.display = 'none';
-
-    // Reset camera input to allow retaking
-    cameraInput.value = '';
-    capturedImageFile = null;
-
-    // User controls when to take another photo - no auto-reopen
+    if (capturedImages.length === 0) {
+        closePreviewModal();
+    } else {
+        showBatchPreview();
+    }
 }
 
 /**
- * Confirm upload with custom filename
+ * Add another photo to the batch
  */
-function confirmUpload() {
-    if (!capturedImageFile) {
+function addAnotherPhoto() {
+    openCamera();
+}
+
+/**
+ * Cancel batch and close modal
+ */
+function cancelBatch() {
+    if (confirm('Vuoi davvero annullare? Tutte le foto acquisite verranno perse.')) {
+        capturedImages = [];
+        closePreviewModal();
+    }
+}
+
+/**
+ * Close preview modal and reset
+ */
+function closePreviewModal() {
+    const modal = document.getElementById('image-preview-modal');
+    modal.style.display = 'none';
+    capturedImages = [];
+}
+
+/**
+ * Upload all captured images as a single PDF document
+ */
+async function uploadBatch() {
+    if (capturedImages.length === 0) {
         alert('Nessuna immagine da caricare');
         return;
     }
 
-    const filenameInput = document.getElementById('preview-filename');
-    let customName = filenameInput.value.trim();
-
-    // Add .jpg extension if not present
-    if (!customName.match(/\.(jpg|jpeg|png)$/i)) {
-        customName += '.jpg';
-    }
-
-    // Create renamed file
-    const renamedFile = new File([capturedImageFile], customName, {
-        type: capturedImageFile.type,
-        lastModified: capturedImageFile.lastModified
-    });
+    const documentName = document.getElementById('batch-document-name').value.trim() || 'documento-scansionato';
 
     // Close modal
     document.getElementById('image-preview-modal').style.display = 'none';
 
-    // Upload file using existing handler
-    handleFileUpload(renamedFile);
+    // Show upload progress
+    const progressContainer = document.getElementById('upload-progress-container');
+    const progressFill = document.getElementById('upload-progress-fill');
+    const progressText = document.getElementById('upload-progress-text');
 
-    // Reset
-    document.getElementById('camera-input').value = '';
-    capturedImageFile = null;
+    progressContainer.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = `Caricamento ${capturedImages.length} foto...`;
+
+    try {
+        // Create FormData with all images
+        const formData = new FormData();
+
+        capturedImages.forEach((img, index) => {
+            // Add document name as filename for first image
+            const filename = index === 0
+                ? `${documentName}.jpg`
+                : `${documentName}_${index + 1}.jpg`;
+
+            const renamedFile = new File([img.file], filename, {
+                type: img.file.type,
+                lastModified: img.file.lastModified
+            });
+
+            formData.append('files', renamedFile);
+        });
+
+        // Add document name to metadata
+        formData.append('document_name', documentName);
+        formData.append('merge_images', 'true');
+
+        // Upload with progress tracking
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                progressFill.style.width = percentComplete + '%';
+                progressText.textContent = `Caricamento: ${Math.round(percentComplete)}%`;
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200 || xhr.status === 201) {
+                progressText.textContent = '✅ Caricamento completato! Il documento è in elaborazione...';
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    capturedImages = [];
+                    loadDocuments();
+                }, 2000);
+            } else {
+                progressText.textContent = '❌ Errore durante il caricamento';
+                console.error('Upload failed:', xhr.responseText);
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            progressText.textContent = '❌ Errore di rete';
+        });
+
+        xhr.open('POST', '/api/documents/upload-batch');
+        xhr.send(formData);
+
+    } catch (error) {
+        console.error('Upload error:', error);
+        progressText.textContent = '❌ Errore durante il caricamento';
+        alert('Errore: ' + error.message);
+    }
 }
 
 // Auto-reload documents every 30 seconds to check for processing updates

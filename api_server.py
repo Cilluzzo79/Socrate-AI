@@ -436,6 +436,138 @@ def upload_document():
         return jsonify({'error': 'Upload failed'}), 500
 
 
+@app.route('/api/documents/upload-batch', methods=['POST'])
+@require_auth
+def upload_batch_documents():
+    """Upload multiple images and merge them into a single PDF document"""
+    user_id = get_current_user_id()
+
+    files = request.files.getlist('files')
+    document_name = request.form.get('document_name', f'documento-{datetime.now().strftime("%Y%m%d%H%M%S")}')
+
+    if not files:
+        return jsonify({'error': 'No files provided'}), 400
+
+    logger.info(f"Batch upload: {len(files)} images by user {user_id}, document_name: {document_name}")
+
+    try:
+        from PIL import Image
+        import io
+        import uuid
+
+        # Generate unique document ID
+        doc_id = str(uuid.uuid4())
+
+        # Convert all images to PDF pages
+        pdf_images = []
+        total_size = 0
+
+        for idx, file in enumerate(files):
+            try:
+                # Read image
+                image_content = file.read()
+                total_size += len(image_content)
+
+                # Open with PIL and convert to RGB (required for PDF)
+                img = Image.open(io.BytesIO(image_content))
+
+                # Convert to RGB if needed (RGBA, L, etc.)
+                if img.mode != 'RGB':
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'RGBA':
+                        rgb_img.paste(img, mask=img.split()[3])
+                    else:
+                        rgb_img.paste(img)
+                    img = rgb_img
+
+                pdf_images.append(img)
+                logger.info(f"  Image {idx + 1}/{len(files)}: {file.filename} ({len(image_content)} bytes)")
+
+            except Exception as e:
+                logger.error(f"Error processing image {idx + 1} ({file.filename}): {e}")
+                return jsonify({'error': f'Failed to process image {idx + 1}: {str(e)}'}), 400
+
+        if not pdf_images:
+            return jsonify({'error': 'No valid images to process'}), 400
+
+        # Create PDF from images
+        pdf_buffer = io.BytesIO()
+
+        # Save first image as PDF with the rest appended
+        pdf_images[0].save(
+            pdf_buffer,
+            format='PDF',
+            save_all=True,
+            append_images=pdf_images[1:] if len(pdf_images) > 1 else [],
+            resolution=100.0,
+            quality=85
+        )
+
+        pdf_content = pdf_buffer.getvalue()
+        pdf_size = len(pdf_content)
+
+        logger.info(f"Created PDF: {len(pdf_images)} pages, {pdf_size} bytes")
+
+        # Upload PDF to R2
+        from core.s3_storage import upload_file, generate_file_key
+
+        pdf_filename = f"{document_name}.pdf"
+        file_key = generate_file_key(user_id, doc_id, pdf_filename)
+        upload_success = upload_file(pdf_content, file_key, 'application/pdf')
+
+        if not upload_success:
+            logger.error(f"Failed to upload merged PDF to R2: {pdf_filename}")
+            return jsonify({'error': 'Upload to cloud storage failed'}), 500
+
+        logger.info(f"Merged PDF uploaded to R2: {file_key}")
+
+        # Create document record
+        doc = create_document(
+            user_id=user_id,
+            filename=pdf_filename,
+            original_filename=pdf_filename,
+            file_path=file_key,
+            file_size=pdf_size,
+            mime_type='application/pdf'
+        )
+
+        logger.info(f"Batch document created: {doc.id} ({len(files)} images merged)")
+
+        # Trigger async processing
+        try:
+            from tasks import process_document_task
+            task = process_document_task.delay(str(doc.id), user_id)
+            logger.info(f"Processing task queued: {task.id} for merged document {doc.id}")
+
+            # Store task ID
+            from core.document_operations import update_document_status
+            update_document_status(
+                str(doc.id),
+                user_id,
+                status='processing',
+                doc_metadata={'task_id': task.id, 'source_images_count': len(files)}
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to queue processing task: {e}")
+
+        return jsonify({
+            'success': True,
+            'document_id': str(doc.id),
+            'filename': doc.filename,
+            'images_merged': len(files),
+            'status': 'processing',
+            'message': f'{len(files)} immagini unite in un PDF. Elaborazione in corso...'
+        }), 201
+
+    except ValueError as e:
+        # Storage quota exceeded
+        return jsonify({'error': str(e)}), 413
+    except Exception as e:
+        logger.error(f"Error in batch upload: {e}", exc_info=True)
+        return jsonify({'error': f'Batch upload failed: {str(e)}'}), 500
+
+
 @app.route('/api/documents/<document_id>', methods=['DELETE'])
 @require_auth
 def delete_document_endpoint(document_id: str):
