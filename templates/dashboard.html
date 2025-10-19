@@ -489,6 +489,81 @@
             // - Analisi avanzata
             alert('Menu Strumenti in arrivo! Include: Quiz, Riassunti, Mind Maps, Outline e molto altro.');
         }
+
+        // ============================================================================
+        // RENAME DOCUMENT FUNCTIONS (INLINE)
+        // ============================================================================
+
+        let documentToRename = null;
+
+        function openRenameModal(documentId, currentFilename) {
+            console.log('openRenameModal called:', documentId, currentFilename);
+            documentToRename = documentId;
+
+            const modal = document.getElementById('rename-modal');
+            const input = document.getElementById('rename-input');
+
+            // Extract filename without extension
+            const lastDotIndex = currentFilename.lastIndexOf('.');
+            const filenameWithoutExt = lastDotIndex > 0
+                ? currentFilename.substring(0, lastDotIndex)
+                : currentFilename;
+
+            input.value = filenameWithoutExt;
+            modal.style.display = 'flex';
+
+            // Focus input and select all text
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 100);
+        }
+
+        function closeRenameModal() {
+            console.log('closeRenameModal called');
+            document.getElementById('rename-modal').style.display = 'none';
+            documentToRename = null;
+            document.getElementById('rename-input').value = '';
+        }
+
+        async function confirmRename() {
+            console.log('confirmRename called, documentToRename:', documentToRename);
+            if (!documentToRename) return;
+
+            const newName = document.getElementById('rename-input').value.trim();
+            console.log('New name:', newName);
+
+            if (!newName) {
+                alert('Inserisci un nome valido');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/documents/${documentToRename}/rename`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ new_filename: newName })
+                });
+
+                console.log('Rename response:', response.status);
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Rename failed');
+                }
+
+                closeRenameModal();
+                await loadDocuments();
+                alert('✅ Documento rinominato');
+
+            } catch (error) {
+                console.error('Rename error:', error);
+                alert('❌ Errore: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>
