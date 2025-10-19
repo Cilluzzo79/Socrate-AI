@@ -1,7 +1,21 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
+ * VERSION: BATCH-CAMERA-RENAME-FIX-19OCT2025
  */
+
+console.log('[DASHBOARD.JS] VERSION: BATCH-CAMERA-RENAME-FIX-19OCT2025');
+console.log('[DASHBOARD.JS] Rename functions available:', {
+    openRenameModal: typeof openRenameModal,
+    closeRenameModal: typeof closeRenameModal,
+    confirmRename: typeof confirmRename
+});
+console.log('[DASHBOARD.JS] Camera functions available:', {
+    openCamera: typeof openCamera,
+    handleCameraCapture: typeof handleCameraCapture,
+    showBatchPreview: typeof showBatchPreview,
+    uploadBatch: typeof uploadBatch
+});
 
 // ============================================================================
 // GLOBAL STATE
