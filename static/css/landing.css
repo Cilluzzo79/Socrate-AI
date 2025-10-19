@@ -53,6 +53,10 @@
 .navbar-logo img {
   height: 40px;
   width: auto;
+  background: transparent !important;
+  mix-blend-mode: normal;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .navbar-brand {
@@ -198,6 +202,10 @@
   height: auto;
   filter: drop-shadow(var(--glow-cyan));
   animation: float 6s ease-in-out infinite;
+  background: transparent !important;
+  mix-blend-mode: normal;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 @keyframes float {
@@ -426,6 +434,10 @@
 .footer-logo img {
   height: 32px;
   width: auto;
+  background: transparent !important;
+  mix-blend-mode: normal;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .footer-brand {

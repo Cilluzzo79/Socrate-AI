@@ -115,6 +115,10 @@
           drop-shadow(0 0 50px rgba(212, 175, 55, 0.2));
   animation: owlIconGlow 3s ease-in-out infinite;
   transition: all var(--transition-slow);
+  background: transparent !important;
+  mix-blend-mode: normal;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .logo-owl-icon:hover {
