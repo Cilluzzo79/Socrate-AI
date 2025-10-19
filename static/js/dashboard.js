@@ -71,7 +71,7 @@ function renderDocuments() {
                     ` : `
                         <button class="btn-tools" disabled>⏳ In elaborazione</button>
                     `}
-                    <button class="btn-rename" onclick="openRenameModal('${doc.id}', '${doc.filename.replace(/'/g, "\\'")}')">✏️</button>
+                    <button class="btn-rename" data-doc-id="${doc.id}" data-filename="${doc.filename}">✏️</button>
                     <button class="btn-delete" onclick="deleteDoc('${doc.id}')" title="Elimina documento">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
@@ -723,3 +723,24 @@ setInterval(() => {
         loadDocuments();
     }
 }, 30000);
+
+// ============================================================================
+// EVENT DELEGATION FOR RENAME BUTTONS
+// ============================================================================
+
+// Handle rename button clicks using event delegation
+document.addEventListener('click', function(e) {
+    // Check if clicked element is a rename button
+    if (e.target.closest('.btn-rename')) {
+        const btn = e.target.closest('.btn-rename');
+        const documentId = btn.dataset.docId;
+        const filename = btn.dataset.filename;
+
+        // Call the openRenameModal function defined in dashboard.html
+        if (typeof openRenameModal === 'function') {
+            openRenameModal(documentId, filename);
+        } else {
+            console.error('openRenameModal function not found');
+        }
+    }
+});
