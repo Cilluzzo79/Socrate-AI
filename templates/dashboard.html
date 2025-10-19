@@ -263,7 +263,7 @@
                 });
 
                 xhr.addEventListener('load', () => {
-                    if (xhr.status === 200) {
+                    if (xhr.status === 200 || xhr.status === 201) {
                         progressText.textContent = '✅ Caricamento completato! Il documento è in elaborazione...';
                         setTimeout(() => {
                             progressContainer.style.display = 'none';
