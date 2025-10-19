@@ -95,70 +95,8 @@ function openUploadModal() {
 }
 
 function closeUploadModal() {
-    document.getElementById('upload-modal').classList.remove('active');
-    document.getElementById('upload-form').reset();
-    document.getElementById('upload-progress').style.display = 'none';
-    document.getElementById('progress-fill').style.width = '0%';
+    // Modal functions removed - upload handled inline in dashboard.html
 }
-
-document.getElementById('upload-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const fileInput = document.getElementById('file-input');
-    const file = fileInput.files[0];
-
-    if (!file) {
-        alert('Seleziona un file');
-        return;
-    }
-
-    // Show progress
-    const progressDiv = document.getElementById('upload-progress');
-    const progressFill = document.getElementById('progress-fill');
-    const progressText = document.getElementById('progress-text');
-
-    progressDiv.style.display = 'block';
-    progressFill.style.width = '0%';
-    progressText.textContent = 'Caricamento...';
-
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/documents/upload', {
-            method: 'POST',
-            body: formData,
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Upload failed');
-        }
-
-        const data = await response.json();
-        const documentId = data.document_id;
-
-        progressFill.style.width = '30%';
-        progressText.textContent = 'Elaborazione in corso...';
-
-        // Start polling for processing status
-        await pollDocumentStatus(documentId, progressFill, progressText);
-
-        // Processing complete
-        progressText.textContent = '✅ Documento pronto!';
-
-        setTimeout(() => {
-            closeUploadModal();
-            loadDocuments(); // Reload documents
-        }, 1500);
-
-    } catch (error) {
-        console.error('Upload error:', error);
-        progressText.textContent = `❌ Errore: ${error.message}`;
-        progressFill.style.width = '0%';
-    }
-});
 
 // ============================================================================
 // DOCUMENT ACTIONS

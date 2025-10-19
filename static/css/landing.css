@@ -51,7 +51,7 @@
 }
 
 .navbar-logo img {
-  height: 40px;
+  height: 60px;
   width: auto;
   background: transparent !important;
   mix-blend-mode: normal;
@@ -432,7 +432,7 @@
 }
 
 .footer-logo img {
-  height: 32px;
+  height: 48px;
   width: auto;
   background: transparent !important;
   mix-blend-mode: normal;

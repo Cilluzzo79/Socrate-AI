@@ -50,8 +50,8 @@
 /* Multi-layer Ambient Glow System */
 .logo-owl-container {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,8 +106,8 @@
 
 /* Layer 3: Core Owl Container with Clipped Glow */
 .logo-owl-icon {
-  width: 108px;
-  height: 108px;
+  width: 140px;
+  height: 140px;
   position: relative;
   z-index: 5;
   filter: drop-shadow(0 0 20px rgba(0, 217, 192, 0.8))
