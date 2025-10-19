@@ -1,0 +1,199 @@
+2025-10-16T15:16:28.000000000Z [inf]  Starting Container
+2025-10-16T15:16:29.017134450Z [inf]  [Wrapper] Starting Celery worker with healthcheck server...
+2025-10-16T15:16:29.017138581Z [inf]  [Wrapper] Starting healthcheck server on port 8080...
+2025-10-16T15:16:30.797622053Z [inf]  [Wrapper] Healthcheck server started
+2025-10-16T15:16:30.797629589Z [inf]  [Wrapper] Starting Celery worker...
+2025-10-16T15:16:31.460685472Z [err]  /opt/venv/lib/python3.11/site-packages/celery/platforms.py:829: SecurityWarning: You're running the worker with superuser privileges: this is
+2025-10-16T15:16:31.460700752Z [err]  absolutely not recommended!
+2025-10-16T15:16:31.460708780Z [err]  
+2025-10-16T15:16:31.460715705Z [err]  Please specify a different user using the --uid option.
+2025-10-16T15:16:31.460721894Z [err]  
+2025-10-16T15:16:31.460739362Z [err]  User information: uid=0 euid=0 gid=0 egid=0
+2025-10-16T15:16:31.460744509Z [err]  
+2025-10-16T15:16:31.460749207Z [err]    warnings.warn(SecurityWarning(ROOT_DISCOURAGED.format(
+2025-10-16T15:16:31.524387197Z [inf]   
+2025-10-16T15:16:31.524413588Z [inf]   -------------- celery@9018abfd0bc0 v5.3.4 (emerald-rush)
+2025-10-16T15:16:31.524421804Z [inf]  --- ***** ----- 
+2025-10-16T15:16:31.524428442Z [inf]  -- ******* ---- Linux-6.12.22+bpo-cloud-amd64-x86_64-with-glibc2.40 2025-10-16 15:16:31
+2025-10-16T15:16:31.524434535Z [inf]  - *** --- * --- 
+2025-10-16T15:16:31.524441284Z [inf]  - ** ---------- [config]
+2025-10-16T15:16:31.524446876Z [inf]  - ** ---------- .> app:         socrate_ai:0x7f8bf38a7dd0
+2025-10-16T15:16:31.524452212Z [inf]  - ** ---------- .> transport:   redis://default:**@redis.railway.internal:6379//
+2025-10-16T15:16:31.524457841Z [inf]  - ** ---------- .> results:     redis://default:**@redis.railway.internal:6379/
+2025-10-16T15:16:31.524466022Z [inf]  - *** --- * --- .> concurrency: 2 (prefork)
+2025-10-16T15:16:31.524470762Z [inf]  -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+2025-10-16T15:16:31.524477886Z [inf]  --- ***** ----- 
+2025-10-16T15:16:31.524484531Z [inf]   -------------- [queues]
+2025-10-16T15:16:31.524491298Z [inf]                  .> celery           exchange=celery(direct) key=celery
+2025-10-16T15:16:31.524497128Z [inf]                  .> documents        exchange=documents(direct) key=documents
+2025-10-16T15:16:31.524503237Z [inf]                  .> maintenance      exchange=maintenance(direct) key=maintenance
+2025-10-16T15:16:31.524509617Z [inf]  
+2025-10-16T15:16:31.524514185Z [inf]  [tasks]
+2025-10-16T15:16:31.524518396Z [inf]    . tasks.cleanup_old_documents
+2025-10-16T15:16:31.524524465Z [inf]    . tasks.on_task_failure
+2025-10-16T15:16:31.524528694Z [inf]    . tasks.process_document_task
+2025-10-16T15:16:31.524533032Z [inf]  
+2025-10-16T15:16:31.648660980Z [err]  [2025-10-16 15:16:31,643: WARNING/MainProcess] /opt/venv/lib/python3.11/site-packages/celery/worker/consumer/consumer.py:507: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+2025-10-16T15:16:31.648668354Z [err]  whether broker connection retries are made during startup in Celery 6.0 and above.
+2025-10-16T15:16:31.648673646Z [err]  If you wish to retain the existing behavior for retrying connections on startup,
+2025-10-16T15:16:31.648678200Z [err]  you should set broker_connection_retry_on_startup to True.
+2025-10-16T15:16:31.648682930Z [err]    warnings.warn(
+2025-10-16T15:16:31.648687278Z [err]  
+2025-10-16T15:16:33.533305261Z [err]  [2025-10-16 15:16:33,530: INFO/MainProcess] Connected to redis://default:**@redis.railway.internal:6379//
+2025-10-16T15:16:33.533311563Z [err]  [2025-10-16 15:16:33,531: WARNING/MainProcess] /opt/venv/lib/python3.11/site-packages/celery/worker/consumer/consumer.py:507: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+2025-10-16T15:16:33.533315750Z [err]  whether broker connection retries are made during startup in Celery 6.0 and above.
+2025-10-16T15:16:33.533319537Z [err]  If you wish to retain the existing behavior for retrying connections on startup,
+2025-10-16T15:16:33.533323261Z [err]  you should set broker_connection_retry_on_startup to True.
+2025-10-16T15:16:33.533327191Z [err]    warnings.warn(
+2025-10-16T15:16:33.533331655Z [err]  
+2025-10-16T15:16:34.984488644Z [err]  [2025-10-16 15:16:34,982: INFO/MainProcess] mingle: searching for neighbors
+2025-10-16T15:16:38.139553675Z [err]  [2025-10-16 15:16:38,137: INFO/MainProcess] mingle: all alone
+2025-10-16T15:16:42.194157570Z [err]  [2025-10-16 15:16:42,190: INFO/MainProcess] celery@9018abfd0bc0 ready.
+2025-10-16T15:17:12.234324458Z [err]  [2025-10-16 15:17:05,434: INFO/MainProcess] Task tasks.process_document_task[41456fbd-1511-4fe4-b8a4-dc9fd8178be5] received
+2025-10-16T15:17:12.234329631Z [err]  [2025-10-16 15:17:06,318: INFO/ForkPoolWorker-2] Starting document processing: f9220c9b-b914-465c-820b-7db2697e0499 for user 2d63181a-b335-4536-9501-f369d8ba0d9b
+2025-10-16T15:17:12.234334030Z [err]  [2025-10-16 15:17:09,548: INFO/ForkPoolWorker-2] Processing document: CogniData Solutions.txt (users/2d63181a-b335-4536-9501-f369d8ba0d9b/docs/a8a37682-d6a8-41ec-8713-d41a04e165cb/CogniData Solutions.txt)
+2025-10-16T15:17:12.234338662Z [err]  [2025-10-16 15:17:10,969: INFO/ForkPoolWorker-2] Downloading file from R2: users/2d63181a-b335-4536-9501-f369d8ba0d9b/docs/a8a37682-d6a8-41ec-8713-d41a04e165cb/CogniData Solutions.txt
+2025-10-16T15:17:12.234343209Z [err]  [2025-10-16 15:17:10,969: INFO/ForkPoolWorker-2] Initializing S3 client for R2...
+2025-10-16T15:17:12.234347731Z [err]  [2025-10-16 15:17:10,969: INFO/ForkPoolWorker-2]   R2_ACCESS_KEY_ID: SET
+2025-10-16T15:17:12.234352203Z [err]  [2025-10-16 15:17:10,969: INFO/ForkPoolWorker-2]   R2_SECRET_ACCESS_KEY: SET
+2025-10-16T15:17:12.234357848Z [err]  [2025-10-16 15:17:10,969: INFO/ForkPoolWorker-2]   R2_ENDPOINT_URL: https://bc8f5eabeecddd41f29cf6300b5738ad.r2.cloudflarestorage.com
+2025-10-16T15:17:12.234362126Z [err]  [2025-10-16 15:17:10,969: INFO/ForkPoolWorker-2]   R2_BUCKET_NAME: socrate-ai-storage
+2025-10-16T15:17:12.234366818Z [err]  [2025-10-16 15:17:11,086: INFO/ForkPoolWorker-2] ✅ S3 client initialized successfully for R2: https://bc8f5eabeecddd41f29cf6300b5738ad.r2.cloudflarestorage.com
+2025-10-16T15:17:12.234372458Z [err]  [2025-10-16 15:17:11,591: INFO/ForkPoolWorker-2] File downloaded from R2: users/2d63181a-b335-4536-9501-f369d8ba0d9b/docs/a8a37682-d6a8-41ec-8713-d41a04e165cb/CogniData Solutions.txt (25349 bytes)
+2025-10-16T15:17:12.234377199Z [err]  [2025-10-16 15:17:11,592: INFO/ForkPoolWorker-2] File downloaded to temp: /tmp/tmpm_patx7o/CogniData Solutions.txt
+2025-10-16T15:17:12.234381713Z [err]  [2025-10-16 15:17:11,592: INFO/ForkPoolWorker-2] Output directory: /tmp/tmpm_patx7o
+2025-10-16T15:17:12.234386235Z [err]  [2025-10-16 15:17:11,878: INFO/ForkPoolWorker-2] Document has 8 pages
+2025-10-16T15:17:12.234390911Z [err]  [2025-10-16 15:17:11,878: INFO/ForkPoolWorker-2] Calculating optimal config for 8 pages, tier: free
+2025-10-16T15:17:12.234395468Z [err]  [2025-10-16 15:17:11,878: INFO/ForkPoolWorker-2] Optimal config: chunk_size=800, overlap=160, max_chunks=None, strategy=small
+2025-10-16T15:17:12.234400452Z [err]  [2025-10-16 15:17:11,878: INFO/ForkPoolWorker-2] Using optimal config: {'chunk_size': 800, 'overlap': 160, 'max_chunks': None, 'page_count': 8, 'tier': 'free', 'strategy': 'small'}
+2025-10-16T15:17:12.434732883Z [err]  [2025-10-16 15:17:12,414: WARNING/ForkPoolWorker-2] ⚠️ memvid non disponibile - solo output JSON sarà supportato
+2025-10-16T15:17:12.434736848Z [err]  [2025-10-16 15:17:12,414: INFO/ForkPoolWorker-2] Starting memvid encoder...
+2025-10-16T15:17:12.434740593Z [err]  [2025-10-16 15:17:12,414: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Inizio elaborazione di /tmp/tmpm_patx7o/CogniData Solutions.txt in sezioni...
+2025-10-16T15:17:12.434744987Z [err]  [2025-10-16 15:17:12,414: WARNING/ForkPoolWorker-2] Parametri: chunk_size=800, overlap=160, format=json
+2025-10-16T15:17:12.434749065Z [err]  [2025-10-16 15:17:12,415: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Creazione directory di output
+2025-10-16T15:17:12.434753548Z [err]  [2025-10-16 15:17:12,417: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Lettura del file /tmp/tmpm_patx7o/CogniData Solutions.txt in sezioni...
+2025-10-16T15:17:12.434757253Z [err]  [2025-10-16 15:17:12,417: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Determinazione codifica del file
+2025-10-16T15:17:12.434762060Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Lettura file di testo in 1 sezioni
+2025-10-16T15:17:12.434766024Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Lettura sezione 1/1
+2025-10-16T15:17:12.434769961Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] Lettura sezione 1/1...
+2025-10-16T15:17:12.434773999Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] File diviso in 1 sezioni
+2025-10-16T15:17:12.434777646Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione sezione 1/1...
+2025-10-16T15:17:12.434781634Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] 
+2025-10-16T15:17:12.434785289Z [err]  Elaborazione sezione 1/1...
+2025-10-16T15:17:12.434789435Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] Dimensione della sezione: 24863 caratteri
+2025-10-16T15:17:12.434795283Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Divisione testo di 24863 caratteri in chunks
+2025-10-16T15:17:12.434821237Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Iniziata divisione in chunk (text_length: 24863)
+2025-10-16T15:17:12.434825545Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 1 - posizione 0/24863 (0.0%)
+2025-10-16T15:17:12.434829552Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 4 - posizione 1510/24863 (6.1%)
+2025-10-16T15:17:12.434834064Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 7 - posizione 2592/24863 (10.4%)
+2025-10-16T15:17:12.434837847Z [err]  [2025-10-16 15:17:12,418: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 10 - posizione 3714/24863 (14.9%)
+2025-10-16T15:17:12.434841750Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 13 - posizione 5533/24863 (22.3%)
+2025-10-16T15:17:12.434845586Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 16 - posizione 7400/24863 (29.8%)
+2025-10-16T15:17:12.434849538Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 19 - posizione 8799/24863 (35.4%)
+2025-10-16T15:17:12.434855988Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 22 - posizione 10169/24863 (40.9%)
+2025-10-16T15:17:12.434859873Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 25 - posizione 11558/24863 (46.5%)
+2025-10-16T15:17:12.434863874Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 28 - posizione 12573/24863 (50.6%)
+2025-10-16T15:17:12.434867787Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 31 - posizione 13975/24863 (56.2%)
+2025-10-16T15:17:12.435160555Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 34 - posizione 15302/24863 (61.5%)
+2025-10-16T15:17:12.435165522Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 37 - posizione 16832/24863 (67.7%)
+2025-10-16T15:17:12.435171241Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 40 - posizione 17901/24863 (72.0%)
+2025-10-16T15:17:12.435176638Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 43 - posizione 19027/24863 (76.5%)
+2025-10-16T15:17:12.435182569Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 46 - posizione 20527/24863 (82.6%)
+2025-10-16T15:17:12.435189005Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 49 - posizione 21852/24863 (87.9%)
+2025-10-16T15:17:12.435664296Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 52 - posizione 23575/24863 (94.8%)
+2025-10-16T15:17:12.435669808Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 55 - posizione 24703/24863 (99.4%)
+2025-10-16T15:17:12.435674045Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [AVVISO] Nuova posizione (24703) non maggiore della precedente (24703), forzando avanzamento
+2025-10-16T15:17:12.435678567Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [AVVISO] Nuova posizione (24703) non maggiore della precedente (24743), forzando avanzamento
+2025-10-16T15:17:12.435682427Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [AVVISO] Nuova posizione (24703) non maggiore della precedente (24783), forzando avanzamento
+2025-10-16T15:17:12.435686576Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione chunk 58 - posizione 24823/24863 (99.8%)
+2025-10-16T15:17:12.435690779Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [AVVISO] Nuova posizione (24703) non maggiore della precedente (24823), forzando avanzamento
+2025-10-16T15:17:12.435694477Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Completata divisione in 58 chunks
+2025-10-16T15:17:12.435698370Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] Generati 58 chunk dalla sezione 1
+2025-10-16T15:17:12.435702461Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Aggiornamento indici per 58 chunks
+2025-10-16T15:17:12.435710700Z [err]  [2025-10-16 15:17:12,419: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Pulizia memoria dopo sezione 1
+2025-10-16T15:17:12.512841744Z [err]  [2025-10-16 15:17:12,489: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Generati 58 chunk totali da 1 sezioni
+2025-10-16T15:17:12.512852110Z [err]  [2025-10-16 15:17:12,489: WARNING/ForkPoolWorker-2] 
+2025-10-16T15:17:12.512858560Z [err]  Generati 58 chunk totali da 1 sezioni
+2025-10-16T15:17:12.512867618Z [err]  [2025-10-16 15:17:12,490: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Estrazione testo per Memvid
+2025-10-16T15:17:12.512874578Z [err]  [2025-10-16 15:17:12,490: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Salvataggio dei metadati in /app/memvidBeta/encoder_app/outputs/CogniData Solutions_sections_metadata.json...
+2025-10-16T15:17:12.512880663Z [err]  [2025-10-16 15:17:12,490: WARNING/ForkPoolWorker-2] Salvataggio dei metadati in /app/memvidBeta/encoder_app/outputs/CogniData Solutions_sections_metadata.json...
+2025-10-16T15:17:12.512888987Z [err]  [2025-10-16 15:17:12,491: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Pulizia memoria prima della generazione video
+2025-10-16T15:17:12.549724935Z [err]  [2025-10-16 15:17:12,546: WARNING/ForkPoolWorker-2] [ATTIVITÀ] Elaborazione completata in 0.13 secondi
+2025-10-16T15:17:12.549731211Z [err]  [2025-10-16 15:17:12,546: WARNING/ForkPoolWorker-2] Elaborazione completata in 0.13 secondi
+2025-10-16T15:17:12.549737295Z [err]  [2025-10-16 15:17:12,546: WARNING/ForkPoolWorker-2] File di metadati: /app/memvidBeta/encoder_app/outputs/CogniData Solutions_sections_metadata.json
+2025-10-16T15:17:12.549743394Z [err]  [2025-10-16 15:17:12,546: INFO/ForkPoolWorker-2] Memvid encoder completed successfully
+2025-10-16T15:17:18.164958051Z [err]  [2025-10-16 15:17:18,161: INFO/ForkPoolWorker-2] Loading faiss with AVX512-SPR support.
+2025-10-16T15:17:18.164964114Z [err]  [2025-10-16 15:17:18,161: INFO/ForkPoolWorker-2] Could not load library with AVX512-SPR support due to:
+2025-10-16T15:17:18.164970362Z [err]  ModuleNotFoundError("No module named 'faiss.swigfaiss_avx512_spr'")
+2025-10-16T15:17:18.164976725Z [err]  [2025-10-16 15:17:18,161: INFO/ForkPoolWorker-2] Loading faiss with AVX512 support.
+2025-10-16T15:17:18.190680837Z [err]  [2025-10-16 15:17:18,185: INFO/ForkPoolWorker-2] Successfully loaded faiss with AVX512 support.
+2025-10-16T15:17:18.194043606Z [err]  [2025-10-16 15:17:18,190: INFO/ForkPoolWorker-2] Generating embeddings for 58 chunks...
+2025-10-16T15:17:18.194054867Z [err]  [2025-10-16 15:17:18,190: INFO/ForkPoolWorker-2] Estimated time: 1 minutes
+2025-10-16T15:17:18.478480350Z [err]  [2025-10-16 15:17:18,477: INFO/ForkPoolWorker-2] Generating embeddings for 58 chunks...
+2025-10-16T15:17:18.478487760Z [err]  [2025-10-16 15:17:18,477: INFO/ForkPoolWorker-2] Loading sentence transformer model: all-MiniLM-L6-v2
+2025-10-16T15:17:18.481938442Z [err]  [2025-10-16 15:17:18,478: INFO/ForkPoolWorker-2] Use pytorch device_name: cpu
+2025-10-16T15:17:18.481947031Z [err]  [2025-10-16 15:17:18,479: INFO/ForkPoolWorker-2] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-10-16T15:17:21.296565678Z [err]  [2025-10-16 15:17:21,292: INFO/ForkPoolWorker-2] Processing 58 chunks in 2 groups of max 50
+2025-10-16T15:17:21.296576413Z [err]  [2025-10-16 15:17:21,292: INFO/ForkPoolWorker-2] Group 1/2: Processing chunks 0-50
+2025-10-16T15:17:21.296585055Z [err]  [2025-10-16 15:17:21,295: WARNING/ForkPoolWorker-2] 
+Batches:   0%|          | 0/7 [00:00<?, ?it/s]
+2025-10-16T15:17:26.571507063Z [err]  [2025-10-16 15:17:26,568: WARNING/ForkPoolWorker-2] 
+Batches:  14%|#4        | 1/7 [00:05<00:31,  5.27s/it]
+2025-10-16T15:17:32.286755560Z [err]  [2025-10-16 15:17:32,279: WARNING/ForkPoolWorker-2] 
+Batches:  29%|##8       | 2/7 [00:10<00:27,  5.53s/it]
+2025-10-16T15:17:32.714413139Z [err]  [2025-10-16 15:17:32,711: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 20s senza aggiornamenti
+2025-10-16T15:17:37.930446978Z [err]  [2025-10-16 15:17:37,926: WARNING/ForkPoolWorker-2] 
+Batches:  43%|####2     | 3/7 [00:16<00:22,  5.58s/it]
+2025-10-16T15:17:43.066930689Z [err]  [2025-10-16 15:17:43,065: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 30s senza aggiornamenti
+2025-10-16T15:17:43.689660465Z [err]  [2025-10-16 15:17:43,671: WARNING/ForkPoolWorker-2] 
+Batches:  57%|#####7    | 4/7 [00:22<00:16,  5.65s/it]
+2025-10-16T15:17:49.187211836Z [err]  [2025-10-16 15:17:49,186: WARNING/ForkPoolWorker-2] 
+Batches:  71%|#######1  | 5/7 [00:27<00:11,  5.60s/it]
+2025-10-16T15:17:53.296535952Z [err]  [2025-10-16 15:17:53,282: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 40s senza aggiornamenti
+2025-10-16T15:17:54.684652628Z [err]  [2025-10-16 15:17:54,679: WARNING/ForkPoolWorker-2] 
+Batches:  86%|########5 | 6/7 [00:33<00:05,  5.56s/it]
+2025-10-16T15:17:59.974122749Z [err]  [2025-10-16 15:17:59,970: WARNING/ForkPoolWorker-2] 
+Batches: 100%|##########| 7/7 [00:38<00:00,  5.47s/it]
+2025-10-16T15:17:59.974131185Z [err]  [2025-10-16 15:17:59,970: WARNING/ForkPoolWorker-2] 
+Batches: 100%|##########| 7/7 [00:38<00:00,  5.52s/it]
+2025-10-16T15:18:00.195875662Z [err]  [2025-10-16 15:18:00,190: INFO/ForkPoolWorker-2] Group 1/2 completed, memory cleaned
+2025-10-16T15:18:00.195884477Z [err]  [2025-10-16 15:18:00,190: INFO/ForkPoolWorker-2] Group 2/2: Processing chunks 50-58
+2025-10-16T15:18:00.195890227Z [err]  [2025-10-16 15:18:00,192: WARNING/ForkPoolWorker-2] 
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+2025-10-16T15:18:03.579843951Z [err]  [2025-10-16 15:18:03,572: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 51s senza aggiornamenti
+2025-10-16T15:18:05.942722722Z [err]  [2025-10-16 15:18:05,938: WARNING/ForkPoolWorker-2] 
+Batches: 100%|##########| 1/1 [00:05<00:00,  5.75s/it]
+2025-10-16T15:18:05.981507814Z [err]  [2025-10-16 15:18:05,938: WARNING/ForkPoolWorker-2] 
+Batches: 100%|##########| 1/1 [00:05<00:00,  5.75s/it]
+2025-10-16T15:18:06.257491869Z [err]  [2025-10-16 15:18:06,230: INFO/ForkPoolWorker-2] Group 2/2 completed, memory cleaned
+2025-10-16T15:18:06.424154962Z [err]  [2025-10-16 15:18:06,423: INFO/ForkPoolWorker-2] Generated embeddings shape: (58, 384)
+2025-10-16T15:18:06.424360459Z [err]  [2025-10-16 15:18:06,423: INFO/ForkPoolWorker-2] Embeddings saved to: /tmp/tmpm_patx7o/f9220c9b-b914-465c-820b-7db2697e0499_embeddings.npy
+2025-10-16T15:18:06.424367292Z [err]  [2025-10-16 15:18:06,423: INFO/ForkPoolWorker-2] Creating FAISS index...
+2025-10-16T15:18:06.424854213Z [err]  [2025-10-16 15:18:06,424: INFO/ForkPoolWorker-2] FAISS index created with 58 vectors
+2025-10-16T15:18:06.424880793Z [err]  [2025-10-16 15:18:06,424: INFO/ForkPoolWorker-2] FAISS index saved to: /tmp/tmpm_patx7o/f9220c9b-b914-465c-820b-7db2697e0499_index.faiss
+2025-10-16T15:18:06.424895255Z [err]  [2025-10-16 15:18:06,424: INFO/ForkPoolWorker-2] Embeddings generated in 0 minutes (estimated: 1)
+2025-10-16T15:18:07.080166203Z [err]  [2025-10-16 15:18:07,077: INFO/ForkPoolWorker-2] File uploaded to R2: users/2d63181a-b335-4536-9501-f369d8ba0d9b/documents/f9220c9b-b914-465c-820b-7db2697e0499/embeddings.npy (89216 bytes)
+2025-10-16T15:18:07.080173103Z [err]  [2025-10-16 15:18:07,077: INFO/ForkPoolWorker-2] Embeddings uploaded to R2: users/2d63181a-b335-4536-9501-f369d8ba0d9b/documents/f9220c9b-b914-465c-820b-7db2697e0499/embeddings.npy
+2025-10-16T15:18:07.699993350Z [err]  [2025-10-16 15:18:07,694: INFO/ForkPoolWorker-2] File uploaded to R2: users/2d63181a-b335-4536-9501-f369d8ba0d9b/documents/f9220c9b-b914-465c-820b-7db2697e0499/index.faiss (89133 bytes)
+2025-10-16T15:18:07.700004834Z [err]  [2025-10-16 15:18:07,694: INFO/ForkPoolWorker-2] FAISS index uploaded to R2: users/2d63181a-b335-4536-9501-f369d8ba0d9b/documents/f9220c9b-b914-465c-820b-7db2697e0499/index.faiss
+2025-10-16T15:18:09.126916224Z [err]  [2025-10-16 15:18:09,110: INFO/ForkPoolWorker-2] File uploaded to R2: users/2d63181a-b335-4536-9501-f369d8ba0d9b/documents/f9220c9b-b914-465c-820b-7db2697e0499/metadata.json (49377 bytes)
+2025-10-16T15:18:10.419039389Z [err]  [2025-10-16 15:18:10,415: INFO/ForkPoolWorker-2] Document processing completed: f9220c9b-b914-465c-820b-7db2697e0499
+2025-10-16T15:18:10.419045551Z [err]  [2025-10-16 15:18:10,415: INFO/ForkPoolWorker-2] Temporary files cleaned up: /tmp/tmpm_patx7o
+2025-10-16T15:18:10.704631811Z [err]  [2025-10-16 15:18:10,703: INFO/ForkPoolWorker-2] Task tasks.process_document_task[41456fbd-1511-4fe4-b8a4-dc9fd8178be5] succeeded in 65.26761634461582s: {'success': True, 'document_id': 'f9220c9b-b914-465c-820b-7db2697e0499', 'total_chunks': 58, 'total_tokens': 4559, 'language': 'it'}
+2025-10-16T15:18:13.914755861Z [err]  [2025-10-16 15:18:13,910: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 61s senza aggiornamenti
+2025-10-16T15:18:33.913938121Z [err]  [2025-10-16 15:18:24,162: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 71s senza aggiornamenti
+2025-10-16T15:18:34.387860712Z [err]  [2025-10-16 15:18:34,384: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 81s senza aggiornamenti
+2025-10-16T15:18:54.387673567Z [err]  [2025-10-16 15:18:44,620: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 92s senza aggiornamenti
+2025-10-16T15:18:54.840883317Z [err]  [2025-10-16 15:18:54,838: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 102s senza aggiornamenti
+2025-10-16T15:19:14.842423627Z [err]  [2025-10-16 15:19:05,051: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 112s senza aggiornamenti
+2025-10-16T15:19:15.267838136Z [err]  [2025-10-16 15:19:15,262: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 122s senza aggiornamenti
+2025-10-16T15:19:35.282258865Z [err]  [2025-10-16 15:19:25,540: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 132s senza aggiornamenti
+2025-10-16T15:19:35.740417959Z [err]  [2025-10-16 15:19:35,739: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 143s senza aggiornamenti
+2025-10-16T15:19:55.767897943Z [err]  [2025-10-16 15:19:45,950: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 153s senza aggiornamenti
+2025-10-16T15:19:56.202541634Z [err]  [2025-10-16 15:19:56,192: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 163s senza aggiornamenti
+2025-10-16T15:20:16.199372363Z [err]  [2025-10-16 15:20:06,449: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 173s senza aggiornamenti
+2025-10-16T15:20:16.668791326Z [err]  [2025-10-16 15:20:16,667: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 184s senza aggiornamenti
+2025-10-16T15:20:36.666924927Z [err]  [2025-10-16 15:20:26,866: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 194s senza aggiornamenti
+2025-10-16T15:20:37.085062663Z [err]  [2025-10-16 15:20:37,081: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 204s senza aggiornamenti
+2025-10-16T15:20:57.086463898Z [err]  [2025-10-16 15:20:47,286: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 214s senza aggiornamenti
+2025-10-16T15:20:57.523355228Z [err]  [2025-10-16 15:20:57,517: WARNING/ForkPoolWorker-2] [MONITOR] Ancora in esecuzione: 'Elaborazione completata in 0.13 secondi' - 224s senza aggiornamenti

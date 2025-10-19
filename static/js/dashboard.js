@@ -243,6 +243,8 @@ function openTools(documentId) {
 }
 
 async function useTool(documentId, toolType) {
+    console.log('[useTool] Starting:', { documentId, toolType });
+
     // Close tools modal
     document.querySelector('.modal')?.remove();
 
@@ -296,12 +298,25 @@ async function useTool(documentId, toolType) {
     };
 
     const config = toolConfigs[toolType];
-    if (!config || !config.query) return;
+    console.log('[useTool] Config for', toolType, ':', config);
+
+    if (!config || !config.query) {
+        console.error('[useTool] Invalid config or query:', { toolType, config });
+        return;
+    }
 
     // Show loading
+    console.log('[useTool] Showing loading indicator');
     showLoading(`Generazione ${toolType} in corso...`);
 
     try {
+        console.log('[useTool] Sending request to /api/query with:', {
+            document_id: documentId,
+            query: config.query,
+            command_type: config.command_type,
+            command_params: config.command_params
+        });
+
         const response = await fetch('/api/query', {
             method: 'POST',
             headers: {
@@ -317,19 +332,24 @@ async function useTool(documentId, toolType) {
             })
         });
 
+        console.log('[useTool] Response status:', response.status, response.statusText);
+
         if (!response.ok) {
             const error = await response.json();
+            console.error('[useTool] Server error:', error);
             throw new Error(error.error || 'Query failed');
         }
 
         const data = await response.json();
+        console.log('[useTool] Response data:', data);
 
         // Show result
+        console.log('[useTool] Hiding loading and showing result');
         hideLoading();
         showResult(data.answer, toolType);
 
     } catch (error) {
-        console.error('Tool error:', error);
+        console.error('[useTool] Caught error:', error);
         hideLoading();
         showError(`Errore: ${error.message}`);
     }
@@ -400,13 +420,20 @@ function sanitizeContent(rawContent) {
 }
 
 function showResult(content, type) {
+    console.log('[showResult] Called with:', { content, type, contentLength: content?.length });
+
     const normalized = (content || '').trim();
+    console.log('[showResult] Normalized content:', { normalized, length: normalized.length });
+
     const displayContent = normalized.length > 0
         ? normalized
         : 'Non è stato possibile generare una risposta. Riprova con una domanda più specifica.';
 
+    console.log('[showResult] Creating modal element');
     const modal = document.createElement('div');
     modal.className = 'modal active';
+    console.log('[showResult] Modal className set to:', modal.className);
+
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
             <h2>Risultato ${type}</h2>
@@ -424,9 +451,25 @@ function showResult(content, type) {
         </div>
     `;
     modal.onclick = (e) => {
-        if (e.target === modal) modal.remove();
+        if (e.target === modal) {
+            console.log('[showResult] Modal backdrop clicked, removing modal');
+            modal.remove();
+        }
     };
+
+    console.log('[showResult] Appending modal to document.body');
     document.body.appendChild(modal);
+
+    // Verify modal is visible
+    setTimeout(() => {
+        const computedStyle = window.getComputedStyle(modal);
+        console.log('[showResult] Modal computed styles:', {
+            display: computedStyle.display,
+            opacity: computedStyle.opacity,
+            visibility: computedStyle.visibility,
+            zIndex: computedStyle.zIndex
+        });
+    }, 100);
 }
 
 // Poll document processing status

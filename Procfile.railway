@@ -1,0 +1,5 @@
+# Procfile for Celery Worker with Healthcheck
+# Railway: Add this as separate service for workers
+# Use 'web' type so Railway assigns a port and does healthcheck
+
+web: python start_worker_wrapper.py
