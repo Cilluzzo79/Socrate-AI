@@ -169,6 +169,18 @@
                     <div class="upload-text">Trascina un file qui o clicca per selezionare</div>
                     <div class="upload-hint">Supportati: PDF, DOCX, TXT, JPG, PNG, HEIC, WebP, TIFF (max {{ user.storage_quota_mb - user.storage_used_mb | round(2) }} MB disponibili)</div>
                     <input type="file" id="file-input" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.heic,.heif,.webp,.bmp,.tiff" style="display: none;">
+                    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
+
+                    <!-- Camera Button -->
+                    <div class="camera-upload-actions">
+                        <button type="button" class="btn-camera" id="camera-btn" onclick="openCamera()">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                            <span>Scatta Foto</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="upload-progress-container" class="upload-progress" style="display: none;">
@@ -230,6 +242,54 @@
             <div style="display: flex; gap: var(--space-3);">
                 <button class="btn btn-secondary" onclick="closeDeleteModal()" style="flex: 1;">Annulla</button>
                 <button class="btn btn-primary" onclick="confirmDelete()" style="flex: 1; background: var(--color-error);">Elimina</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="image-preview-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="background: var(--color-bg-card); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); padding: var(--space-6); max-width: 600px;">
+            <h2 style="color: var(--color-text-primary); margin-bottom: var(--space-4);">📸 Anteprima Foto</h2>
+
+            <!-- Image Preview Container -->
+            <div style="margin-bottom: var(--space-4); text-align: center;">
+                <img id="preview-image" src="" alt="Preview" style="max-width: 100%; max-height: 400px; border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle);">
+            </div>
+
+            <!-- Filename Input -->
+            <div style="margin-bottom: var(--space-4);">
+                <label for="preview-filename" style="display: block; color: var(--color-text-secondary); margin-bottom: var(--space-2); font-weight: 500;">
+                    Nome File
+                </label>
+                <input
+                    type="text"
+                    id="preview-filename"
+                    placeholder="documento-scansionato"
+                    style="
+                        width: 100%;
+                        padding: var(--space-3);
+                        background: var(--color-bg-primary);
+                        border: 1px solid var(--color-border-subtle);
+                        border-radius: var(--radius-md);
+                        color: var(--color-text-primary);
+                        font-size: 1rem;
+                    "
+                />
+                <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--space-2);">
+                    L'estensione .jpg verrà aggiunta automaticamente
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: var(--space-3);">
+                <button class="btn btn-secondary" onclick="closePreviewModal()" style="flex: 1;">
+                    <span>🔄</span>
+                    <span>Scatta di Nuovo</span>
+                </button>
+                <button class="btn btn-primary" onclick="confirmUpload()" style="flex: 1;">
+                    <span>✅</span>
+                    <span>Carica</span>
+                </button>
             </div>
         </div>
     </div>

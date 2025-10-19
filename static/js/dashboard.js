@@ -525,6 +525,117 @@ async function pollDocumentStatus(documentId, progressFill, progressText, maxAtt
     throw new Error('Processing timeout');
 }
 
+// ============================================================================
+// CAMERA CAPTURE FUNCTIONS
+// ============================================================================
+
+let capturedImageFile = null;
+
+/**
+ * Open camera input to capture photo
+ */
+function openCamera() {
+    const cameraInput = document.getElementById('camera-input');
+    if (cameraInput) {
+        cameraInput.click();
+    }
+}
+
+/**
+ * Handle camera capture - set up event listener
+ */
+document.getElementById('camera-input')?.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        handleCameraCapture(file);
+    }
+});
+
+/**
+ * Process captured image and show preview
+ */
+function handleCameraCapture(file) {
+    capturedImageFile = file;
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        showImagePreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+}
+
+/**
+ * Show image preview modal with rename option
+ */
+function showImagePreview(imageDataUrl) {
+    const modal = document.getElementById('image-preview-modal');
+    const previewImage = document.getElementById('preview-image');
+    const filenameInput = document.getElementById('preview-filename');
+
+    // Set preview image
+    previewImage.src = imageDataUrl;
+
+    // Generate default filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    filenameInput.value = `foto-${timestamp}`;
+
+    // Show modal
+    modal.style.display = 'flex';
+}
+
+/**
+ * Close preview modal and reset camera input
+ */
+function closePreviewModal() {
+    const modal = document.getElementById('image-preview-modal');
+    const cameraInput = document.getElementById('camera-input');
+
+    // Hide modal
+    modal.style.display = 'none';
+
+    // Reset camera input to allow retaking
+    cameraInput.value = '';
+    capturedImageFile = null;
+
+    // Optionally reopen camera immediately
+    setTimeout(() => openCamera(), 300);
+}
+
+/**
+ * Confirm upload with custom filename
+ */
+function confirmUpload() {
+    if (!capturedImageFile) {
+        alert('Nessuna immagine da caricare');
+        return;
+    }
+
+    const filenameInput = document.getElementById('preview-filename');
+    let customName = filenameInput.value.trim();
+
+    // Add .jpg extension if not present
+    if (!customName.match(/\.(jpg|jpeg|png)$/i)) {
+        customName += '.jpg';
+    }
+
+    // Create renamed file
+    const renamedFile = new File([capturedImageFile], customName, {
+        type: capturedImageFile.type,
+        lastModified: capturedImageFile.lastModified
+    });
+
+    // Close modal
+    document.getElementById('image-preview-modal').style.display = 'none';
+
+    // Upload file using existing handler
+    handleFileUpload(renamedFile);
+
+    // Reset
+    document.getElementById('camera-input').value = '';
+    capturedImageFile = null;
+}
+
 // Auto-reload documents every 30 seconds to check for processing updates
 setInterval(() => {
     const hasProcessing = documents.some(d => d.status === 'processing');
