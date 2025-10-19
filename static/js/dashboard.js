@@ -524,31 +524,50 @@ function setupCameraListener() {
  * Process captured image and add to batch
  */
 function handleCameraCapture(file) {
+    console.log('[CAMERA] handleCameraCapture called with file:', file.name, file.type, file.size);
+
     // Create preview URL
     const reader = new FileReader();
     reader.onload = function(e) {
+        console.log('[CAMERA] FileReader onload - image loaded, length:', e.target.result.length);
+
         // Add to captured images array
         capturedImages.push({
             file: file,
             dataUrl: e.target.result
         });
+        console.log('[CAMERA] Image added to batch. Total images:', capturedImages.length);
 
         // Show batch preview modal
+        console.log('[CAMERA] Calling showBatchPreview()...');
         showBatchPreview();
+        console.log('[CAMERA] showBatchPreview() returned');
+    };
+    reader.onerror = function(error) {
+        console.error('[CAMERA] FileReader error:', error);
     };
     reader.readAsDataURL(file);
 
     // Reset camera input to allow capturing more
     document.getElementById('camera-input').value = '';
+    console.log('[CAMERA] Camera input reset');
 }
 
 /**
  * Show batch preview modal with all captured images
  */
 function showBatchPreview() {
+    console.log('[BATCH] showBatchPreview() called. Total images:', capturedImages.length);
+
     const modal = document.getElementById('image-preview-modal');
+    if (!modal) {
+        console.error('[BATCH] ERROR: image-preview-modal not found in DOM!');
+        return;
+    }
+    console.log('[BATCH] Modal element found:', modal);
 
     // Generate preview HTML for all images
+    console.log('[BATCH] Generating preview HTML for', capturedImages.length, 'images');
     const previewsHTML = capturedImages.map((img, index) => `
         <div style="position: relative; display: inline-block; margin: 0.5rem;">
             <img src="${img.dataUrl}"
@@ -614,8 +633,22 @@ function showBatchPreview() {
     `;
 
     // Show modal with active class for CSS animation
+    console.log('[BATCH] Setting modal.style.display = flex...');
     modal.style.display = 'flex';
+    console.log('[BATCH] Adding active class to modal...');
     modal.classList.add('active');
+    console.log('[BATCH] Modal should now be visible. Display:', modal.style.display, 'Has active class:', modal.classList.contains('active'));
+
+    // Log final state for debug
+    setTimeout(() => {
+        const computedStyle = window.getComputedStyle(modal);
+        console.log('[BATCH] Modal computed styles after 100ms:', {
+            display: computedStyle.display,
+            opacity: computedStyle.opacity,
+            visibility: computedStyle.visibility,
+            zIndex: computedStyle.zIndex
+        });
+    }, 100);
 }
 
 /**
