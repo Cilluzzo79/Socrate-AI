@@ -1213,3 +1213,97 @@
     max-height: 300px !important;
   }
 }
+
+/* =============================================================================
+   DOCUMENT ACTION BUTTONS (Rename & Delete)
+   ============================================================================= */
+
+.doc-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+}
+
+/* Rename Button */
+.btn-rename {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: linear-gradient(135deg,
+    rgba(0, 217, 192, 0.15),
+    rgba(212, 175, 55, 0.15));
+  border: 2px solid var(--color-primary-cyan);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-size: 1.2rem;
+}
+
+.btn-rename:hover {
+  background: linear-gradient(135deg,
+    rgba(0, 217, 192, 0.3),
+    rgba(212, 175, 55, 0.3));
+  border-color: var(--color-primary-cyan-light);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.btn-rename:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Delete Button */
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: linear-gradient(135deg,
+    rgba(255, 59, 48, 0.15),
+    rgba(255, 69, 58, 0.15));
+  border: 2px solid rgba(255, 59, 48, 0.6);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-delete:hover {
+  background: linear-gradient(135deg,
+    rgba(255, 59, 48, 0.3),
+    rgba(255, 69, 58, 0.3));
+  border-color: rgba(255, 59, 48, 1);
+  box-shadow:
+    0 4px 12px rgba(255, 59, 48, 0.4),
+    0 0 20px rgba(255, 59, 48, 0.2);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.btn-delete:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.btn-delete svg {
+  filter: drop-shadow(0 0 4px rgba(255, 59, 48, 0.6));
+  transition: filter var(--transition-base);
+}
+
+.btn-delete:hover svg {
+  filter: drop-shadow(0 0 8px rgba(255, 59, 48, 1));
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .btn-rename,
+  .btn-delete {
+    width: 40px;
+    height: 40px;
+    font-size: 1.3rem;
+  }
+}

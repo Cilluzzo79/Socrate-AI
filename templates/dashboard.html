@@ -294,6 +294,46 @@
         </div>
     </div>
 
+    <!-- Rename Document Modal -->
+    <div id="rename-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="background: var(--color-bg-card); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); padding: var(--space-6); max-width: 500px;">
+            <h2 style="color: var(--color-text-primary); margin-bottom: var(--space-4);">✏️ Rinomina Documento</h2>
+
+            <!-- New Filename Input -->
+            <div style="margin-bottom: var(--space-6);">
+                <label for="rename-input" style="display: block; color: var(--color-text-secondary); margin-bottom: var(--space-2); font-weight: 500;">
+                    Nuovo Nome
+                </label>
+                <input
+                    type="text"
+                    id="rename-input"
+                    placeholder="nome-documento"
+                    style="
+                        width: 100%;
+                        padding: var(--space-3);
+                        background: var(--color-bg-primary);
+                        border: 1px solid var(--color-border-subtle);
+                        border-radius: var(--radius-md);
+                        color: var(--color-text-primary);
+                        font-size: 1rem;
+                    "
+                />
+                <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--space-2);">
+                    L'estensione originale verrà mantenuta
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: var(--space-3);">
+                <button class="btn btn-secondary" onclick="closeRenameModal()" style="flex: 1;">Annulla</button>
+                <button class="btn btn-primary" onclick="confirmRename()" style="flex: 1;">
+                    <span>✅</span>
+                    <span>Rinomina</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/dashboard.js"></script>
     <script>
         let documentToDelete = null;

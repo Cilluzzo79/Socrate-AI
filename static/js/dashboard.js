@@ -71,6 +71,7 @@ function renderDocuments() {
                     ` : `
                         <button class="btn-tools" disabled>⏳ In elaborazione</button>
                     `}
+                    <button class="btn-rename" onclick="openRenameModal('${doc.id}', '${doc.filename.replace(/'/g, "\\'")}')">✏️</button>
                     <button class="btn-delete" onclick="deleteDoc('${doc.id}')" title="Elimina documento">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
@@ -185,6 +186,75 @@ async function deleteDoc(documentId) {
     } catch (error) {
         console.error('Delete error:', error);
         showError('Errore nell\'eliminazione del documento');
+    }
+}
+
+// ============================================================================
+// RENAME DOCUMENT FUNCTIONS
+// ============================================================================
+
+let documentToRename = null;
+
+function openRenameModal(documentId, currentFilename) {
+    documentToRename = documentId;
+
+    const modal = document.getElementById('rename-modal');
+    const input = document.getElementById('rename-input');
+
+    // Extract filename without extension
+    const lastDotIndex = currentFilename.lastIndexOf('.');
+    const filenameWithoutExt = lastDotIndex > 0
+        ? currentFilename.substring(0, lastDotIndex)
+        : currentFilename;
+
+    input.value = filenameWithoutExt;
+    modal.style.display = 'flex';
+
+    // Focus input and select all text
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 100);
+}
+
+function closeRenameModal() {
+    document.getElementById('rename-modal').style.display = 'none';
+    documentToRename = null;
+    document.getElementById('rename-input').value = '';
+}
+
+async function confirmRename() {
+    if (!documentToRename) return;
+
+    const newName = document.getElementById('rename-input').value.trim();
+
+    if (!newName) {
+        alert('Inserisci un nome valido');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/documents/${documentToRename}/rename`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ new_filename: newName })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Rename failed');
+        }
+
+        closeRenameModal();
+        await loadDocuments();
+        showSuccess('Documento rinominato');
+
+    } catch (error) {
+        console.error('Rename error:', error);
+        showError(`Errore: ${error.message}`);
     }
 }
 

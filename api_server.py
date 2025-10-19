@@ -452,6 +452,67 @@ def delete_document_endpoint(document_id: str):
     return jsonify({'success': True})
 
 
+@app.route('/api/documents/<document_id>/rename', methods=['PUT'])
+@require_auth
+def rename_document_endpoint(document_id: str):
+    """Rename document in database"""
+    user_id = get_current_user_id()
+    data = request.json
+
+    if not data or 'new_filename' not in data:
+        return jsonify({'error': 'new_filename required'}), 400
+
+    new_name = data['new_filename'].strip()
+
+    if not new_name:
+        return jsonify({'error': 'Filename cannot be empty'}), 400
+
+    # Get document to verify ownership and extract extension
+    doc = get_document_by_id(document_id, user_id)
+
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+
+    # Extract original file extension
+    original_filename = doc.filename
+    last_dot_index = original_filename.rfind('.')
+
+    if last_dot_index > 0:
+        extension = original_filename[last_dot_index:]  # includes the dot
+        new_filename = new_name + extension
+    else:
+        # No extension in original file
+        new_filename = new_name
+
+    try:
+        # Update document filename in database
+        from core.database import SessionLocal
+
+        db = SessionLocal()
+        try:
+            doc.filename = new_filename
+            doc.updated_at = datetime.utcnow()
+            db.commit()
+
+            logger.info(f"Document renamed: {document_id} from '{original_filename}' to '{new_filename}' by user {user_id}")
+
+            return jsonify({
+                'success': True,
+                'filename': new_filename
+            })
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error renaming document: {e}")
+            raise
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"Error renaming document {document_id}: {e}")
+        return jsonify({'error': 'Rename failed'}), 500
+
+
 @app.route('/api/admin/cleanup-duplicates', methods=['POST'])
 @require_auth
 def cleanup_duplicate_documents():
