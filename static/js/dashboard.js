@@ -221,7 +221,7 @@ function openTools(documentId) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 600px;">
             <h2>🛠️ Strumenti per: ${doc.filename}</h2>
-            <p style="color: #666; margin-bottom: 1rem;">Scegli uno strumento</p>
+            <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1rem;">Scegli uno strumento</p>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
                 ${toolsHTML}
             </div>
@@ -438,12 +438,15 @@ function showResult(content, type) {
         <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
             <h2>Risultato ${type}</h2>
             <div style="
-                background: #f5f5f5;
+                background: #1a1f2e;
                 padding: 1.5rem;
                 border-radius: 8px;
                 margin: 1rem 0;
                 white-space: pre-wrap;
                 font-family: monospace;
+                color: #e8eaed;
+                border: 1px solid rgba(0, 217, 192, 0.3);
+                line-height: 1.6;
             ">${sanitizeContent(displayContent)}</div>
             <button onclick="this.closest('.modal').remove()" class="primary-btn" style="width: 100%;">
                 Chiudi
