@@ -613,8 +613,9 @@ function showBatchPreview() {
         </button>
     `;
 
-    // Show modal
+    // Show modal with active class for CSS animation
     modal.style.display = 'flex';
+    modal.classList.add('active');
 }
 
 /**
@@ -656,6 +657,7 @@ window.cancelBatch = function() {
  */
 window.closePreviewModal = function() {
     const modal = document.getElementById('image-preview-modal');
+    modal.classList.remove('active');  // Remove active class for CSS animation
     modal.style.display = 'none';
     capturedImages = [];
 }

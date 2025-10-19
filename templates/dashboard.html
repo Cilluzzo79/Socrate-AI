@@ -439,12 +439,16 @@
         // Delete modal functions
         function openDeleteModal(documentId) {
             documentToDelete = documentId;
-            document.getElementById('delete-modal').style.display = 'flex';
+            const modal = document.getElementById('delete-modal');
+            modal.style.display = 'flex';
+            modal.classList.add('active');  // Add active class for CSS animation
         }
 
         function closeDeleteModal() {
             documentToDelete = null;
-            document.getElementById('delete-modal').style.display = 'none';
+            const modal = document.getElementById('delete-modal');
+            modal.classList.remove('active');  // Remove active class
+            modal.style.display = 'none';
         }
 
         async function confirmDelete() {
@@ -514,6 +518,7 @@
 
             input.value = filenameWithoutExt;
             modal.style.display = 'flex';
+            modal.classList.add('active');  // Add active class for CSS animation
 
             // Focus input and select all text
             setTimeout(() => {
@@ -524,7 +529,9 @@
 
         function closeRenameModal() {
             console.log('closeRenameModal called');
-            document.getElementById('rename-modal').style.display = 'none';
+            const modal = document.getElementById('rename-modal');
+            modal.classList.remove('active');  // Remove active class
+            modal.style.display = 'none';
             documentToRename = null;
             document.getElementById('rename-input').value = '';
         }
