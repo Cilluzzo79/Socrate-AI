@@ -192,71 +192,8 @@ async function deleteDoc(documentId) {
 // ============================================================================
 // RENAME DOCUMENT FUNCTIONS
 // ============================================================================
-
-let documentToRename = null;
-
-function openRenameModal(documentId, currentFilename) {
-    documentToRename = documentId;
-
-    const modal = document.getElementById('rename-modal');
-    const input = document.getElementById('rename-input');
-
-    // Extract filename without extension
-    const lastDotIndex = currentFilename.lastIndexOf('.');
-    const filenameWithoutExt = lastDotIndex > 0
-        ? currentFilename.substring(0, lastDotIndex)
-        : currentFilename;
-
-    input.value = filenameWithoutExt;
-    modal.style.display = 'flex';
-
-    // Focus input and select all text
-    setTimeout(() => {
-        input.focus();
-        input.select();
-    }, 100);
-}
-
-function closeRenameModal() {
-    document.getElementById('rename-modal').style.display = 'none';
-    documentToRename = null;
-    document.getElementById('rename-input').value = '';
-}
-
-async function confirmRename() {
-    if (!documentToRename) return;
-
-    const newName = document.getElementById('rename-input').value.trim();
-
-    if (!newName) {
-        alert('Inserisci un nome valido');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/documents/${documentToRename}/rename`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ new_filename: newName })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Rename failed');
-        }
-
-        closeRenameModal();
-        await loadDocuments();
-        showSuccess('Documento rinominato');
-
-    } catch (error) {
-        console.error('Rename error:', error);
-        showError(`Errore: ${error.message}`);
-    }
-}
+// Note: Rename functions are defined inline in dashboard.html to ensure
+// they are globally accessible from onclick handlers
 
 function openTools(documentId) {
     // TODO: Open tools modal or redirect to tools page
