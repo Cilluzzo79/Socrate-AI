@@ -395,15 +395,16 @@ def process_document_task(self, document_id: str, user_id: str):
 @celery_app.task(bind=True, name='tasks.process_image_ocr_task')
 def process_image_ocr_task(self, document_id: str, user_id: str):
     """
-    Process uploaded image with Google Cloud Vision OCR, then pass to normal pipeline
+    Process uploaded image with Google Cloud Vision OCR
+    BYPASSES MEMVID ENCODER - creates chunks directly from OCR text
 
     Flow:
     1. Download image from R2
     2. Extract text with Google Cloud Vision OCR
-    3. Save extracted text as .txt file
-    4. Upload .txt to R2
-    5. Update document to point to .txt file
-    6. Call process_document_task() to continue normal pipeline
+    3. Create chunks directly from text (simple character-based splitting)
+    4. Generate embeddings inline
+    5. Save metadata JSON to R2
+    6. Mark document as 'ready'
 
     Args:
         document_id: Document UUID
@@ -412,7 +413,7 @@ def process_image_ocr_task(self, document_id: str, user_id: str):
     Returns:
         dict: OCR result with status and metadata
     """
-    logger.info(f"Starting OCR processing: {document_id} for user {user_id}")
+    logger.info(f"[OCR NEW] Starting OCR processing: {document_id} for user {user_id}")
 
     # Update task state
     self.update_state(
@@ -430,30 +431,30 @@ def process_image_ocr_task(self, document_id: str, user_id: str):
                 'error': 'Document not found or unauthorized'
             }
 
-        logger.info(f"Processing image: {doc.filename} ({doc.file_path})")
+        logger.info(f"[OCR NEW] Processing image: {doc.filename} ({doc.file_path})")
 
         # Update document status to processing
         update_document_status(
             document_id,
             user_id,
             status='processing',
-            processing_progress=5
+            processing_progress=10
         )
 
         # Update task state
         self.update_state(
             state='PROCESSING',
-            meta={'status': 'Downloading image', 'progress': 10}
+            meta={'status': 'Downloading image from R2', 'progress': 10}
         )
 
         # 2. Download image from R2
         from core.s3_storage import download_file, upload_file
 
-        logger.info(f"Downloading image from R2: {doc.file_path}")
+        logger.info(f"[OCR NEW] Downloading image from R2: {doc.file_path}")
         image_data = download_file(doc.file_path)
 
         if not image_data:
-            logger.error(f"Image not found in R2: {doc.file_path}")
+            logger.error(f"[OCR NEW] Image not found in R2: {doc.file_path}")
             update_document_status(
                 document_id,
                 user_id,
@@ -465,22 +466,22 @@ def process_image_ocr_task(self, document_id: str, user_id: str):
                 'error': 'Image not found in cloud storage'
             }
 
-        logger.info(f"Image downloaded: {len(image_data)} bytes")
+        logger.info(f"[OCR NEW] Image downloaded: {len(image_data)} bytes")
 
         # Update task state
         self.update_state(
             state='PROCESSING',
-            meta={'status': 'Extracting text with Google Cloud Vision', 'progress': 30}
+            meta={'status': 'Extracting text with Google Cloud Vision OCR', 'progress': 30}
         )
 
         # 3. Extract text with Google Cloud Vision OCR
         from core.ocr_processor import extract_text_from_image
 
-        logger.info("Calling Google Cloud Vision OCR API...")
+        logger.info("[OCR NEW] Calling Google Cloud Vision OCR API...")
         ocr_result = extract_text_from_image(image_data, doc.filename)
 
         if not ocr_result['success']:
-            logger.error(f"OCR failed: {ocr_result.get('error', 'Unknown error')}")
+            logger.error(f"[OCR NEW] OCR failed: {ocr_result.get('error', 'Unknown error')}")
             update_document_status(
                 document_id,
                 user_id,
@@ -497,107 +498,183 @@ def process_image_ocr_task(self, document_id: str, user_id: str):
         char_count = len(extracted_text)
         word_count = len(extracted_text.split())
 
-        logger.info(f"✅ OCR successful: {char_count} characters, {word_count} words, language: {language}")
+        logger.info(f"[OCR NEW] ✅ OCR successful: {char_count} characters, {word_count} words, language: {language}")
 
         # Update task state
         self.update_state(
             state='PROCESSING',
-            meta={'status': 'Saving extracted text', 'progress': 60}
+            meta={'status': 'Creating text chunks directly (bypassing encoder)', 'progress': 50}
         )
 
-        # 4. Save extracted text as .txt file and upload to R2
-        import tempfile
-        temp_dir = tempfile.mkdtemp()
+        # 4. Create chunks directly from OCR text (BYPASS ENCODER)
+        CHUNK_SIZE = 1500  # characters
+        OVERLAP = 300      # characters
 
-        # Create text file
-        text_filename = os.path.splitext(doc.filename)[0] + '_ocr.txt'
-        temp_text_path = os.path.join(temp_dir, text_filename)
+        chunks = []
+        chunk_id = 0
 
-        with open(temp_text_path, 'w', encoding='utf-8') as f:
-            f.write(extracted_text)
+        logger.info(f"[OCR NEW] Creating chunks with size={CHUNK_SIZE}, overlap={OVERLAP}")
 
-        logger.info(f"Text file created: {temp_text_path}")
+        for i in range(0, len(extracted_text), CHUNK_SIZE - OVERLAP):
+            chunk_text = extracted_text[i:i + CHUNK_SIZE]
+            if len(chunk_text.strip()) > 0:
+                chunks.append({
+                    "id": chunk_id,
+                    "text": chunk_text,
+                    "start_char": i,
+                    "end_char": i + len(chunk_text),
+                    "metadata": {
+                        "source": "ocr",
+                        "language": language,
+                        "chunk_method": "character_based",
+                        "original_filename": doc.filename
+                    }
+                })
+                chunk_id += 1
 
-        # Upload text file to R2
-        text_r2_key = f"users/{user_id}/documents/{document_id}/{text_filename}"
+        total_chunks = len(chunks)
+        logger.info(f"[OCR NEW] Created {total_chunks} chunks from OCR text")
 
-        with open(temp_text_path, 'rb') as f:
-            text_data = f.read()
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': f'Generating embeddings for {total_chunks} chunks', 'progress': 60}
+        )
 
-        upload_success = upload_file(text_data, text_r2_key, 'text/plain')
+        # 5. Generate embeddings inline (if enabled)
+        ENABLE_EMBEDDINGS = os.getenv('ENABLE_EMBEDDINGS', 'false').lower() == 'true'
+        embeddings_generated = False
+
+        if ENABLE_EMBEDDINGS:
+            try:
+                logger.info(f"[OCR NEW] Generating inline embeddings for {total_chunks} chunks...")
+
+                from sentence_transformers import SentenceTransformer
+                model = SentenceTransformer('all-MiniLM-L6-v2')
+
+                # Generate embeddings for all chunks
+                chunk_texts = [chunk['text'] for chunk in chunks]
+                embeddings = model.encode(chunk_texts, show_progress_bar=False)
+
+                # Add embeddings to chunks
+                for i, chunk in enumerate(chunks):
+                    chunk['embedding'] = embeddings[i].tolist()
+
+                embeddings_generated = True
+                logger.info(f"[OCR NEW] ✅ Generated embeddings for {total_chunks} chunks")
+
+            except Exception as e:
+                logger.warning(f"[OCR NEW] Failed to generate embeddings: {e}")
+                logger.warning("[OCR NEW] Continuing without embeddings (queries will be slower)")
+        else:
+            logger.info("[OCR NEW] ⚠️ Embedding generation DISABLED (set ENABLE_EMBEDDINGS=true)")
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Creating metadata JSON', 'progress': 80}
+        )
+
+        # 6. Create metadata JSON compatible with query engine
+        metadata = {
+            "document_id": document_id,
+            "filename": doc.filename,
+            "processing_method": "ocr_direct_chunking",
+            "ocr_provider": "google_cloud_vision",
+            "language": language,
+            "chunks_count": total_chunks,
+            "total_characters": char_count,
+            "total_words": word_count,
+            "chunk_size": CHUNK_SIZE,
+            "overlap": OVERLAP,
+            "has_embeddings": embeddings_generated,
+            "processed_at": datetime.utcnow().isoformat(),
+            "chunks": chunks,
+            "ocr_metadata": {
+                "char_count": char_count,
+                "word_count": word_count,
+                "confidence": ocr_result.get('confidence', 1.0),
+                "language": language
+            }
+        }
+
+        # Update task state
+        self.update_state(
+            state='PROCESSING',
+            meta={'status': 'Uploading metadata to R2', 'progress': 90}
+        )
+
+        # 7. Save metadata JSON to R2
+        metadata_r2_key = f"users/{user_id}/documents/{document_id}/metadata.json"
+
+        logger.info(f"[OCR NEW] Uploading metadata to R2: {metadata_r2_key}")
+
+        metadata_json = json.dumps(metadata, ensure_ascii=False, indent=2)
+        upload_success = upload_file(metadata_json.encode('utf-8'), metadata_r2_key, 'application/json')
 
         if not upload_success:
-            logger.error("Failed to upload text file to R2")
+            logger.error("[OCR NEW] Failed to upload metadata to R2")
             update_document_status(
                 document_id,
                 user_id,
                 status='failed',
-                error_message='Failed to upload extracted text'
+                error_message='Failed to upload metadata'
             )
             return {
                 'success': False,
-                'error': 'Failed to upload extracted text'
+                'error': 'Failed to upload metadata'
             }
 
-        logger.info(f"Text file uploaded to R2: {text_r2_key}")
+        logger.info(f"[OCR NEW] ✅ Metadata uploaded successfully")
 
         # Update task state
         self.update_state(
             state='PROCESSING',
-            meta={'status': 'Passing to document processor', 'progress': 80}
+            meta={'status': 'Finalizing document', 'progress': 95}
         )
 
-        # 5. Update document to point to text file instead of image
+        # 8. Update document status to 'ready'
         update_document_status(
             document_id,
             user_id,
-            status='processing',
-            processing_progress=85,
+            status='ready',
+            processing_progress=100,
+            total_chunks=total_chunks,
+            total_tokens=word_count,
+            language=language,
             doc_metadata={
-                'original_image_r2_key': doc.file_path,  # Keep reference to original image
-                'ocr_result': {
-                    'extracted_text_r2_key': text_r2_key,
+                'metadata_r2_key': metadata_r2_key,
+                'embeddings_r2_key': 'inline' if embeddings_generated else None,
+                'original_image_r2_key': doc.file_path,
+                'processed_at': datetime.utcnow().isoformat(),
+                'processing_method': 'ocr_direct_chunking',
+                'ocr_provider': 'google_cloud_vision',
+                'chunk_size': CHUNK_SIZE,
+                'overlap': OVERLAP,
+                'has_precomputed_embeddings': embeddings_generated,
+                'ocr_metadata': {
                     'char_count': char_count,
                     'word_count': word_count,
-                    'language': language,
                     'confidence': ocr_result.get('confidence', 1.0),
-                    'ocr_provider': 'google_cloud_vision',
-                    'processed_at': datetime.utcnow().isoformat()
+                    'language': language
                 }
             }
         )
 
-        # Update document file_path to point to text file for normal processing
-        from core.database import SessionLocal, Document
-        db = SessionLocal()
-        try:
-            db_doc = db.query(Document).filter_by(id=document_id).first()
-            if db_doc:
-                db_doc.file_path = text_r2_key
-                db_doc.mime_type = 'text/plain'
-                db_doc.filename = text_filename
-                db.commit()
-                logger.info(f"Document updated to use OCR text file: {text_r2_key}")
-        finally:
-            db.close()
+        logger.info(f"[OCR NEW] ✅ OCR processing completed: {document_id} - {total_chunks} chunks, ready for queries")
 
-        # 6. Call normal document processing pipeline
-        logger.info("Triggering normal document processing for OCR text...")
-
-        result = process_document_task(document_id, user_id)
-
-        # Cleanup temp files
-        try:
-            import shutil
-            shutil.rmtree(temp_dir)
-            logger.info(f"Temporary files cleaned up: {temp_dir}")
-        except Exception as e:
-            logger.warning(f"Error cleaning temp files: {e}")
-
-        return result
+        return {
+            'success': True,
+            'document_id': document_id,
+            'total_chunks': total_chunks,
+            'total_tokens': word_count,
+            'language': language,
+            'processing_method': 'ocr_direct_chunking',
+            'has_embeddings': embeddings_generated
+        }
 
     except Exception as e:
-        logger.error(f"Unexpected error in OCR processing: {e}")
+        logger.error(f"[OCR NEW] Unexpected error in OCR processing: {e}")
         logger.error(traceback.format_exc())
 
         # Update document status
