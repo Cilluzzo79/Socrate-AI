@@ -1,10 +1,10 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: GLOBAL-SCOPE-FIX-19OCT2025
+ * VERSION: FIX-DUPLICATE-UPLOAD-19OCT2025
  */
 
-console.log('[DASHBOARD.JS] VERSION: GLOBAL-SCOPE-FIX-19OCT2025');
+console.log('[DASHBOARD.JS] VERSION: FIX-DUPLICATE-UPLOAD-19OCT2025');
 console.log('[DASHBOARD.JS] Rename functions available:', {
     openRenameModal: typeof openRenameModal,
     closeRenameModal: typeof closeRenameModal,
