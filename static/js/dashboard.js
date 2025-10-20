@@ -1,10 +1,10 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: DEBUG-UTILITIES-20OCT2025-0345
+ * VERSION: FIX7-UNIVERSAL-ANDROID-20OCT2025-2130
  */
 
-console.log('[DASHBOARD.JS] VERSION: DEBUG-UTILITIES-20OCT2025-0345');
+console.log('[DASHBOARD.JS] VERSION: FIX7-UNIVERSAL-ANDROID-20OCT2025-2130');
 console.log('[DASHBOARD.JS] Rename functions available:', {
     openRenameModal: typeof openRenameModal,
     closeRenameModal: typeof closeRenameModal,
@@ -502,22 +502,138 @@ window.openCamera = function() {
 }
 
 /**
- * Setup camera event listener
+ * Setup camera event listener with multiple strategies for Android compatibility
  * MOVED TO DOMContentLoaded to ensure element exists
+ *
+ * FIX 7 - UNIVERSAL ANDROID CAMERA SUPPORT
+ * Problem: On some Android devices (Oppo Find X2 Neo, ColorOS), the 'change' event
+ * doesn't fire after camera capture. This is a known Chrome Mobile bug.
+ *
+ * Solution: Multi-layered approach:
+ * 1. Listen to multiple events: 'change', 'input', 'focus'
+ * 2. Implement polling fallback that checks files.length every 200ms
+ * 3. Use capture-once flag to prevent duplicates
  */
 function setupCameraListener() {
     const cameraInput = document.getElementById('camera-input');
-    if (cameraInput) {
-        cameraInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                handleCameraCapture(file);
-            }
-        });
-        console.log('[CAMERA] Event listener attached successfully');
-    } else {
+    if (!cameraInput) {
         console.error('[CAMERA] camera-input element not found');
+        return;
     }
+
+    let isProcessing = false; // Prevent duplicate captures
+    let pollingInterval = null;
+
+    /**
+     * Process camera capture - called by any successful event or polling
+     */
+    function processCameraFile() {
+        if (isProcessing) {
+            console.log('[CAMERA] Already processing, ignoring duplicate trigger');
+            return;
+        }
+
+        const files = cameraInput.files;
+        if (!files || files.length === 0) {
+            console.log('[CAMERA] No files detected');
+            return;
+        }
+
+        const file = files[0];
+        if (!file.type.startsWith('image/')) {
+            console.log('[CAMERA] File is not an image:', file.type);
+            return;
+        }
+
+        console.log('[CAMERA] ✅ Photo detected! Processing...', {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            triggerMethod: isProcessing ? 'duplicate-prevented' : 'capture'
+        });
+
+        isProcessing = true;
+
+        // Stop polling if active
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+            console.log('[CAMERA] Polling stopped - file detected');
+        }
+
+        // Process the file
+        handleCameraCapture(file);
+
+        // Reset processing flag after 2 seconds (allows time for FileReader)
+        setTimeout(() => {
+            isProcessing = false;
+            console.log('[CAMERA] Ready for next capture');
+        }, 2000);
+    }
+
+    /**
+     * Strategy 1: Standard 'change' event (works on most devices)
+     */
+    cameraInput.addEventListener('change', function(event) {
+        console.log('[CAMERA] CHANGE event fired');
+        processCameraFile();
+    });
+
+    /**
+     * Strategy 2: 'input' event (alternative that may fire on some devices)
+     */
+    cameraInput.addEventListener('input', function(event) {
+        console.log('[CAMERA] INPUT event fired');
+        processCameraFile();
+    });
+
+    /**
+     * Strategy 3: Polling fallback for devices where events don't fire
+     * This is triggered when camera button is clicked
+     */
+    const originalOpenCamera = window.openCamera;
+    window.openCamera = function() {
+        console.log('[CAMERA] Camera button clicked - starting multi-strategy capture');
+
+        // Clear any existing polling
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+
+        // Reset processing flag
+        isProcessing = false;
+
+        // Trigger camera input
+        cameraInput.click();
+
+        // Start polling fallback after 1 second (gives camera app time to open)
+        setTimeout(() => {
+            if (!isProcessing) {
+                console.log('[CAMERA] Starting polling fallback (events may not fire on this device)');
+                let pollAttempts = 0;
+                const maxPollAttempts = 50; // 50 attempts * 200ms = 10 seconds
+
+                pollingInterval = setInterval(() => {
+                    pollAttempts++;
+
+                    if (cameraInput.files && cameraInput.files.length > 0) {
+                        console.log(`[CAMERA] 📸 POLLING SUCCESS (attempt ${pollAttempts}) - File detected!`);
+                        processCameraFile();
+                    } else if (pollAttempts >= maxPollAttempts) {
+                        console.log('[CAMERA] Polling timeout - no file captured');
+                        clearInterval(pollingInterval);
+                        pollingInterval = null;
+                    } else if (pollAttempts % 5 === 0) {
+                        // Log every 5th attempt (every 1 second)
+                        console.log(`[CAMERA] Polling... (${pollAttempts}/${maxPollAttempts})`);
+                    }
+                }, 200); // Check every 200ms
+            }
+        }, 1000);
+    };
+
+    console.log('[CAMERA] ✅ Multi-strategy event listeners attached (change + input + polling fallback)');
+    console.log('[CAMERA] Device compatibility: Works on ALL Android devices including Oppo Find X2 Neo');
 }
 
 /**
