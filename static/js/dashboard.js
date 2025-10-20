@@ -1,10 +1,10 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: FIX-DUPLICATE-UPLOAD-19OCT2025
+ * VERSION: DEBUG-UTILITIES-20OCT2025-0345
  */
 
-console.log('[DASHBOARD.JS] VERSION: FIX-DUPLICATE-UPLOAD-19OCT2025');
+console.log('[DASHBOARD.JS] VERSION: DEBUG-UTILITIES-20OCT2025-0345');
 console.log('[DASHBOARD.JS] Rename functions available:', {
     openRenameModal: typeof openRenameModal,
     closeRenameModal: typeof closeRenameModal,
@@ -821,6 +821,115 @@ document.addEventListener('click', function(e) {
 });
 
 // ============================================================================
+// DEBUG UTILITIES - SYSTEMATIC STATE INSPECTION
+// ============================================================================
+
+/**
+ * Dump complete camera capture state for debugging
+ * EXPOSED TO GLOBAL SCOPE - Call from Eruda console with: window.debugCameraState()
+ */
+window.debugCameraState = function() {
+    const cameraInput = document.getElementById('camera-input');
+    const fileInput = document.getElementById('file-input');
+    const modal = document.getElementById('image-preview-modal');
+
+    const state = {
+        timestamp: new Date().toISOString(),
+        capturedImagesCount: capturedImages.length,
+        capturedImagesDetails: capturedImages.map((img, idx) => ({
+            index: idx,
+            fileName: img.file.name,
+            fileSize: img.file.size,
+            fileType: img.file.type,
+            dataUrlLength: img.dataUrl ? img.dataUrl.length : 0,
+            dataUrlPreview: img.dataUrl ? img.dataUrl.substring(0, 50) + '...' : null
+        })),
+        cameraInputElement: {
+            exists: !!cameraInput,
+            id: cameraInput?.id,
+            value: cameraInput?.value,
+            filesLength: cameraInput?.files?.length || 0,
+            hasChangeListener: true // Set by setupCameraListener()
+        },
+        fileInputElement: {
+            exists: !!fileInput,
+            id: fileInput?.id,
+            value: fileInput?.value,
+            filesLength: fileInput?.files?.length || 0
+        },
+        modalElement: {
+            exists: !!modal,
+            display: modal?.style.display,
+            hasActiveClass: modal?.classList.contains('active'),
+            innerHTML: modal?.innerHTML?.substring(0, 200) + '...' || null
+        },
+        eventListeners: {
+            cameraInputListenerAttached: !!cameraInput,
+            fileInputListenerInDashboardHTML: 'See dashboard.html line 384-399'
+        },
+        globalFunctions: {
+            openCamera: typeof window.openCamera,
+            handleCameraCapture: typeof handleCameraCapture,
+            showBatchPreview: typeof showBatchPreview,
+            uploadBatch: typeof window.uploadBatch,
+            removeImage: typeof window.removeImage,
+            addAnotherPhoto: typeof window.addAnotherPhoto,
+            cancelBatch: typeof window.cancelBatch,
+            closePreviewModal: typeof window.closePreviewModal
+        }
+    };
+
+    console.log('='.repeat(80));
+    console.log('📊 CAMERA CAPTURE STATE DEBUG DUMP');
+    console.log('='.repeat(80));
+    console.log(JSON.stringify(state, null, 2));
+    console.log('='.repeat(80));
+
+    // Also return for programmatic access
+    return state;
+};
+
+/**
+ * Test camera capture workflow step-by-step
+ * EXPOSED TO GLOBAL SCOPE - Call from Eruda console with: window.testCameraWorkflow()
+ */
+window.testCameraWorkflow = function() {
+    console.log('🧪 CAMERA WORKFLOW TEST STARTED');
+    console.log('Step 1: Check initial state');
+
+    const initialState = window.debugCameraState();
+
+    console.log('Step 2: Simulating camera button click');
+    console.log('MANUAL ACTION REQUIRED: Click the camera button and take a photo');
+    console.log('Then run: window.debugCameraState() again to see updated state');
+
+    return {
+        message: 'Test initialized. Take a photo, then run window.debugCameraState() to see results',
+        initialState: initialState
+    };
+};
+
+/**
+ * Clear all captured images and reset state
+ * EXPOSED TO GLOBAL SCOPE - Call from Eruda console with: window.resetCameraState()
+ */
+window.resetCameraState = function() {
+    const before = capturedImages.length;
+    capturedImages = [];
+    const cameraInput = document.getElementById('camera-input');
+    if (cameraInput) cameraInput.value = '';
+
+    const modal = document.getElementById('image-preview-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+
+    console.log(`✅ Camera state reset. Cleared ${before} images.`);
+    return window.debugCameraState();
+};
+
+// ============================================================================
 // INITIALIZATION - DOMContentLoaded
 // ============================================================================
 
@@ -840,8 +949,16 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelBatch: typeof window.cancelBatch,
         closePreviewModal: typeof window.closePreviewModal,
         uploadBatch: typeof window.uploadBatch,
-        removeImage: typeof window.removeImage
+        removeImage: typeof window.removeImage,
+        // Debug utilities
+        debugCameraState: typeof window.debugCameraState,
+        testCameraWorkflow: typeof window.testCameraWorkflow,
+        resetCameraState: typeof window.resetCameraState
     });
 
     console.log('[INIT] Initialization complete');
+    console.log('💡 DEBUG UTILITIES AVAILABLE:');
+    console.log('   - window.debugCameraState() - Dump complete camera state');
+    console.log('   - window.testCameraWorkflow() - Test camera workflow');
+    console.log('   - window.resetCameraState() - Reset camera state');
 });
