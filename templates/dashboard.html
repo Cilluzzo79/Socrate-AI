@@ -381,15 +381,19 @@
                 }
             });
 
-            // File input change
+            // File input change (handles ONLY file-input, NOT camera-input)
+            // Camera-input has its own listener in dashboard.js
             fileInput.addEventListener('change', (e) => {
-                // Prevent handling camera-input events (batch upload uses different flow)
-                if (e.target.id === 'camera-input') {
-                    console.log('[CONFLICT] file-input listener blocked camera-input event');
+                console.log('[FILE-INPUT] Change event detected, target ID:', e.target.id);
+
+                // IMPORTANT: Only handle file-input, camera-input is handled by dashboard.js
+                if (e.target !== fileInput) {
+                    console.log('[FILE-INPUT] Ignoring event from non-file-input element');
                     return;
                 }
 
                 if (e.target.files.length > 0) {
+                    console.log('[FILE-INPUT] Processing single file upload:', e.target.files[0].name);
                     handleFileUpload(e.target.files[0]);
                 }
             });
