@@ -341,7 +341,7 @@
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 
-    <script src="/static/js/dashboard.js?v=FIX-RACE-CONDITION-19OCT2025"></script>
+    <script src="/static/js/dashboard.js?v=FIX-DUPLICATE-UPLOAD-19OCT2025"></script>
     <script>
         let documentToDelete = null;
 
@@ -383,6 +383,12 @@
 
             // File input change
             fileInput.addEventListener('change', (e) => {
+                // Prevent handling camera-input events (batch upload uses different flow)
+                if (e.target.id === 'camera-input') {
+                    console.log('[CONFLICT] file-input listener blocked camera-input event');
+                    return;
+                }
+
                 if (e.target.files.length > 0) {
                     handleFileUpload(e.target.files[0]);
                 }
