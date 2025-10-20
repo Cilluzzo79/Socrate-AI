@@ -538,6 +538,14 @@ function handleCameraCapture(file) {
         });
         console.log('[CAMERA] Image added to batch. Total images:', capturedImages.length);
 
+        // IMPORTANT: Reset camera input AFTER image is successfully loaded
+        // This prevents race condition where reset happens before FileReader completes
+        const cameraInput = document.getElementById('camera-input');
+        if (cameraInput) {
+            cameraInput.value = '';
+            console.log('[CAMERA] Camera input reset AFTER image loaded');
+        }
+
         // Show batch preview modal
         console.log('[CAMERA] Calling showBatchPreview()...');
         showBatchPreview();
@@ -545,12 +553,15 @@ function handleCameraCapture(file) {
     };
     reader.onerror = function(error) {
         console.error('[CAMERA] FileReader error:', error);
+        // Even on error, reset the input so user can try again
+        const cameraInput = document.getElementById('camera-input');
+        if (cameraInput) {
+            cameraInput.value = '';
+            console.log('[CAMERA] Camera input reset after error');
+        }
     };
     reader.readAsDataURL(file);
-
-    // Reset camera input to allow capturing more
-    document.getElementById('camera-input').value = '';
-    console.log('[CAMERA] Camera input reset');
+    console.log('[CAMERA] FileReader started reading image...');
 }
 
 /**
