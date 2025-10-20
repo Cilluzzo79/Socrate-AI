@@ -469,13 +469,19 @@ def upload_batch_documents():
 
         # Check for recent duplicate uploads (within 5 minutes)
         from core.database import SessionLocal, Document
+        from sqlalchemy import cast, String
+
         db = SessionLocal()
 
         try:
             five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+
+            # Query for duplicate - use proper JSON extraction
+            # For PostgreSQL: doc_metadata->>'content_hash'
+            # For SQLite: json_extract(doc_metadata, '$.content_hash')
             existing_doc = db.query(Document).filter(
                 Document.user_id == user_id,
-                Document.doc_metadata['content_hash'].astext == content_fingerprint,
+                cast(Document.doc_metadata['content_hash'], String) == content_fingerprint,
                 Document.created_at > five_minutes_ago
             ).first()
 
