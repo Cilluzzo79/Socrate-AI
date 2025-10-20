@@ -454,59 +454,138 @@ def upload_batch_documents():
         from PIL import Image
         import io
         import uuid
+        import tempfile
+        from datetime import timedelta
+
+        # FIX 1: IDEMPOTENCY CHECK - Calculate content hash to detect duplicates
+        content_hash = hashlib.sha256()
+        for file in files:
+            file.seek(0)
+            content_hash.update(file.read())
+            file.seek(0)  # Reset for later reading
+
+        content_fingerprint = content_hash.hexdigest()
+        logger.info(f"Content fingerprint: {content_fingerprint[:16]}...")
+
+        # Check for recent duplicate uploads (within 5 minutes)
+        from core.database import SessionLocal, Document
+        db = SessionLocal()
+
+        try:
+            five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+            existing_doc = db.query(Document).filter(
+                Document.user_id == user_id,
+                Document.doc_metadata['content_hash'].astext == content_fingerprint,
+                Document.created_at > five_minutes_ago
+            ).first()
+
+            if existing_doc:
+                logger.warning(f"Duplicate upload detected for user {user_id}, returning existing document {existing_doc.id}")
+                db.close()
+                return jsonify({
+                    'success': True,
+                    'document_id': str(existing_doc.id),
+                    'filename': existing_doc.filename,
+                    'images_merged': len(files),
+                    'status': existing_doc.status,
+                    'duplicate': True,
+                    'message': 'Documento già in elaborazione'
+                }), 200
+        finally:
+            db.close()
 
         # Generate unique document ID
         doc_id = str(uuid.uuid4())
 
-        # Convert all images to PDF pages
-        pdf_images = []
+        # FIX 2: MEMORY-EFFICIENT PDF GENERATION
+        # Process images one at a time, save to temp disk, then create PDF
+        logger.info(f"Processing {len(files)} images with memory-efficient method...")
+
         total_size = 0
+        max_size_mb = 50
+        max_dimension = 2000  # Max pixels on longest side
 
-        for idx, file in enumerate(files):
-            try:
-                # Read image
-                image_content = file.read()
-                total_size += len(image_content)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            processed_paths = []
 
-                # Open with PIL and convert to RGB (required for PDF)
-                img = Image.open(io.BytesIO(image_content))
+            for idx, file in enumerate(files):
+                try:
+                    # Read image
+                    image_content = file.read()
+                    image_size = len(image_content)
+                    total_size += image_size
 
-                # Convert to RGB if needed (RGBA, L, etc.)
-                if img.mode != 'RGB':
-                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-                    if img.mode == 'RGBA':
-                        rgb_img.paste(img, mask=img.split()[3])
-                    else:
-                        rgb_img.paste(img)
-                    img = rgb_img
+                    # Check cumulative size limit (50MB)
+                    if total_size > max_size_mb * 1024 * 1024:
+                        logger.error(f"Batch upload exceeds {max_size_mb}MB limit")
+                        return jsonify({'error': f'Batch supera il limite di {max_size_mb}MB'}), 413
 
-                pdf_images.append(img)
-                logger.info(f"  Image {idx + 1}/{len(files)}: {file.filename} ({len(image_content)} bytes)")
+                    logger.info(f"  Processing image {idx + 1}/{len(files)}: {file.filename} ({image_size} bytes)")
 
-            except Exception as e:
-                logger.error(f"Error processing image {idx + 1} ({file.filename}): {e}")
-                return jsonify({'error': f'Failed to process image {idx + 1}: {str(e)}'}), 400
+                    # Open with PIL
+                    img = Image.open(io.BytesIO(image_content))
+                    original_size = img.size
 
-        if not pdf_images:
-            return jsonify({'error': 'No valid images to process'}), 400
+                    # Resize if too large (saves memory and reduces PDF size)
+                    if max(img.size) > max_dimension:
+                        img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+                        logger.info(f"    Resized from {original_size} to {img.size}")
 
-        # Create PDF from images
-        pdf_buffer = io.BytesIO()
+                    # Convert to RGB if needed (required for PDF)
+                    if img.mode != 'RGB':
+                        rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                        if img.mode == 'RGBA':
+                            rgb_img.paste(img, mask=img.split()[3])
+                        else:
+                            rgb_img.paste(img)
+                        img = rgb_img
 
-        # Save first image as PDF with the rest appended
-        pdf_images[0].save(
-            pdf_buffer,
-            format='PDF',
-            save_all=True,
-            append_images=pdf_images[1:] if len(pdf_images) > 1 else [],
-            resolution=100.0,
-            quality=85
-        )
+                    # Save to temp disk (frees memory immediately)
+                    temp_path = Path(temp_dir) / f"page_{idx:03d}.jpg"
+                    img.save(temp_path, 'JPEG', quality=85, optimize=True)
+                    processed_paths.append(str(temp_path))
 
-        pdf_content = pdf_buffer.getvalue()
-        pdf_size = len(pdf_content)
+                    # Free memory immediately
+                    del image_content
+                    del img
 
-        logger.info(f"Created PDF: {len(pdf_images)} pages, {pdf_size} bytes")
+                except Exception as e:
+                    logger.error(f"Error processing image {idx + 1} ({file.filename}): {e}")
+                    return jsonify({'error': f'Errore elaborazione immagine {idx + 1}: {str(e)}'}), 400
+
+            if not processed_paths:
+                return jsonify({'error': 'Nessuna immagine valida da processare'}), 400
+
+            logger.info(f"All images processed, creating PDF from {len(processed_paths)} pages...")
+
+            # Create PDF from processed images on disk (memory-efficient)
+            pdf_buffer = io.BytesIO()
+
+            # Open first image for PDF creation
+            first_img = Image.open(processed_paths[0])
+
+            # Load remaining images
+            remaining_imgs = [Image.open(path) for path in processed_paths[1:]] if len(processed_paths) > 1 else []
+
+            # Save as PDF
+            first_img.save(
+                pdf_buffer,
+                format='PDF',
+                save_all=True,
+                append_images=remaining_imgs,
+                resolution=100.0,
+                quality=85
+            )
+
+            # Close images to free memory
+            first_img.close()
+            for img in remaining_imgs:
+                img.close()
+
+            pdf_content = pdf_buffer.getvalue()
+            pdf_size = len(pdf_content)
+
+        logger.info(f"Created PDF: {len(processed_paths)} pages, {pdf_size} bytes")
 
         # Upload PDF to R2
         from core.s3_storage import upload_file, generate_file_key
@@ -539,13 +618,17 @@ def upload_batch_documents():
             task = process_document_task.delay(str(doc.id), user_id)
             logger.info(f"Processing task queued: {task.id} for merged document {doc.id}")
 
-            # Store task ID
+            # Store task ID and content hash for idempotency
             from core.document_operations import update_document_status
             update_document_status(
                 str(doc.id),
                 user_id,
                 status='processing',
-                doc_metadata={'task_id': task.id, 'source_images_count': len(files)}
+                doc_metadata={
+                    'task_id': task.id,
+                    'source_images_count': len(files),
+                    'content_hash': content_fingerprint
+                }
             )
 
         except Exception as e:
