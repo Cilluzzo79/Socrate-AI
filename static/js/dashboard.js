@@ -1,10 +1,10 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: FIX7-UNIVERSAL-ANDROID-20OCT2025-2130
+ * VERSION: FIX7.1-PROCESS-ALL-FILES-20OCT2025-2200
  */
 
-console.log('[DASHBOARD.JS] VERSION: FIX7-UNIVERSAL-ANDROID-20OCT2025-2130');
+console.log('[DASHBOARD.JS] VERSION: FIX7.1-PROCESS-ALL-FILES-20OCT2025-2200');
 console.log('[DASHBOARD.JS] Rename functions available:', {
     openRenameModal: typeof openRenameModal,
     closeRenameModal: typeof closeRenameModal,
@@ -505,14 +505,18 @@ window.openCamera = function() {
  * Setup camera event listener with multiple strategies for Android compatibility
  * MOVED TO DOMContentLoaded to ensure element exists
  *
- * FIX 7 - UNIVERSAL ANDROID CAMERA SUPPORT
- * Problem: On some Android devices (Oppo Find X2 Neo, ColorOS), the 'change' event
- * doesn't fire after camera capture. This is a known Chrome Mobile bug.
+ * FIX 7.1 - PROCESS ALL FILES IN FILELIST (Oppo Find X2 Neo Camera App Batching)
  *
- * Solution: Multi-layered approach:
- * 1. Listen to multiple events: 'change', 'input', 'focus'
- * 2. Implement polling fallback that checks files.length every 200ms
- * 3. Use capture-once flag to prevent duplicates
+ * ROOT CAUSE DISCOVERED: On Oppo Find X2 Neo (ColorOS), the camera app allows taking
+ * MULTIPLE photos before returning to the browser. The file input receives ALL photos
+ * in the files array, but previous code only processed files[0], causing the alternating
+ * pattern (1st photo lost, 2nd captured, 3rd lost, 4th captured).
+ *
+ * Solution:
+ * 1. Multi-event listeners (change + input) for cross-device compatibility
+ * 2. Polling fallback that checks files.length every 200ms
+ * 3. Process ALL files in the files array, not just files[0]
+ * 4. Use capture-once flag to prevent duplicates
  */
 function setupCameraListener() {
     const cameraInput = document.getElementById('camera-input');
@@ -526,6 +530,7 @@ function setupCameraListener() {
 
     /**
      * Process camera capture - called by any successful event or polling
+     * FIX 7.1: Process ALL files in FileList, not just files[0]
      */
     function processCameraFile() {
         if (isProcessing) {
@@ -539,18 +544,7 @@ function setupCameraListener() {
             return;
         }
 
-        const file = files[0];
-        if (!file.type.startsWith('image/')) {
-            console.log('[CAMERA] File is not an image:', file.type);
-            return;
-        }
-
-        console.log('[CAMERA] ✅ Photo detected! Processing...', {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            triggerMethod: isProcessing ? 'duplicate-prevented' : 'capture'
-        });
+        console.log(`[CAMERA] ✅ ${files.length} photo(s) detected in FileList! Processing ALL files...`);
 
         isProcessing = true;
 
@@ -558,13 +552,36 @@ function setupCameraListener() {
         if (pollingInterval) {
             clearInterval(pollingInterval);
             pollingInterval = null;
-            console.log('[CAMERA] Polling stopped - file detected');
+            console.log('[CAMERA] Polling stopped - files detected');
         }
 
-        // Process the file
-        handleCameraCapture(file);
+        // FIX 7.1: Process ALL files in the FileList array
+        // On Oppo Find X2 Neo, camera app allows taking multiple photos before returning to browser
+        // All photos are received in the files array, so we must process each one
+        let processedCount = 0;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
 
-        // Reset processing flag after 2 seconds (allows time for FileReader)
+            if (!file.type.startsWith('image/')) {
+                console.log(`[CAMERA] Skipping non-image file at index ${i}:`, file.type);
+                continue;
+            }
+
+            console.log(`[CAMERA] Processing file ${i + 1}/${files.length}:`, {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                index: i
+            });
+
+            // Process each file individually
+            handleCameraCapture(file);
+            processedCount++;
+        }
+
+        console.log(`[CAMERA] Processed ${processedCount} image(s) from ${files.length} file(s) in FileList`);
+
+        // Reset processing flag after 2 seconds (allows time for FileReader to complete)
         setTimeout(() => {
             isProcessing = false;
             console.log('[CAMERA] Ready for next capture');
