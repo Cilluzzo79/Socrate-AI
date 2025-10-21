@@ -110,12 +110,16 @@ def process_document_task(self, document_id: str, user_id: str):
         ocr_preextracted = doc.doc_metadata.get('ocr_preextracted', False) if doc.doc_metadata else False
         ocr_texts = doc.doc_metadata.get('ocr_texts', None) if doc.doc_metadata else None
 
+        # Save original base_name for metadata file lookup (before we change temp_file_path)
+        original_base_name = base_name
+
         if ocr_preextracted and ocr_texts:
             logger.info(f"[ALT-A] Using pre-extracted OCR text from {len(ocr_texts)} pages")
 
             # Create temporary text file with pre-extracted OCR text
             # This bypasses PyPDF2 entirely - much faster and no Poppler dependency!
-            text_file_path = os.path.join(temp_dir, f"{base_name}_ocr.txt")
+            # IMPORTANT: Use same base_name (without _ocr suffix) so metadata lookup works
+            text_file_path = os.path.join(temp_dir, f"{base_name}.txt")
 
             with open(text_file_path, 'w', encoding='utf-8') as f:
                 for page_num, page_text in enumerate(ocr_texts, start=1):
