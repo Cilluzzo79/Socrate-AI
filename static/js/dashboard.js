@@ -953,6 +953,11 @@ function showBatchPreview() {
     modal.style.display = 'flex';
     console.log('[BATCH] Adding active class to modal...');
     modal.classList.add('active');
+
+    // FIX 10.2: Force opacity to 1 (CSS might have opacity: 0)
+    modal.style.opacity = '1';
+    modal.style.visibility = 'visible';
+
     console.log('[BATCH] Modal should now be visible. Display:', modal.style.display, 'Has active class:', modal.classList.contains('active'));
 
     // Log final state for debug
