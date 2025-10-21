@@ -400,14 +400,20 @@
                 }
             });
 
-            // File input change (handles ONLY file-input, NOT camera-input)
-            // Camera-input has its own listener in dashboard.js
+            // File input change (handles ONLY file-input, NOT camera-input or gallery-input)
+            // Camera-input and gallery-input have their own listeners in dashboard.js
             fileInput.addEventListener('change', (e) => {
                 console.log('[FILE-INPUT] Change event detected, target ID:', e.target.id);
 
-                // IMPORTANT: Only handle file-input, camera-input is handled by dashboard.js
+                // IMPORTANT: Only handle file-input, ignore camera-input and gallery-input
                 if (e.target !== fileInput) {
-                    console.log('[FILE-INPUT] Ignoring event from non-file-input element');
+                    console.log('[FILE-INPUT] Ignoring event from non-file-input element:', e.target.id);
+                    return;
+                }
+
+                // FIX 10.3: Extra safety - check target.id explicitly
+                if (e.target.id !== 'file-input') {
+                    console.log('[FILE-INPUT] Ignoring event from wrong input ID:', e.target.id);
                     return;
                 }
 
