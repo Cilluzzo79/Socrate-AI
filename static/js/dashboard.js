@@ -1,13 +1,13 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: FIX10-UNIVERSAL-GALLERY-PICKER-21OCT2025
+ * VERSION: FIX10-GALLERY-ONLY-21OCT2025
  *
- * FIX 10: Universal Gallery Picker (100% compatibility on ALL devices)
- * - Gallery multi-select as primary method (works on Oppo, iOS, Samsung, ALL brands)
+ * FIX 10: Gallery-Only Approach (100% compatibility, CAMERA REMOVED)
+ * - Gallery multi-select as ONLY method (works on Oppo, iOS, Samsung, ALL brands)
  * - User workflow: Take photos in native camera → Select from gallery
  * - Simple, reliable, industry-standard approach (WhatsApp/Telegram pattern)
- * - Camera capture kept as legacy fallback
+ * - Camera input completely REMOVED to avoid confusion and errors
  *
  * FIX 9: Stateful file tracking with deduplication (Oppo/MIUI compatibility)
  * - Never resets input during active session (preserves pending photos)
@@ -22,7 +22,7 @@
  * - Robust error handling: failed photos don't block others
  */
 
-console.log('[DASHBOARD.JS] VERSION: FIX10-UNIVERSAL-GALLERY-PICKER-21OCT2025');
+console.log('[DASHBOARD.JS] VERSION: FIX10-GALLERY-ONLY-21OCT2025');
 console.log('[DASHBOARD.JS] Rename functions available:', {
     openRenameModal: typeof openRenameModal,
     closeRenameModal: typeof closeRenameModal,
@@ -518,17 +518,6 @@ window.openGallery = function() {
     const galleryInput = document.getElementById('gallery-input');
     if (galleryInput) {
         galleryInput.click();
-    }
-}
-
-/**
- * Open camera input to capture photo (kept for backward compatibility)
- * EXPOSED TO GLOBAL SCOPE for onclick handlers
- */
-window.openCamera = function() {
-    const cameraInput = document.getElementById('camera-input');
-    if (cameraInput) {
-        cameraInput.click();
     }
 }
 
@@ -1312,15 +1301,14 @@ window.resetCameraState = function() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[INIT] DOM Content Loaded - Setting up listeners');
 
-    // Setup camera event listener
-    setupCameraListener();
+    // FIX 10: Camera input REMOVED - using gallery picker only (100% compatibility)
+    // setupCameraListener(); // ← DISABLED
 
     // ✅ FIX 10: Setup gallery picker listener (universal multi-select)
     setupGalleryListener();
 
     // Verify all global functions are accessible
     console.log('[INIT] Global functions exposed to window:', {
-        openCamera: typeof window.openCamera,
         openGallery: typeof window.openGallery,
         addAnotherPhoto: typeof window.addAnotherPhoto,
         cancelBatch: typeof window.cancelBatch,

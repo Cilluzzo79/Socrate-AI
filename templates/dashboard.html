@@ -172,8 +172,7 @@
                     <div class="upload-text">Trascina un file qui o clicca per selezionare</div>
                     <div class="upload-hint">Supportati: PDF, DOCX, TXT, JPG, PNG, HEIC, WebP, TIFF (max {{ user.storage_quota_mb - user.storage_used_mb | round(2) }} MB disponibili)</div>
                     <input type="file" id="file-input" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.heic,.heif,.webp,.bmp,.tiff" style="display: none;">
-                    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
-                    <!-- FIX 10: Gallery multi-select for universal compatibility -->
+                    <!-- FIX 10: Gallery multi-select for universal compatibility (camera-input REMOVED) -->
                     <input type="file" id="gallery-input" accept="image/*" multiple style="display: none;">
 
                     <!-- Photo Capture Actions -->
