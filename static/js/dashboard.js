@@ -1,7 +1,13 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: FIX8-PARALLEL-BLOB-URLS-21OCT2025
+ * VERSION: FIX9-STATEFUL-DEDUPLICATION-21OCT2025
+ *
+ * FIX 9: Stateful file tracking with deduplication (Oppo/MIUI compatibility)
+ * - Never resets input during active session (preserves pending photos)
+ * - Tracks processed files by name+size+lastModified (prevents duplicates)
+ * - Handles camera apps that batch photos before returning to browser
+ * - Fixes odd/even photo loss on Oppo Find X2 Neo and Xiaomi MIUI devices
  *
  * FIX 8: Parallel processing with Promise.allSettled + Blob URLs
  * - Eliminates race condition with proper async/await
@@ -10,7 +16,7 @@
  * - Robust error handling: failed photos don't block others
  */
 
-console.log('[DASHBOARD.JS] VERSION: FIX8-PARALLEL-BLOB-URLS-21OCT2025');
+console.log('[DASHBOARD.JS] VERSION: FIX9-STATEFUL-DEDUPLICATION-21OCT2025');
 console.log('[DASHBOARD.JS] Rename functions available:', {
     openRenameModal: typeof openRenameModal,
     closeRenameModal: typeof closeRenameModal,
@@ -494,7 +500,8 @@ async function pollDocumentStatus(documentId, progressFill, progressText, maxAtt
 // CAMERA CAPTURE FUNCTIONS - MULTI-PHOTO BATCH
 // ============================================================================
 
-let capturedImages = []; // Array of {file, dataUrl}
+let capturedImages = []; // Array of {file, blobUrl}
+const processedFileKeys = new Set(); // ✅ FIX 9: Track processed files to prevent duplicates (Oppo/MIUI compatibility)
 
 /**
  * Open camera input to capture photo
@@ -557,7 +564,23 @@ function setupCameraListener() {
             return;
         }
 
-        console.log(`[CAMERA] ✅ ${files.length} photo(s) detected! Processing in PARALLEL...`);
+        // ✅ FIX 9: Filter out already-processed files (handles Oppo/MIUI batching)
+        const newFiles = files.filter(file => {
+            const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
+            if (processedFileKeys.has(fileKey)) {
+                console.log(`[CAMERA] Skipping duplicate: ${file.name}`);
+                return false;
+            }
+            return true;
+        });
+
+        if (newFiles.length === 0) {
+            console.log('[CAMERA] No new files to process (all duplicates filtered)');
+            return;
+        }
+
+        console.log(`[CAMERA] ✅ ${newFiles.length} NEW photo(s) detected! Processing in PARALLEL...`);
+        console.log(`[CAMERA] Total files in input: ${files.length}, Already processed: ${files.length - newFiles.length}`);
 
         isProcessing = true;
 
@@ -569,10 +592,10 @@ function setupCameraListener() {
         }
 
         try {
-            // ✅ PARALLEL PROCESSING with Promise.allSettled
+            // ✅ PARALLEL PROCESSING with Promise.allSettled (only NEW files)
             // Processes all photos simultaneously, handles errors per-file
             const results = await Promise.allSettled(
-                files.map((file, index) => handleCameraCaptureAsync(file, index))
+                newFiles.map((file, index) => handleCameraCaptureAsync(file, index))
             );
 
             // Analyze results
@@ -586,9 +609,16 @@ function setupCameraListener() {
                 console.error(`[CAMERA] Photo ${index + 1} failed:`, result.reason);
             });
 
-            // ✅ SINGLE INPUT RESET (not inside each FileReader)
-            cameraInput.value = '';
-            console.log('[CAMERA] Camera input reset after all processing');
+            // ✅ FIX 9: Mark files as processed (prevents re-processing on next trigger)
+            newFiles.forEach(file => {
+                const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
+                processedFileKeys.add(fileKey);
+            });
+
+            console.log(`[CAMERA] Processed files tracker now has ${processedFileKeys.size} entries`);
+
+            // ❌ FIX 9: REMOVED - Never reset input during active session (preserves pending photos)
+            // cameraInput.value = '';  // ← This was causing photo loss on Oppo/MIUI
 
             // ✅ SINGLE MODAL UPDATE (not per photo)
             if (capturedImages.length > 0) {
@@ -920,6 +950,11 @@ function cleanupCapturedImages() {
     });
 
     capturedImages = [];
+
+    // ✅ FIX 9: Clear processed files tracker
+    processedFileKeys.clear();
+    console.log('[CLEANUP] Processed files tracker cleared');
+
     console.log('[CLEANUP] Complete - memory freed');
 }
 
@@ -938,6 +973,7 @@ window.cancelBatch = function() {
 /**
  * Close preview modal and reset
  * FIX 8: Cleanup Blob URLs on close
+ * FIX 9: Reset camera input for next session
  * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
 window.closePreviewModal = function() {
@@ -947,7 +983,14 @@ window.closePreviewModal = function() {
 
     // Only cleanup if not already cleaned
     if (capturedImages.length > 0) {
-        cleanupCapturedImages();  // ✅ Free memory
+        cleanupCapturedImages();  // ✅ Free memory + clear tracker
+    }
+
+    // ✅ FIX 9: Reset camera input for next session
+    const cameraInput = document.getElementById('camera-input');
+    if (cameraInput) {
+        cameraInput.value = '';
+        console.log('[CLEANUP] Camera input reset for next session');
     }
 }
 
