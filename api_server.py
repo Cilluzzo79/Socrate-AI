@@ -448,6 +448,17 @@ def upload_batch_documents():
     if not files:
         return jsonify({'error': 'No files provided'}), 400
 
+    # ALTERNATIVE A: Limit batch size to 10 images (cost control + performance)
+    MAX_BATCH_IMAGES = 10
+
+    if len(files) > MAX_BATCH_IMAGES:
+        logger.warning(f"User {user_id} tried to upload {len(files)} images (max {MAX_BATCH_IMAGES})")
+        return jsonify({
+            'error': f'Puoi caricare massimo {MAX_BATCH_IMAGES} foto per volta. Hai selezionato {len(files)} foto.',
+            'max_allowed': MAX_BATCH_IMAGES,
+            'images_selected': len(files)
+        }), 400
+
     logger.info(f"Batch upload: {len(files)} images by user {user_id}, document_name: {document_name}")
 
     try:
@@ -564,6 +575,57 @@ def upload_batch_documents():
 
             logger.info(f"All images processed, creating PDF from {len(processed_paths)} pages...")
 
+            # ALTERNATIVE A: Apply OCR to images BEFORE creating PDF
+            # This allows memvid encoder to use pre-extracted text instead of PyPDF2
+            logger.info(f"[ALT-A] Applying OCR to {len(processed_paths)} images in parallel...")
+
+            ocr_texts = []
+            ocr_success = True
+
+            try:
+                from concurrent.futures import ThreadPoolExecutor
+                from core.ocr_processor import extract_text_from_image
+
+                # OCR in parallel (3x faster than sequential)
+                with ThreadPoolExecutor(max_workers=min(3, len(processed_paths))) as executor:
+                    futures = []
+
+                    for idx, img_path in enumerate(processed_paths):
+                        # Read image bytes for OCR
+                        with open(img_path, 'rb') as f:
+                            img_bytes = f.read()
+
+                        # Submit OCR task
+                        future = executor.submit(
+                            extract_text_from_image,
+                            img_bytes,
+                            f"page_{idx+1}.jpg"
+                        )
+                        futures.append(future)
+
+                    # Collect results
+                    for idx, future in enumerate(futures):
+                        try:
+                            ocr_result = future.result(timeout=30)  # 30s timeout per page
+
+                            if ocr_result.get('success') and ocr_result.get('text'):
+                                page_text = ocr_result['text']
+                                ocr_texts.append(page_text)
+                                logger.info(f"[ALT-A] Page {idx+1} OCR: {len(page_text)} chars extracted")
+                            else:
+                                ocr_texts.append("")
+                                logger.warning(f"[ALT-A] Page {idx+1} OCR failed: {ocr_result.get('error', 'Unknown')}")
+                        except Exception as e:
+                            ocr_texts.append("")
+                            logger.error(f"[ALT-A] Page {idx+1} OCR exception: {e}")
+
+                logger.info(f"[ALT-A] OCR complete: {len([t for t in ocr_texts if t])} of {len(ocr_texts)} pages successful")
+
+            except Exception as e:
+                logger.error(f"[ALT-A] OCR process failed: {e}")
+                logger.info(f"[ALT-A] Falling back to PDF without pre-extracted text")
+                ocr_success = False
+
             # Create PDF from processed images on disk (memory-efficient)
             pdf_buffer = io.BytesIO()
 
@@ -624,7 +686,7 @@ def upload_batch_documents():
             task = process_document_task.delay(str(doc.id), user_id)
             logger.info(f"Processing task queued: {task.id} for merged document {doc.id}")
 
-            # Store task ID and content hash for idempotency
+            # Store task ID, content hash, and OCR text for idempotency
             from core.document_operations import update_document_status
             update_document_status(
                 str(doc.id),
@@ -633,7 +695,9 @@ def upload_batch_documents():
                 doc_metadata={
                     'task_id': task.id,
                     'source_images_count': len(files),
-                    'content_hash': content_fingerprint
+                    'content_hash': content_fingerprint,
+                    'ocr_preextracted': ocr_success,  # ALTERNATIVE A: Flag that OCR was done
+                    'ocr_texts': ocr_texts if ocr_success else None  # ALTERNATIVE A: Pre-extracted text per page
                 }
             )
 

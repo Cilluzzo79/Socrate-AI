@@ -106,8 +106,32 @@ def process_document_task(self, document_id: str, user_id: str):
             meta={'status': 'Calculating optimal configuration', 'progress': 15}
         )
 
-        # 4.5. Calculate optimal chunk configuration based on document size
-        page_count = count_document_pages(temp_file_path)
+        # ALTERNATIVE A: Check if OCR text was pre-extracted (batch upload from gallery)
+        ocr_preextracted = doc.doc_metadata.get('ocr_preextracted', False) if doc.doc_metadata else False
+        ocr_texts = doc.doc_metadata.get('ocr_texts', None) if doc.doc_metadata else None
+
+        if ocr_preextracted and ocr_texts:
+            logger.info(f"[ALT-A] Using pre-extracted OCR text from {len(ocr_texts)} pages")
+
+            # Create temporary text file with pre-extracted OCR text
+            # This bypasses PyPDF2 entirely - much faster and no Poppler dependency!
+            text_file_path = os.path.join(temp_dir, f"{base_name}_ocr.txt")
+
+            with open(text_file_path, 'w', encoding='utf-8') as f:
+                for page_num, page_text in enumerate(ocr_texts, start=1):
+                    f.write(f"\n## Pagina {page_num}\n\n")
+                    f.write(page_text)
+                    f.write("\n\n")
+
+            logger.info(f"[ALT-A] Created text file with OCR content: {text_file_path}")
+
+            # Use text file instead of PDF for processing
+            temp_file_path = text_file_path
+            page_count = len(ocr_texts)
+        else:
+            # Standard flow: calculate pages from actual file
+            page_count = count_document_pages(temp_file_path)
+
         logger.info(f"Document has {page_count} pages")
 
         # Get user tier (default to 'free' for now - TODO: get from user model)
