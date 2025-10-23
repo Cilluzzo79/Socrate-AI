@@ -7,16 +7,8 @@ import re
 from typing import Dict, List
 
 
-# Simple template prompt that Claude can easily follow
-MERMAID_MINDMAP_PROMPT = """PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
-
-STEP 1 - ANALISI STRUTTURA (mentale, non scrivere):
-- Identifica i capitoli/sezioni principali NEL LORO ORDINE
-- Nota la gerarchia: cosa viene prima, cosa viene dopo
-- Riconosci i temi raggruppati insieme dall'autore
-
-STEP 2 - CREAZIONE MAPPA:
-Crea una mappa concettuale FEDELE al testo, seguendo ESATTAMENTE questo formato:
+# SIMPLIFIED prompt - easier for LLM to follow consistently
+MERMAID_MINDMAP_PROMPT = """Crea una mappa concettuale del documento seguendo ESATTAMENTE questo formato semplice:
 
 === MAPPA CONCETTUALE ===
 
@@ -53,49 +45,45 @@ COLLEGAMENTI:
 
 === FINE MAPPA ===
 
-REGOLE CRITICHE - MASSIMA FEDELTÀ AL TESTO:
+REGOLE IMPORTANTI:
 
-1. FEDELTÀ TERMINOLOGICA ASSOLUTA:
-   - USA i termini ESATTI del documento (es. "Legge del Tre", NON "tre principi")
-   - Se il testo dice "cosmologia" usa "cosmologia", non "universo"
-   - Rispetta nomi propri, concetti tecnici e termini specifici dell'autore
+1. USA i termini ESATTI del documento - NON parafrasare
+2. CREA ALMENO 4-6 RAMI principali (RAMO_1, RAMO_2, RAMO_3, RAMO_4, ecc.)
+3. OGNI RAMO deve avere 2-4 sotto-concetti (con ├─ o └─)
+4. Descrivi cosa fa/significa ogni concetto: "Termine - breve spiegazione"
+5. COLLEGAMENTI: connetti i rami tra loro (almeno 2-3 collegamenti)
 
-2. ORDINE E STRUTTURA GERARCHICA OBBLIGATORI:
-   - I RAMI devono seguire l'ORDINE di presentazione nel documento
-   - RAMO_1 = primo concetto/capitolo presentato dall'autore
-   - RAMO_2 = secondo concetto/capitolo, e così via in sequenza
-   - I sotto-concetti seguono l'ordine in cui appaiono sotto quel tema
-   - NON mescolare concetti da sezioni diverse
-   - Raggruppa insieme solo ciò che l'autore ha raggruppato
+ESEMPIO FORMATO CORRETTO:
 
-3. NESSUNA INTERPRETAZIONE O PARAFRASI:
-   - NON semplificare o generalizzare i concetti
-   - NON usare sinonimi se l'autore usa un termine specifico
-   - Se il testo dice "ottava cosmica" scrivi "ottava cosmica", non "scala universale"
+TEMA_CENTRALE: Intelligenza Artificiale
+DESCRIZIONE_CENTRALE: Studio di sistemi che simulano capacità cognitive umane
 
-4. QUALIFICAZIONE CON DESCRITTORI FUNZIONALI:
-   - OGNI nodo deve includere un descrittore che spiega COSA FA o COSA RAPPRESENTA
-   - Formato: "Termine esatto - breve descrizione funzionale"
-   - Esempio CORRETTO: "Legge del Tre - tre forze in ogni fenomeno" ✓
-   - Esempio SBAGLIATO: "Legge del Tre" ✗ (troppo generico, non qualificato)
-   - Esempio CORRETTO: "Centro intellettuale - elaborazione pensieri logici" ✓
-   - Esempio SBAGLIATO: "Centro intellettuale" ✗ (non spiega cosa fa)
+---
 
-5. VERIFICA INCROCIATA:
-   - Prima di scrivere ogni ramo, cerca nel contesto il termine esatto
-   - Ogni sotto-concetto deve essere effettivamente presente nel testo
-   - I collegamenti devono riflettere relazioni esplicitamente menzionate
+RAMO_1: Machine Learning - sistemi che apprendono dai dati
+├─ Supervised Learning - apprendimento con dati etichettati
+├─ Unsupervised Learning - scoperta pattern senza etichette
+└─ Reinforcement Learning - apprendimento per rinforzo
 
-ESEMPIO CORRETTO (Gurdjieff):
-RAMO: Legge del Tre - ogni fenomeno risulta da tre forze
-├─ Forza Attiva - inizia il processo
-├─ Forza Passiva - resiste al cambiamento
-└─ Forza Neutralizzante - riconcilia le opposte
+RAMO_2: Neural Networks - reti ispirate al cervello biologico
+├─ Deep Learning - reti neurali profonde multistrato
+├─ Convolutional Networks - elaborazione immagini
+└─ Recurrent Networks - elaborazione sequenze temporali
 
-ESEMPIO SBAGLIATO:
-RAMO: Tre Principi Fondamentali  [❌ termine non fedele]
-├─ Principio positivo  [❌ non è la terminologia usata]
-└─ Forza Attiva  [❌ manca descrittore funzionale]
+RAMO_3: Natural Language Processing - comprensione linguaggio umano
+├─ Text Classification - categorizzazione automatica testi
+└─ Language Models - generazione testo coerente
+
+RAMO_4: Computer Vision - percezione visiva automatica
+├─ Object Detection - riconoscimento oggetti
+└─ Image Segmentation - divisione semantica immagini
+
+---
+
+COLLEGAMENTI:
+• RAMO_1 <-> RAMO_2: Neural networks implementano algoritmi di machine learning
+• RAMO_2 <-> RAMO_3: Deep learning è fondamentale per NLP moderno
+• RAMO_2 <-> RAMO_4: CNN sono architetture chiave per computer vision
 """
 
 
