@@ -49,7 +49,7 @@ if os.getenv('FLASK_ENV') == 'production' and (not secret_key or secret_key == '
     raise ValueError("SECRET_KEY must be set to a strong random value in production!")
 app.secret_key = secret_key
 
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB max request size
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max request size (for PDF uploads)
 CORS(app, supports_credentials=True)
 
 # ============================================================================
