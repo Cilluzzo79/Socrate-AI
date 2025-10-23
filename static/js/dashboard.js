@@ -301,17 +301,9 @@ async function useTool(documentId, toolType) {
             const html = await response.text();
             console.log('[useTool] Received HTML, length:', html.length);
 
-            // Open in new tab
-            const newWindow = window.open('', '_blank');
-            if (newWindow) {
-                newWindow.document.write(html);
-                newWindow.document.close();
-                console.log('[useTool] Opened HTML in new tab');
-            } else {
-                throw new Error('Popup blocked - please allow popups for this site');
-            }
-
+            // Show HTML in fullscreen modal with iframe (bypasses popup blocker)
             hideLoading();
+            showHTMLViewer(html, toolType);
             return;
         }
 
@@ -771,6 +763,63 @@ function showResult(content, type) {
             zIndex: computedStyle.zIndex
         });
     }, 100);
+}
+
+// Show HTML visualization in fullscreen iframe (bypasses popup blocker)
+function showHTMLViewer(htmlContent, toolType) {
+    console.log('[showHTMLViewer] Creating fullscreen viewer for:', toolType);
+
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.style.cssText = 'z-index: 10000;';
+
+    // Create blob URL for the HTML content
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 95vw; max-height: 95vh; width: 95vw; height: 95vh; padding: 0; display: flex; flex-direction: column;">
+            <div style="
+                background: #1a1f2e;
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid rgba(0, 217, 192, 0.3);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <h2 style="margin: 0; color: #00d9c0;">${toolType.charAt(0).toUpperCase() + toolType.slice(1)}</h2>
+                <div>
+                    <a href="${blobUrl}" download="${toolType}_result.html" class="primary-btn" style="margin-right: 1rem; padding: 0.5rem 1rem; text-decoration: none; display: inline-block;">
+                        📥 Scarica HTML
+                    </a>
+                    <button onclick="this.closest('.modal').remove(); URL.revokeObjectURL('${blobUrl}');" class="primary-btn" style="padding: 0.5rem 1rem;">
+                        ✕ Chiudi
+                    </button>
+                </div>
+            </div>
+            <iframe
+                src="${blobUrl}"
+                style="
+                    flex: 1;
+                    border: none;
+                    width: 100%;
+                    height: 100%;
+                    background: white;
+                "
+                sandbox="allow-scripts allow-same-origin"
+            ></iframe>
+        </div>
+    `;
+
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            modal.remove();
+            URL.revokeObjectURL(blobUrl);
+        }
+    };
+
+    document.body.appendChild(modal);
+    console.log('[showHTMLViewer] Fullscreen viewer displayed');
 }
 
 // Poll document processing status

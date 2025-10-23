@@ -1312,6 +1312,7 @@ def generate_mindmap_tool(document_id):
 
     try:
         from core.visualizers import get_mermaid_mindmap_prompt, parse_simple_mindmap, generate_mermaid_mindmap_html
+        from core.query_engine import query_document
 
         # Get document
         document = get_document_by_id(document_id, user_id)
