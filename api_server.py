@@ -1100,7 +1100,7 @@ def document_chat(document_id):
     data = request.json
 
     messages = data.get('messages', [])
-    top_k = data.get('top_k', 5)
+    top_k = data.get('top_k', 20)  # Premium: increased from 5 to 20 for richer context
 
     if not messages or len(messages) == 0:
         return jsonify({'error': 'messages array required'}), 400
@@ -1346,7 +1346,7 @@ def generate_mindmap_tool(document_id):
             query=mindmap_prompt,
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
-            top_k=15,  # More context for mind maps
+            top_k=40,  # Premium: high context for comprehensive mindmaps
             user_tier=user_tier,
             query_type='mindmap',
             command_params={'depth': depth, 'topic': topic}
@@ -1430,7 +1430,7 @@ def generate_outline_tool(document_id):
             query=outline_prompt,
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
-            top_k=20,  # More context for outlines
+            top_k=50,  # Premium: maximum context for detailed outlines
             user_tier=user_tier,
             query_type='outline',
             command_params=outline_params
@@ -1509,7 +1509,7 @@ def generate_quiz_tool(document_id):
             query=quiz_prompt,
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
-            top_k=15,
+            top_k=30,  # Premium: rich context for diverse questions
             user_tier=user_tier,
             query_type='quiz',
             command_params=quiz_config
@@ -1578,7 +1578,7 @@ def generate_summary_tool(document_id):
             query=summary_prompt,
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
-            top_k=15,
+            top_k=25,  # Premium: comprehensive context for complete summaries
             user_tier=user_tier,
             query_type='summary',
             command_params=summary_params
@@ -1651,7 +1651,7 @@ def generate_analysis_tool(document_id):
             query=analysis_prompt,
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
-            top_k=20,  # More context for analysis
+            top_k=40,  # Premium: deep context for thorough analysis
             user_tier=user_tier,
             query_type='analyze',
             command_params=analysis_params
