@@ -189,12 +189,15 @@ function openTools(documentId) {
         <button onclick="useTool('${documentId}', '${tool.type}')" style="
             padding: 1rem;
             margin: 0.5rem;
-            background: white;
-            border: 2px solid #667eea;
+            background: var(--color-bg-card, #1a1f2e);
+            border: 2px solid rgba(0, 217, 192, 0.4);
             border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
-        ">
+            color: var(--color-text-primary, #e8eaed);
+            transition: all 0.2s;
+            font-weight: 500;
+        " onmouseover="this.style.background='rgba(0, 217, 192, 0.1)'; this.style.borderColor='rgba(0, 217, 192, 0.6)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='var(--color-bg-card, #1a1f2e)'; this.style.borderColor='rgba(0, 217, 192, 0.4)'; this.style.transform='translateY(0)';">
             ${tool.icon} ${tool.name}
         </button>
     `).join('');
@@ -203,21 +206,38 @@ function openTools(documentId) {
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 600px;">
-            <h2>🛠️ Strumenti per: ${doc.filename}</h2>
-            <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1rem;">Scegli uno strumento</p>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
-                ${toolsHTML}
+        <div class="modal-content" style="
+            max-width: 600px;
+            background: var(--color-bg-card, #1a1f2e);
+            border-radius: var(--radius-lg, 12px);
+            border: 1px solid rgba(0, 217, 192, 0.2);
+        ">
+            <div style="
+                padding: 1.5rem;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 12px 12px 0 0;
+                margin: -1px -1px 0 -1px;
+            ">
+                <h2 style="margin: 0; color: white; font-size: 1.5rem;">🛠️ Strumenti per: ${doc.filename}</h2>
+                <p style="color: rgba(255, 255, 255, 0.9); margin: 0.5rem 0 0 0;">Scegli uno strumento per analizzare il documento</p>
             </div>
-            <button onclick="this.closest('.modal').remove()" style="
-                margin-top: 1rem;
-                width: 100%;
-                padding: 0.8rem;
-                background: #ccc;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-            ">Chiudi</button>
+            <div style="padding: 1.5rem;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                    ${toolsHTML}
+                </div>
+                <button onclick="this.closest('.modal').remove()" style="
+                    margin-top: 1.5rem;
+                    width: 100%;
+                    padding: 0.875rem;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 8px;
+                    cursor: pointer;
+                    color: var(--color-text-primary, #e8eaed);
+                    font-size: 1rem;
+                    transition: all 0.2s;
+                " onmouseover="this.style.background='rgba(255, 255, 255, 0.15)';" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)';">Chiudi</button>
+            </div>
         </div>
     `;
     modal.onclick = (e) => {
@@ -378,30 +398,33 @@ function openPersistentChat(documentId) {
                 justify-content: space-between;
                 align-items: center;
                 border-bottom: 2px solid rgba(0, 217, 192, 0.3);
+                border-radius: 12px 12px 0 0;
             ">
-                <div>
-                    <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        💬 Chat con Documento
+                <div style="flex: 1; min-width: 0;">
+                    <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                        💬 Chat con il Documento
                     </h2>
-                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">
-                        ${doc.filename}
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.95; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${doc.filename}">
+                        📄 ${doc.filename}
                     </p>
                 </div>
                 <button onclick="document.getElementById('chat-modal-${documentId}').remove()" style="
-                    background: rgba(255, 255, 255, 0.2);
-                    border: none;
+                    background: rgba(255, 255, 255, 0.15);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     color: white;
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
+                    width: 36px;
+                    height: 36px;
+                    min-width: 36px;
+                    border-radius: 8px;
                     cursor: pointer;
-                    font-size: 1.5rem;
+                    font-size: 1.25rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    transition: background 0.2s;
-                " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                    ×
+                    transition: all 0.2s;
+                    margin-left: 1rem;
+                " onmouseover="this.style.background='rgba(255,255,255,0.25)'; this.style.borderColor='rgba(255,255,255,0.4)';" onmouseout="this.style.background='rgba(255,255,255,0.15)'; this.style.borderColor='rgba(255,255,255,0.2)';" aria-label="Chiudi chat">
+                    ✕
                 </button>
             </div>
 
