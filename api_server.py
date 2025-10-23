@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 
+# Cache busting: Generate timestamp on startup (changes every deployment)
+APP_VERSION = os.getenv('RAILWAY_DEPLOYMENT_ID', str(int(datetime.now().timestamp())))
+logger.info(f"App version for cache busting: {APP_VERSION}")
+
 # SECURITY: SECRET_KEY validation
 secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-CHANGE-IN-PRODUCTION')
 if os.getenv('FLASK_ENV') == 'production' and (not secret_key or secret_key == 'dev-secret-key-CHANGE-IN-PRODUCTION'):
@@ -200,7 +204,15 @@ def dashboard():
 
     stats = get_user_stats(user_id)
 
-    return render_template('dashboard.html', user=user, stats=stats)
+    # Render template with cache busting version
+    response = app.make_response(render_template('dashboard.html', user=user, stats=stats, app_version=APP_VERSION))
+
+    # Add no-cache headers to prevent browser caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+
+    return response
 
 
 @app.route('/auth/telegram/callback')
