@@ -186,7 +186,7 @@ function openTools(documentId) {
     ];
 
     let toolsHTML = tools.map(tool => `
-        <button onclick="useTool('${documentId}', '${tool.type}')" style="
+        <button onclick="openToolConfig('${documentId}', '${tool.type}')" style="
             padding: 1rem;
             margin: 0.5rem;
             background: var(--color-bg-card, #1a1f2e);
@@ -246,11 +246,368 @@ function openTools(documentId) {
     document.body.appendChild(modal);
 }
 
-async function useTool(documentId, toolType) {
-    console.log('[useTool] Starting:', { documentId, toolType });
+// Open tool configuration modal before executing
+function openToolConfig(documentId, toolType) {
+    console.log('[openToolConfig] Opening config for:', toolType);
 
     // Close tools modal
     document.querySelector('.modal')?.remove();
+
+    // Handle persistent chat separately (no config needed)
+    if (toolType === 'query') {
+        openPersistentChat(documentId);
+        return;
+    }
+
+    // Build configuration modal based on tool type
+    let configHTML = '';
+    let defaultParams = {};
+
+    if (toolType === 'mindmap') {
+        configHTML = `
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tema/Argomento</strong> (opzionale - lascia vuoto per l'intero documento)
+                </label>
+                <input type="text" id="tool-topic" placeholder="Es: Intelligenza Artificiale, Capitolo 3, ecc." style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Livelli di profondità</strong>
+                </label>
+                <select id="tool-depth" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="2">2 livelli (panoramica)</option>
+                    <option value="3" selected>3 livelli (equilibrato)</option>
+                    <option value="4">4 livelli (dettagliato)</option>
+                </select>
+            </div>
+        `;
+        defaultParams = { depth: 3 };
+    } else if (toolType === 'outline') {
+        configHTML = `
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tema/Argomento</strong> (opzionale)
+                </label>
+                <input type="text" id="tool-topic" placeholder="Es: Metodologia, Risultati, ecc." style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tipo di schema</strong>
+                </label>
+                <select id="tool-type" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="hierarchical" selected>Gerarchico (struttura ad albero)</option>
+                    <option value="chronological">Cronologico (temporale)</option>
+                    <option value="thematic">Tematico (per argomenti)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Livello di dettaglio</strong>
+                </label>
+                <select id="tool-detail" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="brief">Sintetico</option>
+                    <option value="medium" selected>Medio</option>
+                    <option value="detailed">Dettagliato</option>
+                </select>
+            </div>
+        `;
+        defaultParams = { type: 'hierarchical', detail_level: 'medium' };
+    } else if (toolType === 'quiz') {
+        configHTML = `
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tema/Argomento</strong> (opzionale)
+                </label>
+                <input type="text" id="tool-topic" placeholder="Es: Capitolo 2, Teoria, ecc." style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Numero di domande</strong>
+                </label>
+                <select id="tool-num-questions" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="5">5 domande</option>
+                    <option value="10" selected>10 domande</option>
+                    <option value="15">15 domande</option>
+                    <option value="20">20 domande</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tipo di domande</strong>
+                </label>
+                <select id="tool-quiz-type" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="multiple_choice">Scelta multipla</option>
+                    <option value="true_false">Vero/Falso</option>
+                    <option value="short_answer">Risposta breve</option>
+                    <option value="mixed" selected>Misto (tutti i tipi)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Difficoltà</strong>
+                </label>
+                <select id="tool-difficulty" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="easy">Facile</option>
+                    <option value="medium" selected>Medio</option>
+                    <option value="hard">Difficile</option>
+                </select>
+            </div>
+        `;
+        defaultParams = { type: 'mixed', num_questions: 10, difficulty: 'medium' };
+    } else if (toolType === 'summary') {
+        configHTML = `
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tema/Argomento</strong> (opzionale)
+                </label>
+                <input type="text" id="tool-topic" placeholder="Es: Introduzione, Conclusioni, ecc." style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Lunghezza riassunto</strong>
+                </label>
+                <select id="tool-length" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="brief">Breve (1-2 paragrafi)</option>
+                    <option value="medium" selected>Medio (3-5 paragrafi)</option>
+                    <option value="detailed">Dettagliato (6+ paragrafi)</option>
+                </select>
+            </div>
+        `;
+        defaultParams = { length: 'medium' };
+    } else if (toolType === 'analyze') {
+        configHTML = `
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tema da analizzare</strong> (obbligatorio)
+                </label>
+                <input type="text" id="tool-theme" placeholder="Es: Impatto economico, Metodologia statistica, ecc." style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                " required>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--color-text-primary);">
+                    <strong>Tipo di focus</strong>
+                </label>
+                <select id="tool-focus" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                ">
+                    <option value="specific">Specifico (focus ristretto)</option>
+                    <option value="comprehensive" selected>Comprensivo (ampio)</option>
+                </select>
+            </div>
+        `;
+        defaultParams = { focus: 'comprehensive' };
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.style.cssText = 'z-index: 9999;';
+
+    const toolNames = {
+        'mindmap': 'Mappa Mentale',
+        'outline': 'Schema/Indice',
+        'quiz': 'Quiz Interattivo',
+        'summary': 'Riassunto',
+        'analyze': 'Analisi Tematica'
+    };
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <div style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 1.5rem;
+                border-radius: 12px 12px 0 0;
+                margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+            ">
+                <h2 style="margin: 0; color: white; font-size: 1.5rem;">⚙️ Configura: ${toolNames[toolType]}</h2>
+                <p style="color: rgba(255, 255, 255, 0.9); margin: 0.5rem 0 0 0;">Personalizza i parametri dello strumento</p>
+            </div>
+            <div>
+                ${configHTML}
+            </div>
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button onclick="window.confirmToolConfig('${documentId}', '${toolType}')" class="primary-btn" style="
+                    flex: 1;
+                    padding: 0.875rem;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    color: white;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                ">✓ Genera</button>
+                <button onclick="this.closest('.modal').remove()" style="
+                    flex: 0 0 auto;
+                    padding: 0.875rem 1.5rem;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 8px;
+                    cursor: pointer;
+                    color: var(--color-text-primary);
+                    font-size: 1rem;
+                    transition: all 0.2s;
+                ">Annulla</button>
+            </div>
+        </div>
+    `;
+
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+
+    document.body.appendChild(modal);
+}
+
+// Confirm tool configuration and execute
+window.confirmToolConfig = function(documentId, toolType) {
+    console.log('[confirmToolConfig] Collecting parameters for:', toolType);
+
+    // Collect parameters from form
+    const params = {};
+
+    // Common parameter: topic
+    const topicInput = document.getElementById('tool-topic');
+    if (topicInput && topicInput.value.trim()) {
+        params.topic = topicInput.value.trim();
+    }
+
+    // Tool-specific parameters
+    if (toolType === 'mindmap') {
+        params.depth = parseInt(document.getElementById('tool-depth').value);
+    } else if (toolType === 'outline') {
+        params.type = document.getElementById('tool-type').value;
+        params.detail_level = document.getElementById('tool-detail').value;
+    } else if (toolType === 'quiz') {
+        params.num_questions = parseInt(document.getElementById('tool-num-questions').value);
+        params.type = document.getElementById('tool-quiz-type').value;
+        params.difficulty = document.getElementById('tool-difficulty').value;
+    } else if (toolType === 'summary') {
+        params.length = document.getElementById('tool-length').value;
+    } else if (toolType === 'analyze') {
+        const themeInput = document.getElementById('tool-theme');
+        if (!themeInput || !themeInput.value.trim()) {
+            alert('Il tema è obbligatorio per l\'analisi!');
+            return;
+        }
+        params.theme = themeInput.value.trim();
+        params.focus = document.getElementById('tool-focus').value;
+    }
+
+    console.log('[confirmToolConfig] Parameters:', params);
+
+    // Close modal
+    document.querySelector('.modal')?.remove();
+
+    // Execute tool with parameters
+    useTool(documentId, toolType, params);
+};
+
+async function useTool(documentId, toolType, params = {}) {
+    console.log('[useTool] Starting:', { documentId, toolType, params });
 
     // Handle persistent chat separately
     if (toolType === 'query') {
@@ -267,18 +624,8 @@ async function useTool(documentId, toolType) {
         if (['mindmap', 'outline', 'quiz'].includes(toolType)) {
             console.log('[useTool] Calling HTML tool endpoint for:', toolType);
 
-            // Default parameters for each tool
-            const params = {};
-            if (toolType === 'mindmap') {
-                params.depth = 3;  // Medium depth
-            } else if (toolType === 'outline') {
-                params.type = 'hierarchical';
-                params.detail_level = 'medium';
-            } else if (toolType === 'quiz') {
-                params.type = 'mixed';
-                params.num_questions = 10;
-                params.difficulty = 'medium';
-            }
+            // Use provided params (from config modal)
+            console.log('[useTool] Using parameters:', params);
 
             const response = await fetch(`/api/tools/${documentId}/${toolType}`, {
                 method: 'POST',
@@ -309,23 +656,14 @@ async function useTool(documentId, toolType) {
 
         // Handle JSON-returning tools (summary, analyze)
         console.log('[useTool] Calling JSON tool endpoint for:', toolType);
+        console.log('[useTool] Using parameters:', params);
 
-        let endpoint, params;
+        let endpoint;
 
         if (toolType === 'summary') {
             endpoint = `/api/tools/${documentId}/summary`;
-            params = { length: 'medium' };
         } else if (toolType === 'analyze') {
-            // For analyze, we need to prompt user for theme
-            hideLoading();
-            const theme = prompt('Su quale tema vuoi analizzare il documento?');
-            if (!theme || !theme.trim()) {
-                console.log('[useTool] Analyze cancelled - no theme provided');
-                return;
-            }
-            showLoading('Generazione analisi in corso...');
             endpoint = `/api/tools/${documentId}/analyze`;
-            params = { theme: theme.trim(), focus: 'comprehensive' };
         } else {
             throw new Error(`Unknown tool type: ${toolType}`);
         }
