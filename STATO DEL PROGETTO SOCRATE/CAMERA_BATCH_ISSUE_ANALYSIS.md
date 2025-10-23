@@ -277,18 +277,42 @@ Prima di applicare i fix, raccogliere:
 2. ✅ Debug logging attivo
 3. ✅ Raccolta log e screenshot da test su smartphone
 4. ✅ Analisi log per confermare ipotesi race condition
-5. ✅ Applicazione Fix 1 (race condition) - DEPLOYED
+5. ✅ Applicazione Fix 1 (race condition camera input) - DEPLOYED
 6. ✅ Test dopo Fix 1 - CONFERMATO FUNZIONANTE
-7. ✅ Applicazione Fix 2 (duplicate upload calls) - DEPLOYED
+7. ✅ Applicazione Fix 2 (duplicate upload calls - primo tentativo) - DEPLOYED
 8. ✅ Applicazione Fix 3 (cache invalidation) - DEPLOYED
 9. ✅ Consulenza Backend Master Analyst - COMPLETATA
-10. ⏳ Applicazione Fix Backend (idempotency + memory-efficient PDF)
-11. ⏳ Test dopo Fix Backend con Eruda Network tab
-12. ⏳ Pulizia debug logs e rimozione Eruda
+10. ✅ Applicazione Fix 4 (backend idempotency + memory-efficient PDF) - DEPLOYED
+11. ✅ Applicazione Fix 5 (correzione SQLAlchemy JSONB query) - DEPLOYED
+12. ✅ Applicazione Fix 6 (event listener conflict resolution) - DEPLOYED
+13. ⏳ Test dopo Fix 6 con Eruda Network tab - IN CORSO
+14. ⏳ Investigare problema preview foto alternante
+15. ⏳ Pulizia debug logs e rimozione Eruda
 
 ---
 
-**Ultimo aggiornamento**: 20 Ottobre 2025, ore 02:00
+**Ultimo aggiornamento**: 20 Ottobre 2025, ore 03:05
+
+## Stato Attuale
+
+**Fix Applicati**: 6/6 critici deployati su Railway
+**Problemi Risolti**:
+- ✅ Race condition FileReader (Fix 1)
+- ✅ SQLAlchemy JSONB query syntax (Fix 5)
+- ✅ Memory exhaustion su PDF grandi (Fix 4b)
+- ✅ Upload duplicati server-side (Fix 4a)
+- ✅ Event listener conflict (Fix 6)
+
+**Problemi Persistenti**:
+- ⏳ Preview foto alternante (prima foto non appare, altre intermittenti)
+- ⏳ Da confermare: Upload batch come singolo PDF invece di file individuali
+
+**Prossimi Test Richiesti**:
+1. Test batch upload 3-5 foto con Eruda Network tab aperto
+2. Verificare che appaia SOLO 1 POST a `/api/documents/upload-batch`
+3. Verificare che NON appaiano POST a `/api/documents/upload`
+4. Verificare che il PDF sia creato con successo (status "Pronto", non "Errore")
+5. Screenshot Eruda console logs `[FILE-INPUT]` e `[CAMERA]`
 
 ## Changelog Fix Applicati
 
@@ -335,6 +359,131 @@ console.log('[DASHBOARD.JS] VERSION: FIX-DUPLICATE-UPLOAD-19OCT2025');
 ```
 
 Questo forza il browser a ricaricare il file perché il contenuto è cambiato, non solo il query parameter. Risolve il problema di cache aggressiva su mobile browser.
+
+---
+
+### Fix 4: Backend Idempotency + Memory-Efficient PDF (20 Ottobre 2025, ore 02:30)
+**File**: `api_server.py` (linee 460-650)
+**Commit**: 94e0cc4
+
+Implementati 2 fix critici backend:
+
+**4a. Idempotency Check con SHA256**:
+```python
+# Calcolare hash contenuto per detect duplicates
+content_hash = hashlib.sha256()
+for file in files:
+    file.seek(0)
+    content_hash.update(file.read())
+    file.seek(0)
+content_fingerprint = content_hash.hexdigest()
+
+# Check duplicates negli ultimi 5 minuti
+five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+existing_doc = db.query(Document).filter(
+    Document.user_id == user_id,
+    cast(Document.doc_metadata['content_hash'], String) == content_fingerprint,
+    Document.created_at > five_minutes_ago
+).first()
+
+if existing_doc:
+    return jsonify({
+        'success': True,
+        'document_id': str(existing_doc.id),
+        'duplicate': True
+    }), 200
+```
+
+**4b. Memory-Efficient PDF Generation**:
+```python
+# Processo una immagine alla volta + resize + disk storage
+with tempfile.TemporaryDirectory() as temp_dir:
+    processed_paths = []
+    for idx, file in enumerate(files):
+        img = Image.open(io.BytesIO(image_content))
+
+        # Resize se troppo grande
+        if max(img.size) > 2000:
+            img.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
+
+        # Salva su disco, libera RAM immediatamente
+        temp_path = Path(temp_dir) / f"page_{idx:03d}.jpg"
+        img.save(temp_path, 'JPEG', quality=85, optimize=True)
+        processed_paths.append(str(temp_path))
+
+        del image_content
+        del img
+```
+
+Questo fix risolve:
+- Upload duplicati (anche con retry di rete)
+- PDF da 5MB che andavano in "Errore" per OOM
+- Memory exhaustion su batch grandi
+
+**PROBLEMA CRITICO INTRODOTTO**: Syntax error SQLAlchemy - `.astext` non esiste. Corretto in commit successivo d9b42f3.
+
+---
+
+### Fix 5: Correzione SQLAlchemy JSONB Query (20 Ottobre 2025, ore 02:45)
+**File**: `api_server.py` (linea 478)
+**Commit**: d9b42f3
+
+**ERRORE BLOCCANTE RISOLTO**:
+```
+"Neither 'BinaryExpression' object nor 'Comparator' object has an attribute 'astext'"
+```
+
+**Causa**: Sintassi incorretta per query JSONB in SQLAlchemy:
+```python
+# SBAGLIATO:
+Document.doc_metadata['content_hash'].astext == content_fingerprint
+
+# CORRETTO:
+from sqlalchemy import cast, String
+cast(Document.doc_metadata['content_hash'], String) == content_fingerprint
+```
+
+Questo fix ha risolto l'errore critico che impediva tutti gli upload batch.
+
+---
+
+### Fix 6: Event Listener Conflict Resolution (20 Ottobre 2025, ore 03:00)
+**File**: `templates/dashboard.html` (linee 384-399)
+**Commit**: 612a3d5
+
+**PROBLEMA RISOLTO**: Foto processate come file SINGOLI invece che unite in PDF batch.
+
+**Causa**: Due listener gestivano lo stesso evento:
+1. `fileInput.addEventListener('change')` → upload singolo via `/api/documents/upload`
+2. `cameraInput.addEventListener('change')` → batch upload via `/api/documents/upload-batch`
+
+Quando camera-input triggera, ENTRAMBI i listener si attivavano → upload duplicato.
+
+**Fix applicato**:
+```javascript
+// File input change (handles ONLY file-input, NOT camera-input)
+fileInput.addEventListener('change', (e) => {
+    console.log('[FILE-INPUT] Change event detected, target ID:', e.target.id);
+
+    // IMPORTANTE: Solo gestire file-input, camera-input ha il suo listener
+    if (e.target !== fileInput) {
+        console.log('[FILE-INPUT] Ignoring event from non-file-input element');
+        return;
+    }
+
+    if (e.target.files.length > 0) {
+        console.log('[FILE-INPUT] Processing single file upload:', e.target.files[0].name);
+        handleFileUpload(e.target.files[0]);
+    }
+});
+```
+
+Questo fix garantisce:
+- Solo il listener camera-input gestisce foto dalla camera
+- Nessun upload singolo quando si usa batch camera
+- Una sola richiesta POST a `/api/documents/upload-batch`
+
+**DA TESTARE**: Verificare con Eruda Network tab che appaia solo 1 POST a `/upload-batch` e nessuna a `/upload`.
 
 ---
 

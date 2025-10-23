@@ -5,6 +5,9 @@ Flask API with Telegram Login Widget Authentication
 
 from flask import Flask, request, redirect, session, jsonify, render_template, send_file
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from markupsafe import escape as html_escape
 import hashlib
 import hmac
 import os
@@ -39,9 +42,75 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-CHANGE-IN-PRODUCTION')
+
+# SECURITY: SECRET_KEY validation
+secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-CHANGE-IN-PRODUCTION')
+if os.getenv('FLASK_ENV') == 'production' and (not secret_key or secret_key == 'dev-secret-key-CHANGE-IN-PRODUCTION'):
+    raise ValueError("SECRET_KEY must be set to a strong random value in production!")
+app.secret_key = secret_key
+
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB max request size
 CORS(app, supports_credentials=True)
+
+# ============================================================================
+# RATE LIMITING CONFIGURATION
+# ============================================================================
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",  # Use Redis in production: os.getenv('REDIS_URL')
+    strategy="fixed-window"
+)
+
+# ============================================================================
+# SECURITY HELPERS
+# ============================================================================
+
+def sanitize_for_html(text: str) -> str:
+    """
+    Sanitize text for safe HTML embedding (XSS prevention).
+    Uses MarkupSafe's escape function for comprehensive protection.
+    """
+    if not text:
+        return ""
+    return str(html_escape(text))
+
+def validate_integer_param(value: any, param_name: str, min_val: int = None, max_val: int = None, default: int = None) -> int:
+    """
+    Validate and safely convert integer parameters from request.
+
+    Args:
+        value: Input value to validate
+        param_name: Parameter name for error messages
+        min_val: Minimum allowed value (optional)
+        max_val: Maximum allowed value (optional)
+        default: Default value if conversion fails (optional)
+
+    Returns:
+        Validated integer value
+
+    Raises:
+        ValueError: If validation fails and no default provided
+    """
+    try:
+        result = int(value) if value is not None else default
+        if result is None:
+            raise ValueError(f"{param_name} is required")
+
+        if min_val is not None and result < min_val:
+            result = min_val
+        if max_val is not None and result > max_val:
+            result = max_val
+
+        return result
+    except (TypeError, ValueError) as e:
+        if default is not None:
+            logger.warning(f"Invalid {param_name}: {value}, using default {default}")
+            return default
+        raise ValueError(f"{param_name} must be a valid integer")
 
 # Telegram Bot credentials
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -1217,6 +1286,385 @@ Rispondi alla nuova domanda tenendo conto del contesto della conversazione."""
             'error': error_message,  # Sanitized error for client
             'session_id': str(chat_session.id)
         }), 500
+
+
+# ============================================================================
+# ADVANCED DOCUMENT TOOLS ENDPOINTS
+# ============================================================================
+
+@app.route('/api/tools/<document_id>/mindmap', methods=['POST'])
+@limiter.limit("5 per minute")  # SECURITY: Rate limit expensive LLM operations
+@require_auth
+def generate_mindmap_tool(document_id):
+    """
+    Generate interactive mindmap visualization using Mermaid.js
+
+    Body:
+        {
+            "topic": "Specific topic" (optional - if empty, creates general overview),
+            "depth": 3 (2-4, optional, default 3)
+        }
+
+    Returns:
+        HTML page with Mermaid mindmap visualization
+    """
+    user_id = get_current_user_id()
+
+    try:
+        from core.visualizers import get_mermaid_mindmap_prompt, parse_simple_mindmap, generate_mermaid_mindmap_html
+
+        # Get document
+        document = get_document_by_id(document_id, user_id)
+        if not document:
+            return jsonify({'error': 'Document not found'}), 404
+
+        # SECURITY: Validate and sanitize inputs
+        data = request.json or {}
+        topic_raw = data.get('topic', '').strip()
+        topic = sanitize_for_html(topic_raw)[:200]  # Limit length + sanitize
+
+        # SECURITY: Robust integer validation
+        try:
+            depth = validate_integer_param(data.get('depth'), 'depth', min_val=2, max_val=4, default=3)
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+
+        # SECURITY: Sanitize document filename for HTML embedding
+        safe_filename = sanitize_for_html(document.filename)
+
+        # Get mindmap prompt
+        mindmap_prompt = get_mermaid_mindmap_prompt(depth_level=depth, central_concept=topic if topic else None)
+
+        # Query document using RAG
+        metadata_file = document.file_path
+        metadata_r2_key = document.r2_key
+
+        user_tier = 'premium'  # TODO: Get from user settings
+
+        result = query_document(
+            query=mindmap_prompt,
+            metadata_file=metadata_file,
+            metadata_r2_key=metadata_r2_key,
+            top_k=15,  # More context for mind maps
+            user_tier=user_tier,
+            query_type='mindmap',
+            command_params={'depth': depth, 'topic': topic}
+        )
+
+        if not result.get('success'):
+            error_msg = result.get('error', 'Failed to generate mindmap')
+            logger.warning(f"Mindmap generation failed: {error_msg}")
+            return jsonify({'error': 'Failed to generate mindmap'}), 500
+
+        # Parse LLM response
+        mindmap_data = parse_simple_mindmap(result['answer'])
+
+        # Generate HTML with sanitized filename
+        html = generate_mermaid_mindmap_html(mindmap_data, safe_filename)
+
+        # Return HTML directly
+        from flask import Response
+        return Response(html, mimetype='text/html')
+
+    except ValueError as e:
+        logger.warning(f"Validation error in mindmap: {e}")
+        return jsonify({'error': str(e)}), 400
+    except KeyError as e:
+        logger.error(f"Missing required data in mindmap: {e}")
+        return jsonify({'error': 'Invalid request format'}), 400
+    except Exception as e:
+        logger.error(f"Unexpected error generating mindmap: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@app.route('/api/tools/<document_id>/outline', methods=['POST'])
+@require_auth
+def generate_outline_tool(document_id):
+    """
+    Generate interactive outline visualization with accordion layout
+
+    Body:
+        {
+            "type": "hierarchical|chronological|thematic" (default: hierarchical),
+            "detail_level": "brief|medium|detailed" (default: medium),
+            "topic": "Specific topic" (optional)
+        }
+
+    Returns:
+        HTML page with interactive outline
+    """
+    user_id = get_current_user_id()
+
+    try:
+        from core.visualizers import generate_outline_html, parse_outline_text, get_outline_visualizer_prompt
+        from core.content_generators import generate_outline_prompt
+
+        # Get document
+        document = get_document_by_id(document_id, user_id)
+        if not document:
+            return jsonify({'error': 'Document not found'}), 404
+
+        # Get request parameters
+        data = request.json or {}
+        outline_type = data.get('type', 'hierarchical')
+        detail_level = data.get('detail_level', 'medium')
+        topic = data.get('topic', '').strip()
+
+        # Build outline prompt
+        outline_params = {
+            'outline_type': outline_type,
+            'detail_level': detail_level,
+            'focus_area': topic if topic else 'L\'intero documento'
+        }
+
+        outline_prompt = generate_outline_prompt(**outline_params)
+
+        # Query document using RAG
+        metadata_file = document.file_path
+        metadata_r2_key = document.r2_key
+        user_tier = 'premium'
+
+        result = query_document(
+            query=outline_prompt,
+            metadata_file=metadata_file,
+            metadata_r2_key=metadata_r2_key,
+            top_k=20,  # More context for outlines
+            user_tier=user_tier,
+            query_type='outline',
+            command_params=outline_params
+        )
+
+        if not result['success']:
+            return jsonify({'error': result.get('error', 'Failed to generate outline')}), 500
+
+        # Parse LLM response
+        outline_data = parse_outline_text(result['answer'])
+
+        # Generate HTML
+        html = generate_outline_html(outline_data, document.filename, outline_type, detail_level)
+
+        # Return HTML directly
+        from flask import Response
+        return Response(html, mimetype='text/html')
+
+    except Exception as e:
+        logger.error(f"Error generating outline: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to generate outline'}), 500
+
+
+@app.route('/api/tools/<document_id>/quiz', methods=['POST'])
+@require_auth
+def generate_quiz_tool(document_id):
+    """
+    Generate interactive quiz with flip cards
+
+    Body:
+        {
+            "type": "multiple_choice|true_false|short_answer|mixed" (default: mixed),
+            "num_questions": 10 (default),
+            "difficulty": "easy|medium|hard" (default: medium),
+            "topic": "Specific topic" (optional)
+        }
+
+    Returns:
+        HTML page with interactive quiz cards
+    """
+    user_id = get_current_user_id()
+
+    try:
+        from core.visualizers import generate_quiz_cards_html
+        from core.content_generators import generate_quiz_prompt
+
+        # Get document
+        document = get_document_by_id(document_id, user_id)
+        if not document:
+            return jsonify({'error': 'Document not found'}), 404
+
+        # Get request parameters
+        data = request.json or {}
+        quiz_type = data.get('type', 'mixed')
+        num_questions = int(data.get('num_questions', 10))
+        difficulty = data.get('difficulty', 'medium')
+        topic = data.get('topic', '').strip()
+
+        # Build quiz config
+        quiz_config = {
+            'quiz_type': quiz_type,
+            'num_questions': num_questions,
+            'difficulty': difficulty,
+            'focus_area': topic if topic else 'L\'intero documento',
+            'type': quiz_type
+        }
+
+        quiz_prompt = generate_quiz_prompt(**quiz_config)
+
+        # Query document using RAG
+        metadata_file = document.file_path
+        metadata_r2_key = document.r2_key
+        user_tier = 'premium'
+
+        result = query_document(
+            query=quiz_prompt,
+            metadata_file=metadata_file,
+            metadata_r2_key=metadata_r2_key,
+            top_k=15,
+            user_tier=user_tier,
+            query_type='quiz',
+            command_params=quiz_config
+        )
+
+        if not result['success']:
+            return jsonify({'error': result.get('error', 'Failed to generate quiz')}), 500
+
+        # Generate HTML with quiz cards
+        html = generate_quiz_cards_html(result['answer'], document.filename, quiz_config)
+
+        # Return HTML directly
+        from flask import Response
+        return Response(html, mimetype='text/html')
+
+    except Exception as e:
+        logger.error(f"Error generating quiz: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to generate quiz'}), 500
+
+
+@app.route('/api/tools/<document_id>/summary', methods=['POST'])
+@require_auth
+def generate_summary_tool(document_id):
+    """
+    Generate document summary
+
+    Body:
+        {
+            "length": "brief|medium|detailed" (default: medium),
+            "topic": "Specific topic" (optional - for focused summaries)
+        }
+
+    Returns:
+        JSON with summary text
+    """
+    user_id = get_current_user_id()
+
+    try:
+        from core.content_generators import generate_summary_prompt
+
+        # Get document
+        document = get_document_by_id(document_id, user_id)
+        if not document:
+            return jsonify({'error': 'Document not found'}), 404
+
+        # Get request parameters
+        data = request.json or {}
+        length = data.get('length', 'medium')
+        topic = data.get('topic', '').strip()
+
+        # Build summary prompt
+        summary_params = {
+            'summary_length': length,
+            'focus_area': topic if topic else 'L\'intero documento'
+        }
+
+        summary_prompt = generate_summary_prompt(**summary_params)
+
+        # Query document using RAG
+        metadata_file = document.file_path
+        metadata_r2_key = document.r2_key
+        user_tier = 'premium'
+
+        result = query_document(
+            query=summary_prompt,
+            metadata_file=metadata_file,
+            metadata_r2_key=metadata_r2_key,
+            top_k=15,
+            user_tier=user_tier,
+            query_type='summary',
+            command_params=summary_params
+        )
+
+        if not result['success']:
+            return jsonify({'error': result.get('error', 'Failed to generate summary')}), 500
+
+        return jsonify({
+            'success': True,
+            'summary': result['answer'],
+            'metadata': result.get('metadata', {})
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating summary: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to generate summary'}), 500
+
+
+@app.route('/api/tools/<document_id>/analyze', methods=['POST'])
+@require_auth
+def generate_analysis_tool(document_id):
+    """
+    Generate custom analysis based on user-specified theme/question
+
+    Body:
+        {
+            "theme": "Analysis theme/question",
+            "focus": "specific|comprehensive" (default: comprehensive)
+        }
+
+    Returns:
+        JSON with analysis text
+    """
+    user_id = get_current_user_id()
+
+    try:
+        from core.content_generators import generate_analysis_prompt
+
+        # Get document
+        document = get_document_by_id(document_id, user_id)
+        if not document:
+            return jsonify({'error': 'Document not found'}), 404
+
+        # Get request parameters
+        data = request.json or {}
+        theme = data.get('theme', '').strip()
+
+        if not theme:
+            return jsonify({'error': 'Analysis theme is required'}), 400
+
+        focus = data.get('focus', 'comprehensive')
+
+        # Build analysis prompt
+        analysis_params = {
+            'analysis_theme': theme,
+            'focus_type': focus
+        }
+
+        analysis_prompt = generate_analysis_prompt(**analysis_params)
+
+        # Query document using RAG
+        metadata_file = document.file_path
+        metadata_r2_key = document.r2_key
+        user_tier = 'premium'
+
+        result = query_document(
+            query=analysis_prompt,
+            metadata_file=metadata_file,
+            metadata_r2_key=metadata_r2_key,
+            top_k=20,  # More context for analysis
+            user_tier=user_tier,
+            query_type='analyze',
+            command_params=analysis_params
+        )
+
+        if not result['success']:
+            return jsonify({'error': result.get('error', 'Failed to generate analysis')}), 500
+
+        return jsonify({
+            'success': True,
+            'analysis': result['answer'],
+            'theme': theme,
+            'metadata': result.get('metadata', {})
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating analysis: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to generate analysis'}), 500
 
 
 def calculate_cost(input_tokens: int, output_tokens: int, model: str) -> float:

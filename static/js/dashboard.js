@@ -258,83 +258,93 @@ async function useTool(documentId, toolType) {
         return;
     }
 
-    // Define prompts and parameters for each tool type
-    const toolConfigs = {
-        quiz: {
-            query: 'Genera un quiz completo basato sul documento',
-            command_type: 'quiz',
-            command_params: {
-                quiz_type: 'multiple_choice',
-                num_questions: 10,
-                difficulty: 'medium'
-            }
-        },
-        summary: {
-            query: 'Crea un riassunto del documento',
-            command_type: 'summary',
-            command_params: {
-                summary_type: 'medium',
-                length: '3-5 paragrafi'
-            }
-        },
-        mindmap: {
-            query: 'Crea una mappa concettuale',
-            command_type: 'mindmap',
-            command_params: {
-                depth_level: 3
-            }
-        },
-        outline: {
-            query: 'Crea uno schema gerarchico',
-            command_type: 'outline',
-            command_params: {
-                outline_type: 'hierarchical',
-                detail_level: 'medium'
-            }
-        },
-        analyze: {
-            query: 'Analizza i temi principali',
-            command_type: 'analyze',
-            command_params: {
-                analysis_type: 'thematic',
-                depth: 'profonda'
-            }
-        }
-    };
-
-    const config = toolConfigs[toolType];
-    console.log('[useTool] Config for', toolType, ':', config);
-
-    if (!config || !config.query) {
-        console.error('[useTool] Invalid config or query:', { toolType, config });
-        return;
-    }
-
     // Show loading
     console.log('[useTool] Showing loading indicator');
     showLoading(`Generazione ${toolType} in corso...`);
 
     try {
-        console.log('[useTool] Sending request to /api/query with:', {
-            document_id: documentId,
-            query: config.query,
-            command_type: config.command_type,
-            command_params: config.command_params
-        });
+        // Handle HTML-generating tools (mindmap, outline, quiz)
+        if (['mindmap', 'outline', 'quiz'].includes(toolType)) {
+            console.log('[useTool] Calling HTML tool endpoint for:', toolType);
 
-        const response = await fetch('/api/query', {
+            // Default parameters for each tool
+            const params = {};
+            if (toolType === 'mindmap') {
+                params.depth = 3;  // Medium depth
+            } else if (toolType === 'outline') {
+                params.type = 'hierarchical';
+                params.detail_level = 'medium';
+            } else if (toolType === 'quiz') {
+                params.type = 'mixed';
+                params.num_questions = 10;
+                params.difficulty = 'medium';
+            }
+
+            const response = await fetch(`/api/tools/${documentId}/${toolType}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(params)
+            });
+
+            console.log('[useTool] Response status:', response.status, response.statusText);
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ error: 'Request failed' }));
+                console.error('[useTool] Server error:', error);
+                throw new Error(error.error || `Failed to generate ${toolType}`);
+            }
+
+            // Get HTML response
+            const html = await response.text();
+            console.log('[useTool] Received HTML, length:', html.length);
+
+            // Open in new tab
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+                newWindow.document.write(html);
+                newWindow.document.close();
+                console.log('[useTool] Opened HTML in new tab');
+            } else {
+                throw new Error('Popup blocked - please allow popups for this site');
+            }
+
+            hideLoading();
+            return;
+        }
+
+        // Handle JSON-returning tools (summary, analyze)
+        console.log('[useTool] Calling JSON tool endpoint for:', toolType);
+
+        let endpoint, params;
+
+        if (toolType === 'summary') {
+            endpoint = `/api/tools/${documentId}/summary`;
+            params = { length: 'medium' };
+        } else if (toolType === 'analyze') {
+            // For analyze, we need to prompt user for theme
+            hideLoading();
+            const theme = prompt('Su quale tema vuoi analizzare il documento?');
+            if (!theme || !theme.trim()) {
+                console.log('[useTool] Analyze cancelled - no theme provided');
+                return;
+            }
+            showLoading('Generazione analisi in corso...');
+            endpoint = `/api/tools/${documentId}/analyze`;
+            params = { theme: theme.trim(), focus: 'comprehensive' };
+        } else {
+            throw new Error(`Unknown tool type: ${toolType}`);
+        }
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             credentials: 'include',
-            body: JSON.stringify({
-                document_id: documentId,
-                query: config.query,
-                command_type: config.command_type,
-                command_params: config.command_params,
-                top_k: 10
-            })
+            body: JSON.stringify(params)
         });
 
         console.log('[useTool] Response status:', response.status, response.statusText);
@@ -342,16 +352,19 @@ async function useTool(documentId, toolType) {
         if (!response.ok) {
             const error = await response.json();
             console.error('[useTool] Server error:', error);
-            throw new Error(error.error || 'Query failed');
+            throw new Error(error.error || `Failed to generate ${toolType}`);
         }
 
         const data = await response.json();
         console.log('[useTool] Response data:', data);
 
-        // Show result
+        // Show result in modal
         console.log('[useTool] Hiding loading and showing result');
         hideLoading();
-        showResult(data.answer, toolType);
+
+        // Extract result text based on tool type
+        const resultText = data.summary || data.analysis || data.answer;
+        showResult(resultText, toolType);
 
     } catch (error) {
         console.error('[useTool] Caught error:', error);
