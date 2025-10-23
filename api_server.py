@@ -1337,7 +1337,7 @@ def generate_mindmap_tool(document_id):
 
         # Query document using RAG
         metadata_file = document.file_path
-        metadata_r2_key = document.r2_key
+        metadata_r2_key = document.doc_metadata.get('metadata_r2_key') if document.doc_metadata else None
 
         user_tier = 'premium'  # TODO: Get from user settings
 
@@ -1422,7 +1422,7 @@ def generate_outline_tool(document_id):
 
         # Query document using RAG
         metadata_file = document.file_path
-        metadata_r2_key = document.r2_key
+        metadata_r2_key = document.doc_metadata.get('metadata_r2_key') if document.doc_metadata else None
         user_tier = 'premium'
 
         result = query_document(
@@ -1494,15 +1494,14 @@ def generate_quiz_tool(document_id):
             'quiz_type': quiz_type,
             'num_questions': num_questions,
             'difficulty': difficulty,
-            'focus_area': topic if topic else 'L\'intero documento',
-            'type': quiz_type
+            'focus_area': topic if topic else 'L\'intero documento'
         }
 
         quiz_prompt = generate_quiz_prompt(**quiz_config)
 
         # Query document using RAG
         metadata_file = document.file_path
-        metadata_r2_key = document.r2_key
+        metadata_r2_key = document.doc_metadata.get('metadata_r2_key') if document.doc_metadata else None
         user_tier = 'premium'
 
         result = query_document(
@@ -1563,7 +1562,7 @@ def generate_summary_tool(document_id):
 
         # Build summary prompt
         summary_params = {
-            'summary_length': length,
+            'summary_type': length,
             'focus_area': topic if topic else 'L\'intero documento'
         }
 
@@ -1571,7 +1570,7 @@ def generate_summary_tool(document_id):
 
         # Query document using RAG
         metadata_file = document.file_path
-        metadata_r2_key = document.r2_key
+        metadata_r2_key = document.doc_metadata.get('metadata_r2_key') if document.doc_metadata else None
         user_tier = 'premium'
 
         result = query_document(
@@ -1635,15 +1634,16 @@ def generate_analysis_tool(document_id):
 
         # Build analysis prompt
         analysis_params = {
-            'analysis_theme': theme,
-            'focus_type': focus
+            'analysis_type': 'thematic',  # Default analysis type
+            'focus_area': theme,  # User's theme becomes the focus area
+            'depth': 'profonda'  # Deep analysis by default
         }
 
         analysis_prompt = generate_analysis_prompt(**analysis_params)
 
         # Query document using RAG
         metadata_file = document.file_path
-        metadata_r2_key = document.r2_key
+        metadata_r2_key = document.doc_metadata.get('metadata_r2_key') if document.doc_metadata else None
         user_tier = 'premium'
 
         result = query_document(
