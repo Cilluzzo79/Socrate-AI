@@ -1398,6 +1398,7 @@ def generate_outline_tool(document_id):
     try:
         from core.visualizers import generate_outline_html, parse_outline_text, get_outline_visualizer_prompt
         from core.content_generators import generate_outline_prompt
+        from core.query_engine import query_document
 
         # Get document
         document = get_document_by_id(document_id, user_id)
@@ -1474,6 +1475,7 @@ def generate_quiz_tool(document_id):
     try:
         from core.visualizers import generate_quiz_cards_html
         from core.content_generators import generate_quiz_prompt
+        from core.query_engine import query_document
 
         # Get document
         document = get_document_by_id(document_id, user_id)
@@ -1547,6 +1549,7 @@ def generate_summary_tool(document_id):
 
     try:
         from core.content_generators import generate_summary_prompt
+        from core.query_engine import query_document
 
         # Get document
         document = get_document_by_id(document_id, user_id)
@@ -1614,6 +1617,7 @@ def generate_analysis_tool(document_id):
 
     try:
         from core.content_generators import generate_analysis_prompt
+        from core.query_engine import query_document
 
         # Get document
         document = get_document_by_id(document_id, user_id)
