@@ -237,9 +237,13 @@ class SimpleQueryEngine:
         max_chunks = tier_config.get(query_type, tier_config['query'])
         top_k = min(top_k, max_chunks)
 
-        # Increase max_tokens for structured outputs
-        if query_type in ['quiz', 'summary', 'outline', 'mindmap', 'analyze']:
-            max_tokens = 4096  # Allow longer responses for structured content
+        # Increase max_tokens for structured outputs based on complexity
+        if query_type in ['outline', 'mindmap']:
+            # Outline and mindmap need more tokens for hierarchical structures
+            max_tokens = 8192  # Premium: comprehensive structured outputs
+        elif query_type in ['quiz', 'summary', 'analyze']:
+            # Other tools need moderate token budget
+            max_tokens = 6144  # Premium: detailed but not as complex as outlines
 
         logger.info(f"Processing {query_type} (tier: {user_tier}, top_k: {top_k}): {query[:100]}")
 
