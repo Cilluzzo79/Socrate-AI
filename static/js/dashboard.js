@@ -232,6 +232,12 @@ async function useTool(documentId, toolType) {
     // Close tools modal
     document.querySelector('.modal')?.remove();
 
+    // Handle persistent chat separately
+    if (toolType === 'query') {
+        openPersistentChat(documentId);
+        return;
+    }
+
     // Define prompts and parameters for each tool type
     const toolConfigs = {
         quiz: {
@@ -273,11 +279,6 @@ async function useTool(documentId, toolType) {
                 analysis_type: 'thematic',
                 depth: 'profonda'
             }
-        },
-        query: {
-            query: prompt('Inserisci la tua domanda:'),
-            command_type: 'query',
-            command_params: {}
         }
     };
 
@@ -336,6 +337,283 @@ async function useTool(documentId, toolType) {
         console.error('[useTool] Caught error:', error);
         hideLoading();
         showError(`Errore: ${error.message}`);
+    }
+}
+
+// ============================================================================
+// PERSISTENT CHAT INTERFACE
+// ============================================================================
+
+// Store conversation history per document
+const chatHistories = {};
+
+function openPersistentChat(documentId) {
+    const doc = documents.find(d => d.id === documentId);
+    if (!doc) return;
+
+    // Initialize chat history if not exists
+    if (!chatHistories[documentId]) {
+        chatHistories[documentId] = [];
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = `chat-modal-${documentId}`;
+    modal.innerHTML = `
+        <div class="modal-content" style="
+            max-width: 900px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--color-bg-card, #1a1f2e);
+            border-radius: var(--radius-lg, 12px);
+            overflow: hidden;
+        ">
+            <!-- Chat Header -->
+            <div style="
+                padding: 1.5rem;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2px solid rgba(0, 217, 192, 0.3);
+            ">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        💬 Chat con Documento
+                    </h2>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">
+                        ${doc.filename}
+                    </p>
+                </div>
+                <button onclick="document.getElementById('chat-modal-${documentId}').remove()" style="
+                    background: rgba(255, 255, 255, 0.2);
+                    border: none;
+                    color: white;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    font-size: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: background 0.2s;
+                " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                    ×
+                </button>
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div id="chat-messages-${documentId}" style="
+                flex: 1;
+                overflow-y: auto;
+                padding: 1.5rem;
+                background: var(--color-bg-primary, #0f1419);
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            ">
+                ${chatHistories[documentId].length === 0 ? `
+                    <div style="
+                        text-align: center;
+                        padding: 3rem 1rem;
+                        color: rgba(255, 255, 255, 0.5);
+                    ">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🤔</div>
+                        <p style="font-size: 1.1rem;">Inizia una conversazione facendo una domanda sul documento</p>
+                    </div>
+                ` : ''}
+            </div>
+
+            <!-- Chat Input Area -->
+            <div style="
+                padding: 1.5rem;
+                background: var(--color-bg-card, #1a1f2e);
+                border-top: 1px solid rgba(0, 217, 192, 0.2);
+            ">
+                <form id="chat-form-${documentId}" onsubmit="sendChatMessage('${documentId}', event); return false;" style="
+                    display: flex;
+                    gap: 1rem;
+                    align-items: flex-end;
+                ">
+                    <textarea id="chat-input-${documentId}" placeholder="Scrivi la tua domanda..." style="
+                        flex: 1;
+                        padding: 1rem;
+                        background: var(--color-bg-primary, #0f1419);
+                        border: 1px solid rgba(0, 217, 192, 0.3);
+                        border-radius: 8px;
+                        color: var(--color-text-primary, #e8eaed);
+                        font-size: 1rem;
+                        font-family: inherit;
+                        resize: vertical;
+                        min-height: 60px;
+                        max-height: 150px;
+                    " onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage('${documentId}',event);}"></textarea>
+                    <button type="submit" style="
+                        padding: 1rem 2rem;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        border: none;
+                        border-radius: 8px;
+                        color: white;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: transform 0.2s, box-shadow 0.2s;
+                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(102, 126, 234, 0.6)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';">
+                        <span>Invia</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    // Render existing chat history
+    if (chatHistories[documentId].length > 0) {
+        renderChatHistory(documentId);
+    }
+
+    document.body.appendChild(modal);
+
+    // Focus input
+    document.getElementById(`chat-input-${documentId}`).focus();
+}
+
+function renderChatHistory(documentId) {
+    const container = document.getElementById(`chat-messages-${documentId}`);
+    if (!container) return;
+
+    container.innerHTML = chatHistories[documentId].map(msg => {
+        const isUser = msg.role === 'user';
+        return `
+            <div style="
+                display: flex;
+                ${isUser ? 'justify-content: flex-end' : 'justify-content: flex-start'};
+            ">
+                <div style="
+                    max-width: 70%;
+                    padding: 1rem 1.25rem;
+                    border-radius: 12px;
+                    ${isUser ?
+                        'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;' :
+                        'background: rgba(0, 217, 192, 0.1); color: var(--color-text-primary, #e8eaed); border: 1px solid rgba(0, 217, 192, 0.3);'
+                    }
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                ">
+                    ${escapeHtml(msg.content)}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function sendChatMessage(documentId, event) {
+    event.preventDefault();
+
+    const input = document.getElementById(`chat-input-${documentId}`);
+    const query = input.value.trim();
+
+    if (!query) return;
+
+    // Add user message to history
+    chatHistories[documentId].push({
+        role: 'user',
+        content: query
+    });
+
+    // Clear input and render
+    input.value = '';
+    renderChatHistory(documentId);
+
+    // Show loading message
+    const container = document.getElementById(`chat-messages-${documentId}`);
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = `loading-${documentId}`;
+    loadingDiv.style.cssText = 'display: flex; justify-content: flex-start;';
+    loadingDiv.innerHTML = `
+        <div style="
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            background: rgba(0, 217, 192, 0.1);
+            border: 1px solid rgba(0, 217, 192, 0.3);
+            color: var(--color-text-secondary, #8b949e);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        ">
+            <div style="
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #00d9c0;
+                animation: pulse 1.5s ease-in-out infinite;
+            "></div>
+            <span>Sto pensando...</span>
+        </div>
+    `;
+    container.appendChild(loadingDiv);
+    container.scrollTop = container.scrollHeight;
+
+    try {
+        const response = await fetch(`/api/documents/${documentId}/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                messages: chatHistories[documentId],
+                top_k: 5
+            })
+        });
+
+        // Remove loading indicator
+        loadingDiv.remove();
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Chat failed');
+        }
+
+        const data = await response.json();
+
+        // Update chat history with full conversation
+        chatHistories[documentId] = data.messages;
+
+        // Render updated history
+        renderChatHistory(documentId);
+
+    } catch (error) {
+        console.error('[sendChatMessage] Error:', error);
+
+        // Remove loading
+        loadingDiv.remove();
+
+        // Add error message
+        chatHistories[documentId].push({
+            role: 'assistant',
+            content: `Errore: ${error.message}`
+        });
+        renderChatHistory(documentId);
     }
 }
 

@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-CHANGE-IN-PRODUCTION')
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB max request size
 CORS(app, supports_credentials=True)
 
 # Telegram Bot credentials
@@ -998,6 +999,221 @@ def custom_query():
         return jsonify({
             'success': False,
             'error': str(e),
+            'session_id': str(chat_session.id)
+        }), 500
+
+
+@app.route('/api/documents/<document_id>/chat', methods=['POST'])
+@require_auth
+def document_chat(document_id):
+    """
+    Persistent chat interface with conversation history
+
+    Body: {
+        "messages": [
+            {"role": "user", "content": "..."},
+            {"role": "assistant", "content": "..."},
+            {"role": "user", "content": "..."}  // Latest query
+        ],
+        "top_k": 5  // Optional
+    }
+
+    Returns:
+        {
+            "success": true,
+            "messages": [...],  // Full conversation history
+            "session_id": "...",
+            "metadata": {...}
+        }
+    """
+    user_id = get_current_user_id()
+    data = request.json
+
+    messages = data.get('messages', [])
+    top_k = data.get('top_k', 5)
+
+    if not messages or len(messages) == 0:
+        return jsonify({'error': 'messages array required'}), 400
+
+    # SECURITY FIX: Validate and sanitize all messages
+    VALID_ROLES = {'user', 'assistant'}
+    MAX_MESSAGE_LENGTH = 10000  # 10K chars per message
+    MAX_MESSAGES = 100  # Limit conversation length
+    MAX_TOTAL_SIZE = 100000  # 100KB total conversation size
+
+    if len(messages) > MAX_MESSAGES:
+        return jsonify({'error': f'Too many messages (max {MAX_MESSAGES})'}), 413
+
+    # Calculate total size and validate messages
+    import sys
+    total_size = sys.getsizeof(json.dumps(messages))
+    if total_size > MAX_TOTAL_SIZE:
+        return jsonify({'error': 'Conversation size too large'}), 413
+
+    # Sanitize and validate each message
+    sanitized_messages = []
+    for msg in messages:
+        role = msg.get('role', '')
+        content = msg.get('content', '')
+
+        # Validate role
+        if role not in VALID_ROLES:
+            return jsonify({'error': f'Invalid message role: {role}'}), 400
+
+        # Validate content length
+        if len(content) > MAX_MESSAGE_LENGTH:
+            return jsonify({'error': f'Message too long (max {MAX_MESSAGE_LENGTH} chars)'}), 400
+
+        # Sanitize content (strip HTML tags, prevent XSS)
+        # Use simple text escaping - we want plain text only
+        sanitized_content = content.replace('<', '&lt;').replace('>', '&gt;').strip()
+
+        sanitized_messages.append({
+            'role': role,
+            'content': sanitized_content
+        })
+
+    # Replace messages with sanitized version
+    messages = sanitized_messages
+
+    # Extract latest user query
+    latest_message = messages[-1]
+    if latest_message.get('role') != 'user':
+        return jsonify({'error': 'Last message must be from user'}), 400
+
+    query = latest_message.get('content', '')
+    if not query.strip():
+        return jsonify({'error': 'Query cannot be empty'}), 400
+
+    # Verify document ownership
+    logger.info(f"💬 Chat request for document: {document_id}")
+    doc = get_document_by_id(document_id, user_id)
+    if not doc:
+        logger.error(f"❌ Document not found: {document_id} for user {user_id}")
+        return jsonify({'error': 'Document not found'}), 404
+
+    if doc.status != 'ready':
+        logger.warning(f"⚠️  Document not ready: {document_id} (status: {doc.status})")
+        return jsonify({'error': f'Document not ready (status: {doc.status})'}), 400
+
+    logger.info(f"✅ Document found: {doc.filename} ({doc.id})")
+
+    # Get user for tier info
+    user = get_user_by_id(user_id)
+    user_tier = user.subscription_tier if user else 'free'
+
+    # Build conversation context from history (exclude latest query)
+    # PERFORMANCE FIX: Use list comprehension and join instead of string concatenation
+    conversation_context = ""
+    if len(messages) > 1:
+        context_messages = messages[:-1]  # All except latest
+        context_parts = []
+        for msg in context_messages[-6:]:  # Last 3 turns (6 messages: 3 user + 3 assistant)
+            role_label = "Utente" if msg['role'] == 'user' else "Assistente"
+            context_parts.append(f"{role_label}: {msg['content']}")
+        conversation_context = "\n".join(context_parts)
+
+    # Create chat session
+    chat_session = create_chat_session(
+        user_id=user_id,
+        document_id=document_id,
+        command_type='chat',
+        request_data={
+            'query': query,
+            'conversation_history': messages[:-1],  # Store previous messages
+            'top_k': top_k
+        },
+        channel='web_app'
+    )
+
+    try:
+        # Get metadata source from document
+        metadata_r2_key = doc.doc_metadata.get('metadata_r2_key') if doc.doc_metadata else None
+        metadata_file = doc.doc_metadata.get('metadata_file') if doc.doc_metadata else None
+
+        if not metadata_r2_key and not metadata_file:
+            logger.error(f"No metadata source in document {document_id}")
+            return jsonify({
+                'error': 'Document metadata not found',
+                'help': 'Document may need to be reprocessed'
+            }), 500
+
+        # Build enhanced query with conversation context
+        enhanced_query = query
+        if conversation_context:
+            enhanced_query = f"""Conversazione precedente:
+{conversation_context}
+
+Nuova domanda dell'utente: {query}
+
+Rispondi alla nuova domanda tenendo conto del contesto della conversazione."""
+
+        # Process query using RAG pipeline
+        from core.query_engine import query_document
+
+        result = query_document(
+            query=enhanced_query,
+            metadata_file=metadata_file,
+            metadata_r2_key=metadata_r2_key,
+            top_k=top_k,
+            user_tier=user_tier,
+            query_type='chat',
+            command_params={}
+        )
+
+        # Build updated messages array
+        updated_messages = messages + [{
+            'role': 'assistant',
+            'content': result['answer']
+        }]
+
+        # Update session with response
+        update_chat_session(
+            session_id=str(chat_session.id),
+            response_data={
+                'answer': result['answer'],
+                'sources': result.get('sources', []),
+                'messages': updated_messages
+            },
+            success=result['success'],
+            input_tokens=result.get('metadata', {}).get('input_tokens'),
+            output_tokens=result.get('metadata', {}).get('output_tokens'),
+            cost_usd=calculate_cost(
+                result.get('metadata', {}).get('input_tokens', 0),
+                result.get('metadata', {}).get('output_tokens', 0),
+                'gpt-5-nano'
+            ),
+            model_used=result.get('metadata', {}).get('model', 'gpt-5-nano')
+        )
+
+        return jsonify({
+            'success': result['success'],
+            'session_id': str(chat_session.id),
+            'messages': updated_messages,  # Full conversation history
+            'sources': result.get('sources', []),
+            'metadata': result.get('metadata', {})
+        })
+
+    except Exception as e:
+        logger.error(f"Error processing chat for session {chat_session.id}: {e}", exc_info=True)
+
+        # SECURITY FIX: Don't expose internal errors to client
+        error_message = "An error occurred processing your request. Please try again."
+        if isinstance(e, (ValueError, KeyError, TypeError)):
+            error_message = "Invalid request format"
+        elif isinstance(e, FileNotFoundError):
+            error_message = "Document metadata not found"
+
+        # Update session with error (store full error internally)
+        update_chat_session(
+            session_id=str(chat_session.id),
+            response_data={'error': str(e)},  # Full error for logging
+            success=False
+        )
+
+        return jsonify({
+            'success': False,
+            'error': error_message,  # Sanitized error for client
             'session_id': str(chat_session.id)
         }), 500
 
