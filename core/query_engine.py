@@ -97,7 +97,7 @@ class SimpleQueryEngine:
         top_k: int = 3
     ) -> List[Dict[str, Any]]:
         """
-        Find most relevant chunks for a query
+        Find most relevant chunks using HYBRID SEARCH (semantic + keyword matching)
 
         Args:
             query: User query
@@ -105,55 +105,117 @@ class SimpleQueryEngine:
             top_k: Number of chunks to return
 
         Returns:
-            List of most relevant chunks with scores
+            List of most relevant chunks with scores (hybrid ranking)
         """
 
         if not chunks:
             return []
 
-        # If embeddings not available, use simple keyword matching
+        # If embeddings not available, use pure keyword matching
         if not EMBEDDINGS_AVAILABLE or self.model is None:
             return self._keyword_matching(query, chunks, top_k)
 
         try:
-            # Encode query
+            # STEP 1: Semantic search (embeddings)
             query_embedding = self.model.encode(query, convert_to_tensor=False)
 
             # Check if chunks have precomputed embeddings inline
             has_inline_embeddings = all('embedding' in chunk for chunk in chunks)
 
             if has_inline_embeddings:
-                # Use precomputed embeddings (FAST!)
                 logger.info(f"Using precomputed inline embeddings for {len(chunks)} chunks")
                 chunk_embeddings = np.array([chunk['embedding'] for chunk in chunks])
             else:
-                # Fallback: compute embeddings on-demand (SLOW)
-                logger.warning(f"No inline embeddings found, computing on-demand for {len(chunks)} chunks (this may be slow!)")
+                logger.warning(f"No inline embeddings found, computing on-demand for {len(chunks)} chunks")
                 chunk_texts = [chunk['text'] for chunk in chunks]
                 chunk_embeddings = self.model.encode(chunk_texts, convert_to_tensor=False, show_progress_bar=True)
 
             # Calculate cosine similarity
-            similarities = np.dot(chunk_embeddings, query_embedding) / (
+            semantic_scores = np.dot(chunk_embeddings, query_embedding) / (
                 np.linalg.norm(chunk_embeddings, axis=1) * np.linalg.norm(query_embedding)
             )
 
+            # STEP 2: Keyword matching (term frequency)
+            keyword_scores = self._calculate_keyword_scores(query, chunks)
+
+            # STEP 3: Hybrid combination (weighted average)
+            # Normalize scores to [0, 1] range
+            semantic_norm = (semantic_scores - semantic_scores.min()) / (semantic_scores.max() - semantic_scores.min() + 1e-10)
+            keyword_norm = (keyword_scores - keyword_scores.min()) / (keyword_scores.max() - keyword_scores.min() + 1e-10)
+
+            # Combine: 70% semantic, 30% keyword (prioritize semantic understanding)
+            # BUT if keyword score is high (>0.8), boost it to catch exact matches
+            hybrid_scores = np.zeros(len(chunks))
+            for i in range(len(chunks)):
+                if keyword_norm[i] > 0.8:
+                    # Strong keyword match → boost keyword weight to 50%
+                    hybrid_scores[i] = 0.5 * semantic_norm[i] + 0.5 * keyword_norm[i]
+                else:
+                    # Normal: 70% semantic, 30% keyword
+                    hybrid_scores[i] = 0.7 * semantic_norm[i] + 0.3 * keyword_norm[i]
+
             # Get top-k indices
-            top_indices = np.argsort(similarities)[-top_k:][::-1]
+            top_indices = np.argsort(hybrid_scores)[-top_k:][::-1]
 
             # Build results
             results = []
             for idx in top_indices:
                 chunk = chunks[idx].copy()
-                chunk['similarity_score'] = float(similarities[idx])
+                chunk['similarity_score'] = float(hybrid_scores[idx])
+                chunk['semantic_score'] = float(semantic_scores[idx])
+                chunk['keyword_score'] = float(keyword_scores[idx])
                 results.append(chunk)
 
-            logger.info(f"Found {len(results)} relevant chunks (scores: {[r['similarity_score'] for r in results]})")
+            logger.info(f"Hybrid search: {len(results)} chunks (semantic avg: {semantic_scores[top_indices].mean():.3f}, keyword avg: {keyword_scores[top_indices].mean():.3f})")
             return results
 
         except Exception as e:
-            logger.error(f"Error in embedding-based retrieval: {e}")
+            logger.error(f"Error in hybrid search: {e}")
             # Fallback to keyword matching
             return self._keyword_matching(query, chunks, top_k)
+
+    def _calculate_keyword_scores(
+        self,
+        query: str,
+        chunks: List[Dict[str, Any]]
+    ) -> np.ndarray:
+        """
+        Calculate keyword-based scores for all chunks (TF-IDF-like)
+
+        Args:
+            query: User query
+            chunks: List of chunks
+
+        Returns:
+            Array of keyword scores (one per chunk)
+        """
+        query_lower = query.lower()
+        query_terms = [term for term in query_lower.split() if len(term) > 2]  # Filter stopwords
+
+        scores = np.zeros(len(chunks))
+
+        for i, chunk in enumerate(chunks):
+            if 'text' not in chunk:
+                continue
+
+            text_lower = chunk['text'].lower()
+
+            # Count term frequency for each query term
+            score = 0
+            for term in query_terms:
+                # Exact term matches
+                term_count = text_lower.count(term)
+                score += term_count * 2  # Weight exact matches higher
+
+                # Partial matches (term as substring)
+                words = text_lower.split()
+                for word in words:
+                    if term in word and term != word:  # Substring but not exact
+                        score += 0.5
+
+            scores[i] = score
+
+        return scores
 
     def _keyword_matching(
         self,
@@ -162,7 +224,7 @@ class SimpleQueryEngine:
         top_k: int
     ) -> List[Dict[str, Any]]:
         """
-        Simple keyword-based chunk matching (fallback)
+        Simple keyword-based chunk matching (fallback when embeddings unavailable)
 
         Args:
             query: User query
