@@ -90,6 +90,134 @@ INIZIA LA COMPILAZIONE ORA:
 """
 
 
+def get_mermaid_mindmap_prompt(depth_level: int = 3, central_concept: str = None) -> str:
+    """
+    Return the mindmap prompt based on depth level and optional central concept.
+    Uses the fill-in-blank template but varies branch/sub-concept count by depth.
+
+    Args:
+        depth_level: Depth of the mindmap (2-4)
+            - 2: Superficiale (3 rami, 2 concetti per ramo)
+            - 3: Media (4 rami, 3 concetti per ramo) - DEFAULT
+            - 4: Dettagliata (5 rami, 3-4 concetti per ramo)
+        central_concept: Optional specific concept to focus on
+    """
+    depth_level = max(2, min(4, depth_level))  # Clamp between 2 and 4
+
+    # Determine focus instruction
+    if central_concept:
+        focus_instruction = f"""
+FOCUS SPECIFICO RICHIESTO:
+- Il tema centrale della mappa DEVE essere: "{central_concept}"
+- Tutti i rami devono esplorare SOLO aspetti, componenti e dettagli di "{central_concept}"
+- Non creare una mappa generale del documento, ma una mappa specifica su questo argomento
+"""
+    else:
+        focus_instruction = """
+MAPPA GENERALE DEL DOCUMENTO:
+- Il tema centrale è l'argomento principale dell'intero documento
+- I rami sono i capitoli/sezioni/temi principali del documento
+- Crea una panoramica completa seguendo la struttura del testo
+"""
+
+    if depth_level == 2:
+        # Superficiale: 3 rami, 2 concetti per ramo
+        return f"""TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
+{focus_instruction}
+⚠️ IMPORTANTE: Devi OBBLIGATORIAMENTE compilare TUTTI i 3 RAMI con i loro sotto-concetti.
+
+=== INIZIA COMPILAZIONE ===
+
+TEMA_CENTRALE: _______________
+DESCRIZIONE_CENTRALE: _______________
+
+---
+
+RAMO_1: _______________
+├─ _______________
+└─ _______________
+
+RAMO_2: _______________
+├─ _______________
+└─ _______________
+
+RAMO_3: _______________
+├─ _______________
+└─ _______________
+
+---
+
+COLLEGAMENTI:
+• RAMO_1 <-> RAMO_2: _______________
+• RAMO_2 <-> RAMO_3: _______________
+
+=== FINE COMPILAZIONE ===
+
+ISTRUZIONI: Sostituisci ogni "_____" con contenuto ESATTO dal documento. Formato: "Termine esatto - breve descrizione".
+INIZIA LA COMPILAZIONE ORA:
+"""
+
+    elif depth_level == 4:
+        # Dettagliata: 5 rami, 3-4 concetti per ramo
+        return f"""TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
+{focus_instruction}
+⚠️ IMPORTANTE: Devi OBBLIGATORIAMENTE compilare TUTTI i 5 RAMI con i loro sotto-concetti.
+
+=== INIZIA COMPILAZIONE ===
+
+TEMA_CENTRALE: _______________
+DESCRIZIONE_CENTRALE: _______________
+
+---
+
+RAMO_1: _______________
+├─ _______________
+├─ _______________
+├─ _______________
+└─ _______________
+
+RAMO_2: _______________
+├─ _______________
+├─ _______________
+├─ _______________
+└─ _______________
+
+RAMO_3: _______________
+├─ _______________
+├─ _______________
+└─ _______________
+
+RAMO_4: _______________
+├─ _______________
+├─ _______________
+└─ _______________
+
+RAMO_5: _______________
+├─ _______________
+├─ _______________
+└─ _______________
+
+---
+
+COLLEGAMENTI:
+• RAMO_1 <-> RAMO_2: _______________
+• RAMO_2 <-> RAMO_3: _______________
+• RAMO_3 <-> RAMO_4: _______________
+• RAMO_4 <-> RAMO_5: _______________
+
+=== FINE COMPILAZIONE ===
+
+ISTRUZIONI: Sostituisci ogni "_____" con contenuto ESATTO dal documento. Formato: "Termine esatto - breve descrizione".
+INIZIA LA COMPILAZIONE ORA:
+"""
+
+    else:  # depth_level == 3 (default)
+        # Media: 4 rami, 3 concetti per ramo - use the main template
+        return f"""TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
+{focus_instruction}
+{MERMAID_MINDMAP_PROMPT}"""
+
+
 def parse_simple_mindmap(response: str) -> Dict:
     """
     Parse the simple template format into a structured dictionary.
