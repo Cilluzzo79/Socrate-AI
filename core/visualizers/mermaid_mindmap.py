@@ -140,11 +140,22 @@ def parse_simple_mindmap(response: str) -> Dict:
             tema_centrale = tema_match.group(1).strip()
             logger.info("[PARSER] Found markdown header pattern")
 
-    # Pattern C: First significant content line
+    # Pattern C: Extract from ASCII box (║ ... ║ format)
     if not tema_centrale:
-        for line in response.split('\n')[:15]:
-            clean = re.sub(r'[#═╔╗╚╝─│├└┐┌┴┬┤┼\U0001F300-\U0001F9FF]', '', line).strip()
-            if clean and len(clean) > 5 and not clean.upper().startswith(('STEP', 'REGOLE', '---', 'PRIMA')):
+        # Look for text inside ASCII box after emoji/title
+        box_match = re.search(r'║\s*(?:🧠|🎯|📚)?\s*(.+?)\s*║', response)
+        if box_match:
+            tema_centrale = box_match.group(1).strip()
+            # Clean up if it's too long (take first line only)
+            if len(tema_centrale) > 100:
+                tema_centrale = tema_centrale.split('\n')[0].strip()
+            logger.info(f"[PARSER] Extracted from ASCII box: {tema_centrale[:50]}")
+
+    # Pattern D: First significant content line
+    if not tema_centrale:
+        for line in response.split('\n')[:20]:
+            clean = re.sub(r'[#═╔╗╚╝─│├└┐┌┴┬┤┼\U0001F300-\U0001F9FF║]', '', line).strip()
+            if clean and len(clean) > 10 and len(clean) < 150 and not clean.upper().startswith(('STEP', 'REGOLE', '---', 'PRIMA', 'L' + "'")):
                 tema_centrale = clean
                 logger.info(f"[PARSER] Extracted from first line: {tema_centrale[:50]}")
                 break
@@ -232,22 +243,27 @@ def parse_simple_mindmap(response: str) -> Dict:
             end_pos = headers[i+1].start() if i+1 < len(headers) else len(response)
             section_content = response[start_pos:end_pos]
 
-            # Extract sub-concepts from bullets
+            # Extract sub-concepts from bullets (limit to reasonable number)
             sub_concepts = []
             for line in section_content.split('\n'):
+                # Stop if we already have enough
+                if len(sub_concepts) >= 10:
+                    break
+
                 # Match bullet points or indented lines
                 if re.match(r'^\s*[-•*→►]\s+', line) or re.match(r'^\s{2,}', line):
                     clean_line = re.sub(r'^\s*[-•*→►]\s+', '', line).strip()
                     clean_line = re.sub(r'[\U0001F300-\U0001F9FF]', '', clean_line)
                     clean_line = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', clean_line)
 
-                    if clean_line and len(clean_line) > 3:
+                    # Skip very long lines (likely paragraph text, not bullet point)
+                    if clean_line and len(clean_line) > 3 and len(clean_line) < 200:
                         sub_concepts.append(clean_line)
 
             if branch_title:  # Only add if we got a title
                 branches.append({
                     "title": branch_title,
-                    "sub_concepts": sub_concepts
+                    "sub_concepts": sub_concepts[:10]  # Hard limit to 10 per branch
                 })
 
     # Strategy C: Last resort - extract from paragraphs
