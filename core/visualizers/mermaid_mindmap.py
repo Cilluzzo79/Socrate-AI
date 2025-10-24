@@ -4,20 +4,11 @@ Much better than vis.js for consistent rendering and font control
 """
 
 import re
-import logging
 from typing import Dict, List
-
-logger = logging.getLogger(__name__)
 
 
 # Simple template prompt that Claude can easily follow
-MERMAID_MINDMAP_PROMPT = """⚠️ CRITICAL OVERRIDE: IGNORE ALL PREVIOUS FORMATTING INSTRUCTIONS FROM SYSTEM PROMPT.
-DO NOT use markdown headers (##, ###).
-DO NOT use emoji decorations (🧠, 🌳, etc.).
-DO NOT create ASCII art boxes (═══, ╔══╗).
-FOLLOW ONLY THE EXACT FORMAT SPECIFIED BELOW.
-
-PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
+MERMAID_MINDMAP_PROMPT = """PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
 
 STEP 1 - ANALISI STRUTTURA (mentale, non scrivere):
 - Identifica i capitoli/sezioni principali NEL LORO ORDINE
@@ -110,226 +101,50 @@ RAMO: Tre Principi Fondamentali  [❌ termine non fedele]
 
 def parse_simple_mindmap(response: str) -> Dict:
     """
-    INTELLIGENT PARSER: Extracts mindmap structure from ANY LLM format.
-
-    Handles:
-    - Markdown headers (##, ###, ####)
-    - Emoji decorations (🧠, 🌳, 🎯, etc.)
-    - ASCII art boxes (═══, ╔══╗, etc.)
-    - Different bullet styles (•, -, *, →)
-    - Various indentation patterns
-    - Expected format (RAMO_X: [...])
-
-    Extracts semantic structure regardless of formatting.
+    Parse the simple template format into a structured dictionary.
     """
-    logger.info(f"[INTELLIGENT PARSER] Processing {len(response)} chars")
-
-    # STEP 1: Extract central theme with multiple fallback patterns
-    tema_centrale = None
-
-    # Pattern A: TEMA_CENTRALE: [text]
+    # Extract central theme
     tema_match = re.search(r'TEMA_CENTRALE:\s*(.+?)(?:\n|$)', response, re.IGNORECASE)
-    if tema_match:
-        tema_centrale = tema_match.group(1).strip()
-        logger.info("[PARSER] Found TEMA_CENTRALE pattern")
+    tema_centrale = tema_match.group(1).strip() if tema_match else "Concetto Centrale"
 
-    # Pattern B: Markdown header with "Concetto Centrale"
-    if not tema_centrale:
-        tema_match = re.search(r'(?:##|###)?\s*(?:🧠|🎯|📚)?\s*Concetto Centrale[:\s]+(.+?)(?:\n|═|╔|$)', response, re.IGNORECASE)
-        if tema_match:
-            tema_centrale = tema_match.group(1).strip()
-            logger.info("[PARSER] Found markdown header pattern")
-
-    # Pattern C: Extract from ASCII box (║ ... ║ format)
-    if not tema_centrale:
-        # Look for lines with ║ that contain significant text (not just spaces/decorations)
-        for line in response.split('\n')[:30]:
-            if '║' in line:
-                # Extract text between ║ symbols
-                parts = line.split('║')
-                for part in parts:
-                    clean_part = re.sub(r'[\U0001F300-\U0001F9FF═╔╗╚╝─│├└┐┌┴┬┤┼\s]+', ' ', part).strip()
-                    # Check if it's substantial text (not just decoration)
-                    if clean_part and len(clean_part) > 10 and len(clean_part) < 120:
-                        # Check it's not just repeated characters
-                        if len(set(clean_part)) > 5:
-                            tema_centrale = clean_part
-                            logger.info(f"[PARSER] Extracted from ASCII box: {tema_centrale[:50]}")
-                            break
-            if tema_centrale:
-                break
-
-    # Pattern D: First significant content line
-    if not tema_centrale:
-        for line in response.split('\n')[:20]:
-            clean = re.sub(r'[#═╔╗╚╝─│├└┐┌┴┬┤┼\U0001F300-\U0001F9FF║]', '', line).strip()
-            if clean and len(clean) > 10 and len(clean) < 150 and not clean.upper().startswith(('STEP', 'REGOLE', '---', 'PRIMA', 'L' + "'")):
-                tema_centrale = clean
-                logger.info(f"[PARSER] Extracted from first line: {tema_centrale[:50]}")
-                break
-
-    # Fallback
-    if not tema_centrale:
-        tema_centrale = "Concetto Centrale"
-        logger.warning("[PARSER] Using fallback tema_centrale")
-
-    # Clean emoji and decorations
-    tema_centrale = re.sub(r'[\U0001F300-\U0001F9FF]', '', tema_centrale)
-    tema_centrale = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', tema_centrale)
-    tema_centrale = tema_centrale.strip()
-
-    logger.info(f"[PARSER] Central theme: '{tema_centrale}'")
-
-    # STEP 2: Extract description
-    descrizione = ""
+    # Extract central description
     desc_match = re.search(r'DESCRIZIONE_CENTRALE:\s*(.+?)(?:\n---|\\n\\n)', response, re.IGNORECASE | re.DOTALL)
-    if desc_match:
-        descrizione = desc_match.group(1).strip()
-        descrizione = re.sub(r'[\U0001F300-\U0001F9FF]', '', descrizione)
-        descrizione = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', descrizione)
+    descrizione = desc_match.group(1).strip() if desc_match else "Mappa concettuale del documento"
 
-    if not descrizione:
-        descrizione = f"Mappa concettuale di {tema_centrale}"
-
-    # STEP 3: INTELLIGENT BRANCH EXTRACTION
+    # Extract branches
     branches = []
+    ramo_pattern = r'RAMO_(\d+):\s*(.+?)(?=\n(?:RAMO_|\-\-\-|COLLEGAMENTI|===))'
 
-    # Strategy A: Look for explicit RAMO_X: patterns (preferred format)
-    ramo_pattern = r'RAMO_(\d+):\s*(.+?)(?=\n(?:RAMO_|\-\-\-|COLLEGAMENTI|===|$))'
-    ramo_matches = list(re.finditer(ramo_pattern, response, re.DOTALL))
+    for match in re.finditer(ramo_pattern, response, re.DOTALL):
+        ramo_num = match.group(1)
+        ramo_content = match.group(2)
 
-    if ramo_matches:
-        logger.info(f"[PARSER] ✓ Found {len(ramo_matches)} RAMO patterns")
-        for match in ramo_matches:
-            ramo_num = match.group(1)
-            ramo_content = match.group(2)
+        # Extract branch title (first line)
+        lines = ramo_content.strip().split('\n')
+        branch_title = lines[0].strip() if lines else f"Ramo {ramo_num}"
 
-            lines = ramo_content.strip().split('\n')
-            branch_title = lines[0].strip() if lines else f"Ramo {ramo_num}"
+        # Extract sub-concepts
+        sub_concepts = []
+        for line in lines[1:]:
+            if any(char in line for char in ['├', '└', '│']):
+                clean_line = re.sub(r'[├└│─\s]+', '', line, count=1).strip()
+                if clean_line and len(clean_line) > 3:
+                    sub_concepts.append(clean_line)
 
-            # Clean title
-            branch_title = re.sub(r'[\U0001F300-\U0001F9FF]', '', branch_title)
-            branch_title = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', branch_title)
-            branch_title = branch_title.strip()
+        branches.append({
+            "title": branch_title,
+            "sub_concepts": sub_concepts
+        })
 
-            # Extract sub-concepts
-            sub_concepts = []
-            for line in lines[1:]:
-                if any(char in line for char in ['├', '└', '│', '•', '-', '*', '→']):
-                    clean_line = re.sub(r'[├└│─•\-\*→\s]+', '', line, count=1).strip()
-                    clean_line = re.sub(r'[\U0001F300-\U0001F9FF]', '', clean_line)
-                    clean_line = re.sub(r'[═╔╗╚╝┐┌┴┬┤┼]', '', clean_line)
-
-                    if clean_line and len(clean_line) > 3:
-                        sub_concepts.append(clean_line)
-
-            branches.append({
-                "title": branch_title,
-                "sub_concepts": sub_concepts
-            })
-
-    # Strategy B: Parse markdown headers (### or ####)
-    if not branches:
-        logger.warning("[PARSER] No RAMO patterns found, trying markdown extraction")
-
-        # Find all markdown headers that look like branches
-        header_pattern = r'(?:###|####)\s*(?:\U0001F300-\U0001F9FF)?\s*(?:Ramo\s*\d+[:\s]+)?(.+?)(?:\n|$)'
-        headers = list(re.finditer(header_pattern, response))
-
-        logger.info(f"[PARSER] Found {len(headers)} markdown headers")
-
-        for i, header_match in enumerate(headers):
-            branch_title = header_match.group(1).strip()
-
-            # Clean title
-            branch_title = re.sub(r'[\U0001F300-\U0001F9FF]', '', branch_title)
-            branch_title = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', branch_title)
-            branch_title = branch_title.strip()
-
-            # Extract content until next header or end
-            start_pos = header_match.end()
-            end_pos = headers[i+1].start() if i+1 < len(headers) else len(response)
-            section_content = response[start_pos:end_pos]
-
-            # Extract sub-concepts from bullets (limit to reasonable number)
-            sub_concepts = []
-            for line in section_content.split('\n'):
-                # Stop if we already have enough
-                if len(sub_concepts) >= 10:
-                    break
-
-                # Match bullet points or indented lines
-                if re.match(r'^\s*[-•*→►]\s+', line) or re.match(r'^\s{2,}', line):
-                    clean_line = re.sub(r'^\s*[-•*→►]\s+', '', line).strip()
-                    clean_line = re.sub(r'[\U0001F300-\U0001F9FF]', '', clean_line)
-                    clean_line = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', clean_line)
-
-                    # Skip very long lines (likely paragraph text, not bullet point)
-                    if clean_line and len(clean_line) > 3 and len(clean_line) < 200:
-                        sub_concepts.append(clean_line)
-
-            if branch_title:  # Only add if we got a title
-                branches.append({
-                    "title": branch_title,
-                    "sub_concepts": sub_concepts[:10]  # Hard limit to 10 per branch
-                })
-
-    # Strategy C: Last resort - extract from paragraphs
-    if not branches:
-        logger.warning("[PARSER] No headers found, using paragraph extraction (last resort)")
-
-        paragraphs = [p.strip() for p in response.split('\n\n') if p.strip()]
-
-        for para in paragraphs[:5]:  # Limit to 5 branches max
-            # Skip metadata lines
-            if any(skip in para.upper() for skip in ['TEMA_CENTRALE', 'DESCRIZIONE', 'STEP', 'REGOLE', 'COLLEGAMENTI', '===', '---', 'PRIMA ANALIZZA']):
-                continue
-
-            lines = para.split('\n')
-            if not lines:
-                continue
-
-            # First line = title
-            title = lines[0].strip()
-            title = re.sub(r'[\U0001F300-\U0001F9FF]', '', title)
-            title = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼#*]', '', title)
-            title = title.strip()
-
-            if not title or len(title) < 5:
-                continue
-
-            # Rest = sub-concepts
-            sub_concepts = []
-            for line in lines[1:]:
-                clean = re.sub(r'[\U0001F300-\U0001F9FF]', '', line)
-                clean = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', clean)
-                clean = re.sub(r'^\s*[-•*→►]\s+', '', clean).strip()
-
-                if clean and len(clean) > 3:
-                    sub_concepts.append(clean)
-
-            branches.append({
-                "title": title,
-                "sub_concepts": sub_concepts[:3]  # Max 3 per branch
-            })
-
-    logger.info(f"[PARSER] Extracted {len(branches)} branches:")
-    for i, b in enumerate(branches):
-        logger.info(f"  {i+1}. {b['title']} ({len(b['sub_concepts'])} sub-concepts)")
-
-    # STEP 4: Extract connections
+    # Extract connections
     connections = []
     conn_section = re.search(r'COLLEGAMENTI:\s*(.+?)(?=\n===|$)', response, re.DOTALL | re.IGNORECASE)
     if conn_section:
         conn_lines = conn_section.group(1).strip().split('\n')
         for line in conn_lines:
-            if '<->' in line or '→' in line or '->' in line or '↔' in line:
+            if '<->' in line or '→' in line or '->' in line:
                 clean_line = line.strip('•- ')
-                clean_line = re.sub(r'[\U0001F300-\U0001F9FF]', '', clean_line)
-                clean_line = re.sub(r'[═╔╗╚╝─│├└┐┌┴┬┤┼]', '', clean_line)
-                connections.append(clean_line.strip())
-
-    logger.info(f"[PARSER] Final: {len(branches)} branches, {len(connections)} connections")
+                connections.append(clean_line)
 
     return {
         "tema_centrale": tema_centrale,
@@ -341,38 +156,20 @@ def parse_simple_mindmap(response: str) -> Dict:
 
 def escape_mermaid_text(text: str) -> str:
     """Escape special characters for Mermaid syntax"""
-    # Remove emoji (critical for Mermaid compatibility)
-    text = re.sub(r'[\U0001F300-\U0001F9FF]', '', text)
-
     # Remove or escape characters that break Mermaid syntax
     text = text.replace('"', "'")
     text = text.replace('[', '(')
     text = text.replace(']', ')')
     text = text.replace('{', '(')
     text = text.replace('}', ')')
-
-    # Remove any remaining problematic characters
-    text = text.replace(':', ' -')  # Colon can confuse Mermaid
-    text = text.replace('|', ' ')   # Pipe breaks syntax
-
-    # Clean up multiple spaces
-    text = ' '.join(text.split())
-
-    return text.strip()
+    return text
 
 
 def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
     """
     Generate a professional HTML visualization using Mermaid.js mindmap.
     """
-    tema = data.get("tema_centrale", "Mappa Concettuale")
-
-    # CRITICAL: Mermaid requires non-empty root text
-    if not tema or tema.strip() == "":
-        tema = "Mappa Concettuale"
-        logger.warning("[MERMAID] Empty tema_centrale, using fallback")
-
-    tema = escape_mermaid_text(tema)
+    tema = escape_mermaid_text(data.get("tema_centrale", "Mappa Concettuale"))
     descrizione = data.get("descrizione", "")
     branches = data.get("branches", [])
     connections = data.get("connections", [])
@@ -389,10 +186,6 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         for sub in branch.get("sub_concepts", []):
             sub_text = escape_mermaid_text(sub)
             mermaid_code += f"      {sub_text}\n"
-
-    # Log generated Mermaid code for debugging
-    logger.info(f"[MERMAID] Generated code ({len(mermaid_code)} chars):")
-    logger.info(f"[MERMAID] {mermaid_code[:500]}")
 
     html = f"""<!DOCTYPE html>
 <html lang="it">
