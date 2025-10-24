@@ -7,215 +7,96 @@ import re
 from typing import Dict, List
 
 
-# ULTRA-DIRECTIVE prompt with fill-in-the-blank structure to FORCE branch generation
-MERMAID_MINDMAP_PROMPT = """TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
+# Simple template prompt that Claude can easily follow
+MERMAID_MINDMAP_PROMPT = """PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
 
-⚠️ IMPORTANTE: Devi OBBLIGATORIAMENTE compilare ALMENO 4 RAMI (RAMO_1, RAMO_2, RAMO_3, RAMO_4) con i relativi sotto-concetti.
+STEP 1 - ANALISI STRUTTURA (mentale, non scrivere):
+- Identifica i capitoli/sezioni principali NEL LORO ORDINE
+- Nota la gerarchia: cosa viene prima, cosa viene dopo
+- Riconosci i temi raggruppati insieme dall'autore
 
-=== INIZIA COMPILAZIONE ===
+STEP 2 - CREAZIONE MAPPA:
+Crea una mappa concettuale FEDELE al testo, seguendo ESATTAMENTE questo formato:
 
-TEMA_CENTRALE: _______________
-DESCRIZIONE_CENTRALE: _______________
+=== MAPPA CONCETTUALE ===
 
----
-
-RAMO_1: _______________
-├─ _______________
-├─ _______________
-└─ _______________
-
-RAMO_2: _______________
-├─ _______________
-├─ _______________
-└─ _______________
-
-RAMO_3: _______________
-├─ _______________
-└─ _______________
-
-RAMO_4: _______________
-├─ _______________
-└─ _______________
+TEMA_CENTRALE: [tema principale ESATTO dal testo - 3-6 parole]
+DESCRIZIONE_CENTRALE: [definizione precisa in 1 frase]
 
 ---
 
-COLLEGAMENTI:
-• RAMO_1 <-> RAMO_2: _______________
-• RAMO_2 <-> RAMO_3: _______________
-• RAMO_3 <-> RAMO_4: _______________
+RAMO_1: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
 
-=== FINE COMPILAZIONE ===
+RAMO_2: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
 
-ISTRUZIONI DI COMPILAZIONE:
+RAMO_3: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
 
-1. Sostituisci ogni "_____________" con il contenuto appropriato dal documento
-2. Formato per RAMI: "Termine esatto - breve descrizione funzionale"
-3. Formato per SOTTO-CONCETTI: "Concetto - cosa fa/rappresenta"
-4. Usa SOLO termini ESATTI dal documento (NON parafrasare)
-5. COLLEGAMENTI: spiega la relazione tra i rami (max 10 parole)
-
-ESEMPIO DI COMPILAZIONE CORRETTA:
-
-TEMA_CENTRALE: Intelligenza Artificiale
-DESCRIZIONE_CENTRALE: Studio di sistemi che simulano capacità cognitive umane
-
----
-
-RAMO_1: Machine Learning - sistemi che apprendono dai dati
-├─ Supervised Learning - apprendimento con dati etichettati
-├─ Unsupervised Learning - scoperta pattern senza etichette
-└─ Reinforcement Learning - apprendimento per rinforzo
-
-RAMO_2: Neural Networks - reti ispirate al cervello biologico
-├─ Deep Learning - reti neurali profonde multistrato
-├─ Convolutional Networks - elaborazione immagini
-└─ Recurrent Networks - elaborazione sequenze temporali
-
-RAMO_3: Natural Language Processing - comprensione linguaggio umano
-├─ Text Classification - categorizzazione automatica testi
-└─ Language Models - generazione testo coerente
-
-RAMO_4: Computer Vision - percezione visiva automatica
-├─ Object Detection - riconoscimento oggetti
-└─ Image Segmentation - divisione semantica immagini
+RAMO_4: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
 
 ---
 
 COLLEGAMENTI:
-• RAMO_1 <-> RAMO_2: Neural networks implementano algoritmi di machine learning
-• RAMO_2 <-> RAMO_3: Deep learning è fondamentale per NLP moderno
-• RAMO_2 <-> RAMO_4: CNN sono architetture chiave per computer vision
+• RAMO_1 <-> RAMO_2: [relazione ESATTA dal testo - MAX 8 parole]
+• RAMO_2 <-> RAMO_3: [relazione ESATTA dal testo - MAX 8 parole]
+• RAMO_3 <-> RAMO_4: [relazione ESATTA dal testo - MAX 8 parole]
 
-INIZIA LA COMPILAZIONE ORA:
+=== FINE MAPPA ===
+
+REGOLE CRITICHE - MASSIMA FEDELTÀ AL TESTO:
+
+1. FEDELTÀ TERMINOLOGICA ASSOLUTA:
+   - USA i termini ESATTI del documento (es. "Legge del Tre", NON "tre principi")
+   - Se il testo dice "cosmologia" usa "cosmologia", non "universo"
+   - Rispetta nomi propri, concetti tecnici e termini specifici dell'autore
+
+2. ORDINE E STRUTTURA GERARCHICA OBBLIGATORI:
+   - I RAMI devono seguire l'ORDINE di presentazione nel documento
+   - RAMO_1 = primo concetto/capitolo presentato dall'autore
+   - RAMO_2 = secondo concetto/capitolo, e così via in sequenza
+   - I sotto-concetti seguono l'ordine in cui appaiono sotto quel tema
+   - NON mescolare concetti da sezioni diverse
+   - Raggruppa insieme solo ciò che l'autore ha raggruppato
+
+3. NESSUNA INTERPRETAZIONE O PARAFRASI:
+   - NON semplificare o generalizzare i concetti
+   - NON usare sinonimi se l'autore usa un termine specifico
+   - Se il testo dice "ottava cosmica" scrivi "ottava cosmica", non "scala universale"
+
+4. QUALIFICAZIONE CON DESCRITTORI FUNZIONALI:
+   - OGNI nodo deve includere un descrittore che spiega COSA FA o COSA RAPPRESENTA
+   - Formato: "Termine esatto - breve descrizione funzionale"
+   - Esempio CORRETTO: "Legge del Tre - tre forze in ogni fenomeno" ✓
+   - Esempio SBAGLIATO: "Legge del Tre" ✗ (troppo generico, non qualificato)
+   - Esempio CORRETTO: "Centro intellettuale - elaborazione pensieri logici" ✓
+   - Esempio SBAGLIATO: "Centro intellettuale" ✗ (non spiega cosa fa)
+
+5. VERIFICA INCROCIATA:
+   - Prima di scrivere ogni ramo, cerca nel contesto il termine esatto
+   - Ogni sotto-concetto deve essere effettivamente presente nel testo
+   - I collegamenti devono riflettere relazioni esplicitamente menzionate
+
+ESEMPIO CORRETTO (Gurdjieff):
+RAMO: Legge del Tre - ogni fenomeno risulta da tre forze
+├─ Forza Attiva - inizia il processo
+├─ Forza Passiva - resiste al cambiamento
+└─ Forza Neutralizzante - riconcilia le opposte
+
+ESEMPIO SBAGLIATO:
+RAMO: Tre Principi Fondamentali  [❌ termine non fedele]
+├─ Principio positivo  [❌ non è la terminologia usata]
+└─ Forza Attiva  [❌ manca descrittore funzionale]
 """
-
-
-def get_mermaid_mindmap_prompt(depth_level: int = 3, central_concept: str = None) -> str:
-    """
-    Return the mindmap prompt based on depth level and optional central concept.
-    Uses the fill-in-blank template but varies branch/sub-concept count by depth.
-
-    Args:
-        depth_level: Depth of the mindmap (2-4)
-            - 2: Superficiale (3 rami, 2 concetti per ramo)
-            - 3: Media (4 rami, 3 concetti per ramo) - DEFAULT
-            - 4: Dettagliata (5 rami, 3-4 concetti per ramo)
-        central_concept: Optional specific concept to focus on
-    """
-    depth_level = max(2, min(4, depth_level))  # Clamp between 2 and 4
-
-    # Determine focus instruction
-    if central_concept:
-        focus_instruction = f"""
-FOCUS SPECIFICO RICHIESTO:
-- Il tema centrale della mappa DEVE essere: "{central_concept}"
-- Tutti i rami devono esplorare SOLO aspetti, componenti e dettagli di "{central_concept}"
-- Non creare una mappa generale del documento, ma una mappa specifica su questo argomento
-"""
-    else:
-        focus_instruction = """
-MAPPA GENERALE DEL DOCUMENTO:
-- Il tema centrale è l'argomento principale dell'intero documento
-- I rami sono i capitoli/sezioni/temi principali del documento
-- Crea una panoramica completa seguendo la struttura del testo
-"""
-
-    if depth_level == 2:
-        # Superficiale: 3 rami, 2 concetti per ramo
-        return f"""TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
-{focus_instruction}
-⚠️ IMPORTANTE: Devi OBBLIGATORIAMENTE compilare TUTTI i 3 RAMI con i loro sotto-concetti.
-
-=== INIZIA COMPILAZIONE ===
-
-TEMA_CENTRALE: _______________
-DESCRIZIONE_CENTRALE: _______________
-
----
-
-RAMO_1: _______________
-├─ _______________
-└─ _______________
-
-RAMO_2: _______________
-├─ _______________
-└─ _______________
-
-RAMO_3: _______________
-├─ _______________
-└─ _______________
-
----
-
-COLLEGAMENTI:
-• RAMO_1 <-> RAMO_2: _______________
-• RAMO_2 <-> RAMO_3: _______________
-
-=== FINE COMPILAZIONE ===
-
-ISTRUZIONI: Sostituisci ogni "_____" con contenuto ESATTO dal documento. Formato: "Termine esatto - breve descrizione".
-INIZIA LA COMPILAZIONE ORA:
-"""
-
-    elif depth_level == 4:
-        # Dettagliata: 5 rami, 3-4 concetti per ramo
-        return f"""TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
-{focus_instruction}
-⚠️ IMPORTANTE: Devi OBBLIGATORIAMENTE compilare TUTTI i 5 RAMI con i loro sotto-concetti.
-
-=== INIZIA COMPILAZIONE ===
-
-TEMA_CENTRALE: _______________
-DESCRIZIONE_CENTRALE: _______________
-
----
-
-RAMO_1: _______________
-├─ _______________
-├─ _______________
-├─ _______________
-└─ _______________
-
-RAMO_2: _______________
-├─ _______________
-├─ _______________
-├─ _______________
-└─ _______________
-
-RAMO_3: _______________
-├─ _______________
-├─ _______________
-└─ _______________
-
-RAMO_4: _______________
-├─ _______________
-├─ _______________
-└─ _______________
-
-RAMO_5: _______________
-├─ _______________
-├─ _______________
-└─ _______________
-
----
-
-COLLEGAMENTI:
-• RAMO_1 <-> RAMO_2: _______________
-• RAMO_2 <-> RAMO_3: _______________
-• RAMO_3 <-> RAMO_4: _______________
-• RAMO_4 <-> RAMO_5: _______________
-
-=== FINE COMPILAZIONE ===
-
-ISTRUZIONI: Sostituisci ogni "_____" con contenuto ESATTO dal documento. Formato: "Termine esatto - breve descrizione".
-INIZIA LA COMPILAZIONE ORA:
-"""
-
-    else:  # depth_level == 3 (default)
-        # Media: 4 rami, 3 concetti per ramo - use the main template
-        return f"""TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
-{focus_instruction}
-{MERMAID_MINDMAP_PROMPT}"""
 
 
 def parse_simple_mindmap(response: str) -> Dict:
@@ -572,3 +453,157 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
 </html>"""
 
     return html
+
+
+def get_mermaid_mindmap_prompt(depth_level: int = 3, central_concept: str = None) -> str:
+    """
+    Return the mindmap prompt based on depth level and optional central concept.
+
+    Args:
+        depth_level: Depth of the mindmap (2-4)
+            - 2: Superficiale (3 rami, 2 concetti per ramo)
+            - 3: Media (4 rami, 3 concetti per ramo)
+            - 4: Dettagliata (5 rami, 3-4 concetti per ramo)
+        central_concept: Optional specific concept to focus on (e.g., "Legge del Tre", "Ray di Creazione")
+                        If None, creates a general overview map of the entire document
+    """
+    depth_level = max(2, min(4, depth_level))  # Clamp between 2 and 4
+
+    # Determine focus instruction based on central_concept
+    if central_concept:
+        focus_instruction = f"""
+FOCUS SPECIFICO RICHIESTO:
+- Il tema centrale della mappa DEVE essere: "{central_concept}"
+- Tutti i rami devono esplorare SOLO aspetti, componenti e dettagli di "{central_concept}"
+- Non creare una mappa generale del documento, ma una mappa specifica su questo argomento
+- I rami sono le sotto-categorie/aspetti di "{central_concept}" come presentati nel testo
+"""
+    else:
+        focus_instruction = """
+MAPPA GENERALE DEL DOCUMENTO:
+- Il tema centrale è l'argomento principale dell'intero documento
+- I rami sono i capitoli/sezioni/temi principali del documento
+- Crea una panoramica completa seguendo la struttura del testo
+"""
+
+    if depth_level == 2:
+        # Superficiale: 3 rami, 2 concetti per ramo
+        return f"""PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
+{focus_instruction}
+STEP 1 - ANALISI STRUTTURA (mentale, non scrivere):
+- Identifica i 3 temi/capitoli PRINCIPALI nel loro ORDINE di apparizione
+- Nota la sequenza logica dell'autore
+
+STEP 2 - CREAZIONE MAPPA:
+Crea una mappa concettuale SUPERFICIALE ma FEDELE al testo, seguendo ESATTAMENTE questo formato:
+
+=== MAPPA CONCETTUALE ===
+
+TEMA_CENTRALE: [tema principale ESATTO dal testo - 3-6 parole]
+DESCRIZIONE_CENTRALE: [definizione precisa in 1 frase]
+
+---
+
+RAMO_1: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+RAMO_2: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+RAMO_3: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+---
+
+COLLEGAMENTI:
+• RAMO_1 <-> RAMO_2: [relazione ESATTA dal testo - MAX 8 parole]
+• RAMO_2 <-> RAMO_3: [relazione ESATTA dal testo - MAX 8 parole]
+
+=== FINE MAPPA ===
+
+REGOLE CRITICHE:
+1. Mappa SUPERFICIALE: 3 rami principali, 2 concetti per ramo
+2. ORDINE OBBLIGATORIO: I rami seguono l'ordine di presentazione nel testo
+3. MASSIMA FEDELTÀ TERMINOLOGICA: usa termini esatti del testo
+4. QUALIFICAZIONE OBBLIGATORIA: Ogni nodo DEVE avere descrittore funzionale (formato: "Termine - cosa fa/rappresenta")
+5. NO parafrasi o interpretazioni - solo contenuti letterali con descrittori
+"""
+
+    elif depth_level == 4:
+        # Dettagliata: 5 rami, 3-4 concetti per ramo
+        return f"""PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
+{focus_instruction}
+STEP 1 - ANALISI STRUTTURA (mentale, non scrivere):
+- Identifica i 5 temi/capitoli principali nel loro ORDINE di apparizione
+- Nota la gerarchia e la sequenza logica dell'autore
+- Riconosci quali sotto-concetti appartengono a quale tema
+
+STEP 2 - CREAZIONE MAPPA:
+Crea una mappa concettuale DETTAGLIATA e FEDELE al testo, seguendo ESATTAMENTE questo formato:
+
+=== MAPPA CONCETTUALE ===
+
+TEMA_CENTRALE: [tema principale ESATTO dal testo - 3-6 parole]
+DESCRIZIONE_CENTRALE: [definizione precisa in 1 frase]
+
+---
+
+RAMO_1: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+RAMO_2: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+RAMO_3: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+RAMO_4: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+RAMO_5: [Concetto LETTERALE - breve descrizione funzionale]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+├─ [Sotto-concetto - cosa fa/rappresenta]
+└─ [Sotto-concetto - cosa fa/rappresenta]
+
+---
+
+COLLEGAMENTI:
+• RAMO_1 <-> RAMO_2: [relazione ESATTA dal testo - MAX 8 parole]
+• RAMO_2 <-> RAMO_3: [relazione ESATTA dal testo - MAX 8 parole]
+• RAMO_3 <-> RAMO_4: [relazione ESATTA dal testo - MAX 8 parole]
+• RAMO_4 <-> RAMO_5: [relazione ESATTA dal testo - MAX 8 parole]
+
+=== FINE MAPPA ===
+
+REGOLE CRITICHE:
+1. Mappa DETTAGLIATA: 5 rami principali, 3-4 concetti per ramo
+2. ORDINE OBBLIGATORIO: I rami seguono l'ordine di presentazione nel testo
+3. MASSIMA FEDELTÀ TERMINOLOGICA: usa termini esatti del testo
+4. QUALIFICAZIONE OBBLIGATORIA: Ogni nodo DEVE avere descrittore funzionale (formato: "Termine - cosa fa/rappresenta")
+5. NO parafrasi o interpretazioni - solo contenuti letterali con descrittori
+"""
+
+    else:  # depth_level == 3 (default)
+        # Media: 4 rami, 3 concetti per ramo
+        return f"""PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
+{focus_instruction}
+STEP 1 - ANALISI STRUTTURA (mentale, non scrivere):
+- Identifica i capitoli/sezioni principali NEL LORO ORDINE
+- Nota la gerarchia: cosa viene prima, cosa viene dopo
+- Riconosci i temi raggruppati insieme dall'autore
+
+STEP 2 - CREAZIONE MAPPA:
+{MERMAID_MINDMAP_PROMPT}"""
