@@ -360,7 +360,18 @@
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 
-    <script src="/static/js/dashboard.js?v={{ app_version }}"></script>
+    <!-- Dynamic script loading with runtime timestamp to bypass ALL caching -->
+    <script>
+        (function() {
+            // Force fresh load with millisecond timestamp
+            const timestamp = new Date().getTime();
+            const script = document.createElement('script');
+            script.src = '/static/js/dashboard.js?v={{ app_version }}&t=' + timestamp;
+            script.async = false; // Load synchronously to ensure availability
+            document.head.appendChild(script);
+            console.log('[CACHE-BUSTER] Loading dashboard.js with timestamp:', timestamp);
+        })();
+    </script>
     <script>
         let documentToDelete = null;
 
