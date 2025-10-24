@@ -247,7 +247,7 @@ function openTools(documentId) {
 }
 
 // Open tool configuration modal before executing
-function openToolConfig(documentId, toolType) {
+window.openToolConfig = function(documentId, toolType) {
     console.log('[openToolConfig] Opening config for:', toolType);
 
     // Close tools modal
