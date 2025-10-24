@@ -4,7 +4,10 @@ Much better than vis.js for consistent rendering and font control
 """
 
 import re
+import logging
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 # Simple template prompt that Claude can easily follow
