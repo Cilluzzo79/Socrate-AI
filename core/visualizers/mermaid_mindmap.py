@@ -341,13 +341,24 @@ def parse_simple_mindmap(response: str) -> Dict:
 
 def escape_mermaid_text(text: str) -> str:
     """Escape special characters for Mermaid syntax"""
+    # Remove emoji (critical for Mermaid compatibility)
+    text = re.sub(r'[\U0001F300-\U0001F9FF]', '', text)
+
     # Remove or escape characters that break Mermaid syntax
     text = text.replace('"', "'")
     text = text.replace('[', '(')
     text = text.replace(']', ')')
     text = text.replace('{', '(')
     text = text.replace('}', ')')
-    return text
+
+    # Remove any remaining problematic characters
+    text = text.replace(':', ' -')  # Colon can confuse Mermaid
+    text = text.replace('|', ' ')   # Pipe breaks syntax
+
+    # Clean up multiple spaces
+    text = ' '.join(text.split())
+
+    return text.strip()
 
 
 def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
@@ -378,6 +389,10 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         for sub in branch.get("sub_concepts", []):
             sub_text = escape_mermaid_text(sub)
             mermaid_code += f"      {sub_text}\n"
+
+    # Log generated Mermaid code for debugging
+    logger.info(f"[MERMAID] Generated code ({len(mermaid_code)} chars):")
+    logger.info(f"[MERMAID] {mermaid_code[:500]}")
 
     html = f"""<!DOCTYPE html>
 <html lang="it">
