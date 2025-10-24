@@ -514,6 +514,18 @@ window.openToolConfig = function(documentId, toolType) {
     };
 
     modal.innerHTML = `
+        <style>
+            /* Fix option visibility in select dropdowns */
+            .modal-content select option {
+                background-color: #1a1a2e !important;
+                color: #ffffff !important;
+            }
+            .modal-content select option:hover,
+            .modal-content select option:checked {
+                background-color: #667eea !important;
+                color: #ffffff !important;
+            }
+        </style>
         <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
             <div style="
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
