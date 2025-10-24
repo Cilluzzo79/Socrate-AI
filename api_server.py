@@ -1358,7 +1358,9 @@ def generate_mindmap_tool(document_id):
             query=mindmap_prompt,
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
-            top_k=40,  # Premium: high context for comprehensive mindmaps
+            top_k=15,  # Reduced from 40: Too much context confuses LLM for structured outputs
+            max_tokens=2500,  # Match old app: 2000-3000 range for mindmaps
+            temperature=0.3,  # Low temperature for strict format adherence
             user_tier=user_tier,
             query_type='mindmap',
             command_params={'depth': depth, 'topic': topic}
