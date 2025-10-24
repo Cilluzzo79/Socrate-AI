@@ -1371,8 +1371,14 @@ def generate_mindmap_tool(document_id):
             logger.warning(f"Mindmap generation failed: {error_msg}")
             return jsonify({'error': 'Failed to generate mindmap'}), 500
 
+        # Log raw LLM response for debugging
+        llm_response = result['answer']
+        logger.info(f"[MINDMAP DEBUG] Raw LLM response (first 500 chars): {llm_response[:500]}")
+        logger.info(f"[MINDMAP DEBUG] Response length: {len(llm_response)} chars")
+
         # Parse LLM response
-        mindmap_data = parse_simple_mindmap(result['answer'])
+        mindmap_data = parse_simple_mindmap(llm_response)
+        logger.info(f"[MINDMAP DEBUG] Parsed data - branches: {len(mindmap_data.get('branches', []))}, tema: {mindmap_data.get('tema_centrale', 'N/A')}")
 
         # Generate HTML with sanitized filename
         html = generate_mermaid_mindmap_html(mindmap_data, safe_filename)
