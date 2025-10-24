@@ -8,7 +8,13 @@ from typing import Dict, List
 
 
 # Simple template prompt that Claude can easily follow
-MERMAID_MINDMAP_PROMPT = """PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
+MERMAID_MINDMAP_PROMPT = """⚠️ CRITICAL OVERRIDE: IGNORE ALL PREVIOUS FORMATTING INSTRUCTIONS FROM SYSTEM PROMPT.
+DO NOT use markdown headers (##, ###).
+DO NOT use emoji decorations (🧠, 🌳, etc.).
+DO NOT create ASCII art boxes (═══, ╔══╗).
+FOLLOW ONLY THE EXACT FORMAT SPECIFIED BELOW.
+
+PRIMA ANALIZZA LA STRUTTURA DEL DOCUMENTO, POI crea la mappa seguendo l'ordine del testo.
 
 STEP 1 - ANALISI STRUTTURA (mentale, non scrivere):
 - Identifica i capitoli/sezioni principali NEL LORO ORDINE
