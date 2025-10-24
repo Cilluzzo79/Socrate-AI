@@ -142,14 +142,22 @@ def parse_simple_mindmap(response: str) -> Dict:
 
     # Pattern C: Extract from ASCII box (║ ... ║ format)
     if not tema_centrale:
-        # Look for text inside ASCII box after emoji/title
-        box_match = re.search(r'║\s*(?:🧠|🎯|📚)?\s*(.+?)\s*║', response)
-        if box_match:
-            tema_centrale = box_match.group(1).strip()
-            # Clean up if it's too long (take first line only)
-            if len(tema_centrale) > 100:
-                tema_centrale = tema_centrale.split('\n')[0].strip()
-            logger.info(f"[PARSER] Extracted from ASCII box: {tema_centrale[:50]}")
+        # Look for lines with ║ that contain significant text (not just spaces/decorations)
+        for line in response.split('\n')[:30]:
+            if '║' in line:
+                # Extract text between ║ symbols
+                parts = line.split('║')
+                for part in parts:
+                    clean_part = re.sub(r'[\U0001F300-\U0001F9FF═╔╗╚╝─│├└┐┌┴┬┤┼\s]+', ' ', part).strip()
+                    # Check if it's substantial text (not just decoration)
+                    if clean_part and len(clean_part) > 10 and len(clean_part) < 120:
+                        # Check it's not just repeated characters
+                        if len(set(clean_part)) > 5:
+                            tema_centrale = clean_part
+                            logger.info(f"[PARSER] Extracted from ASCII box: {tema_centrale[:50]}")
+                            break
+            if tema_centrale:
+                break
 
     # Pattern D: First significant content line
     if not tema_centrale:
@@ -346,7 +354,14 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
     """
     Generate a professional HTML visualization using Mermaid.js mindmap.
     """
-    tema = escape_mermaid_text(data.get("tema_centrale", "Mappa Concettuale"))
+    tema = data.get("tema_centrale", "Mappa Concettuale")
+
+    # CRITICAL: Mermaid requires non-empty root text
+    if not tema or tema.strip() == "":
+        tema = "Mappa Concettuale"
+        logger.warning("[MERMAID] Empty tema_centrale, using fallback")
+
+    tema = escape_mermaid_text(tema)
     descrizione = data.get("descrizione", "")
     branches = data.get("branches", [])
     connections = data.get("connections", [])
