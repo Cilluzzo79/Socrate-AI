@@ -7,53 +7,54 @@ import re
 from typing import Dict, List
 
 
-# SIMPLIFIED prompt - easier for LLM to follow consistently
-MERMAID_MINDMAP_PROMPT = """Crea una mappa concettuale del documento seguendo ESATTAMENTE questo formato semplice:
+# ULTRA-DIRECTIVE prompt with fill-in-the-blank structure to FORCE branch generation
+MERMAID_MINDMAP_PROMPT = """TASK: Complete la seguente mappa concettuale compilando TUTTI i campi richiesti.
 
-=== MAPPA CONCETTUALE ===
+⚠️ IMPORTANTE: Devi OBBLIGATORIAMENTE compilare ALMENO 4 RAMI (RAMO_1, RAMO_2, RAMO_3, RAMO_4) con i relativi sotto-concetti.
 
-TEMA_CENTRALE: [tema principale ESATTO dal testo - 3-6 parole]
-DESCRIZIONE_CENTRALE: [definizione precisa in 1 frase]
+=== INIZIA COMPILAZIONE ===
+
+TEMA_CENTRALE: _______________
+DESCRIZIONE_CENTRALE: _______________
 
 ---
 
-RAMO_1: [Concetto LETTERALE - breve descrizione funzionale]
-├─ [Sotto-concetto - cosa fa/rappresenta]
-├─ [Sotto-concetto - cosa fa/rappresenta]
-└─ [Sotto-concetto - cosa fa/rappresenta]
+RAMO_1: _______________
+├─ _______________
+├─ _______________
+└─ _______________
 
-RAMO_2: [Concetto LETTERALE - breve descrizione funzionale]
-├─ [Sotto-concetto - cosa fa/rappresenta]
-├─ [Sotto-concetto - cosa fa/rappresenta]
-└─ [Sotto-concetto - cosa fa/rappresenta]
+RAMO_2: _______________
+├─ _______________
+├─ _______________
+└─ _______________
 
-RAMO_3: [Concetto LETTERALE - breve descrizione funzionale]
-├─ [Sotto-concetto - cosa fa/rappresenta]
-├─ [Sotto-concetto - cosa fa/rappresenta]
-└─ [Sotto-concetto - cosa fa/rappresenta]
+RAMO_3: _______________
+├─ _______________
+└─ _______________
 
-RAMO_4: [Concetto LETTERALE - breve descrizione funzionale]
-├─ [Sotto-concetto - cosa fa/rappresenta]
-└─ [Sotto-concetto - cosa fa/rappresenta]
+RAMO_4: _______________
+├─ _______________
+└─ _______________
 
 ---
 
 COLLEGAMENTI:
-• RAMO_1 <-> RAMO_2: [relazione ESATTA dal testo - MAX 8 parole]
-• RAMO_2 <-> RAMO_3: [relazione ESATTA dal testo - MAX 8 parole]
-• RAMO_3 <-> RAMO_4: [relazione ESATTA dal testo - MAX 8 parole]
+• RAMO_1 <-> RAMO_2: _______________
+• RAMO_2 <-> RAMO_3: _______________
+• RAMO_3 <-> RAMO_4: _______________
 
-=== FINE MAPPA ===
+=== FINE COMPILAZIONE ===
 
-REGOLE IMPORTANTI:
+ISTRUZIONI DI COMPILAZIONE:
 
-1. USA i termini ESATTI del documento - NON parafrasare
-2. CREA ALMENO 4-6 RAMI principali (RAMO_1, RAMO_2, RAMO_3, RAMO_4, ecc.)
-3. OGNI RAMO deve avere 2-4 sotto-concetti (con ├─ o └─)
-4. Descrivi cosa fa/significa ogni concetto: "Termine - breve spiegazione"
-5. COLLEGAMENTI: connetti i rami tra loro (almeno 2-3 collegamenti)
+1. Sostituisci ogni "_____________" con il contenuto appropriato dal documento
+2. Formato per RAMI: "Termine esatto - breve descrizione funzionale"
+3. Formato per SOTTO-CONCETTI: "Concetto - cosa fa/rappresenta"
+4. Usa SOLO termini ESATTI dal documento (NON parafrasare)
+5. COLLEGAMENTI: spiega la relazione tra i rami (max 10 parole)
 
-ESEMPIO FORMATO CORRETTO:
+ESEMPIO DI COMPILAZIONE CORRETTA:
 
 TEMA_CENTRALE: Intelligenza Artificiale
 DESCRIZIONE_CENTRALE: Studio di sistemi che simulano capacità cognitive umane
@@ -84,6 +85,8 @@ COLLEGAMENTI:
 • RAMO_1 <-> RAMO_2: Neural networks implementano algoritmi di machine learning
 • RAMO_2 <-> RAMO_3: Deep learning è fondamentale per NLP moderno
 • RAMO_2 <-> RAMO_4: CNN sono architetture chiave per computer vision
+
+INIZIA LA COMPILAZIONE ORA:
 """
 
 
