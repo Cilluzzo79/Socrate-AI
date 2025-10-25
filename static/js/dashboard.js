@@ -744,22 +744,22 @@ function openPersistentChat(documentId) {
             border-radius: var(--radius-lg, 12px);
             overflow: hidden;
         ">
-            <!-- Chat Header -->
+            <!-- Chat Header - MOBILE-FIRST: Cyan-Purple Gradient + Larger Fonts -->
             <div style="
                 padding: 1.5rem;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
                 color: white;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-bottom: 2px solid rgba(0, 217, 192, 0.3);
+                border-bottom: 2px solid rgba(6, 182, 212, 0.3);
                 border-radius: 12px 12px 0 0;
             ">
                 <div style="flex: 1; min-width: 0;">
-                    <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                    <h2 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
                         💬 Chat con il Documento
                     </h2>
-                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.95; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${doc.filename}">
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; opacity: 0.95; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${doc.filename}">
                         📄 ${doc.filename}
                     </p>
                 </div>
@@ -818,32 +818,34 @@ function openPersistentChat(documentId) {
                 ">
                     <textarea id="chat-input-${documentId}" placeholder="Scrivi la tua domanda..." style="
                         flex: 1;
-                        padding: 1rem;
-                        background: var(--color-bg-primary, #0f1419);
-                        border: 1px solid rgba(0, 217, 192, 0.3);
+                        padding: 14px 16px;
+                        background: #0f1419;
+                        border: 2px solid #06b6d4;
                         border-radius: 8px;
-                        color: var(--color-text-primary, #e8eaed);
-                        font-size: 1rem;
-                        font-family: inherit;
+                        color: #e8eaed;
+                        font-size: 16px;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                         resize: vertical;
-                        min-height: 60px;
-                        max-height: 150px;
+                        min-height: 56px;
+                        max-height: 200px;
+                        line-height: 1.5;
                     " onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage('${documentId}',event);}"></textarea>
                     <button type="submit" style="
-                        padding: 1rem 2rem;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 14px 24px;
+                        background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
                         border: none;
                         border-radius: 8px;
                         color: white;
-                        font-size: 1rem;
+                        font-size: 16px;
                         font-weight: 600;
                         cursor: pointer;
                         transition: transform 0.2s, box-shadow 0.2s;
-                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
                         display: flex;
                         align-items: center;
                         gap: 0.5rem;
-                    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(102, 126, 234, 0.6)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';">
+                        min-height: 56px;
+                    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(6, 182, 212, 0.6)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(6, 182, 212, 0.4)';">
                         <span>Invia</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -878,15 +880,18 @@ function renderChatHistory(documentId) {
                 ${isUser ? 'justify-content: flex-end' : 'justify-content: flex-start'};
             ">
                 <div style="
-                    max-width: 70%;
-                    padding: 1rem 1.25rem;
+                    max-width: 85%;
+                    padding: 14px 18px;
                     border-radius: 12px;
                     ${isUser ?
-                        'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;' :
-                        'background: rgba(0, 217, 192, 0.1); color: var(--color-text-primary, #e8eaed); border: 1px solid rgba(0, 217, 192, 0.3);'
+                        'background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%); color: white;' :
+                        'background: rgba(6, 182, 212, 0.1); color: #e8eaed; border: 1px solid rgba(6, 182, 212, 0.3);'
                     }
                     word-wrap: break-word;
                     white-space: pre-wrap;
+                    font-size: 15px;
+                    line-height: 1.6;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 ">
                     ${escapeHtml(msg.content)}
                 </div>
