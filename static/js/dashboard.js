@@ -219,7 +219,7 @@ function openTools(documentId) {
         ">
             <div style="
                 padding: 1.5rem;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
                 border-radius: 12px 12px 0 0;
                 margin: -1px -1px 0 -1px;
             ">
@@ -533,7 +533,7 @@ window.openToolConfig = function(documentId, toolType) {
         </style>
         <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
             <div style="
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
                 padding: 1.5rem;
                 border-radius: 12px 12px 0 0;
                 margin: -1.5rem -1.5rem 1.5rem -1.5rem;
@@ -548,7 +548,7 @@ window.openToolConfig = function(documentId, toolType) {
                 <button onclick="window.confirmToolConfig('${documentId}', '${toolType}')" class="primary-btn" style="
                     flex: 1;
                     padding: 0.875rem;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
                     border: none;
                     border-radius: 8px;
                     cursor: pointer;
