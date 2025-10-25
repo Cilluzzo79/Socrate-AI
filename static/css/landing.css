@@ -82,7 +82,7 @@
 }
 
 .navbar-link:hover {
-  color: var(--color-primary-cyan);
+  color: var(--color-primary-lime);
 }
 
 .navbar-cta {
@@ -118,8 +118,8 @@
   right: 0;
   bottom: 0;
   background-image:
-    linear-gradient(rgba(0, 217, 192, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 217, 192, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(143, 239, 16, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143, 239, 16, 0.05) 1px, transparent 1px);
   background-size: 50px 50px;
   opacity: 0.3;
   animation: gridMove 20s linear infinite;
@@ -145,11 +145,11 @@
   margin-bottom: var(--space-6);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
-  color: var(--color-primary-cyan-light);
-  background: rgba(0, 217, 192, 0.1);
-  border: 1px solid var(--color-primary-cyan);
+  color: var(--color-primary-lime-light);
+  background: rgba(143, 239, 16, 0.1);
+  border: 1px solid var(--color-primary-lime);
   border-radius: var(--radius-full);
-  box-shadow: var(--glow-cyan);
+  box-shadow: var(--glow-lime);
 }
 
 .hero-title {
@@ -158,8 +158,8 @@
   line-height: 1.1;
   margin-bottom: var(--space-6);
   background: linear-gradient(135deg,
-    var(--color-primary-cyan-light) 0%,
-    var(--color-primary-cyan) 50%,
+    var(--color-primary-lime-light) 0%,
+    var(--color-primary-green) 50%,
     var(--color-accent-gold) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -168,8 +168,8 @@
 }
 
 @keyframes titleGlow {
-  0%, 100% { filter: drop-shadow(0 0 20px rgba(0, 217, 192, 0.4)); }
-  50% { filter: drop-shadow(0 0 40px rgba(0, 217, 192, 0.6)); }
+  0%, 100% { filter: drop-shadow(0 0 20px rgba(143, 239, 16, 0.4)); }
+  50% { filter: drop-shadow(0 0 40px rgba(143, 239, 16, 0.6)); }
 }
 
 .hero-subtitle {
@@ -200,7 +200,7 @@
 .hero-visual img {
   width: 100%;
   height: auto;
-  filter: drop-shadow(var(--glow-cyan));
+  filter: drop-shadow(var(--glow-lime));
   animation: float 6s ease-in-out infinite;
   background: transparent !important;
   mix-blend-mode: normal;
@@ -278,14 +278,14 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--color-primary-cyan), var(--color-accent-gold));
+  background: linear-gradient(90deg, var(--color-primary-lime), var(--color-accent-gold));
   opacity: 0;
   transition: opacity var(--transition-base);
 }
 
 .feature-card:hover {
-  border-color: var(--color-primary-cyan);
-  box-shadow: var(--shadow-xl), var(--glow-cyan);
+  border-color: var(--color-primary-lime);
+  box-shadow: var(--shadow-xl), var(--glow-lime);
   transform: translateY(-8px);
 }
 
@@ -302,11 +302,11 @@
   margin-bottom: var(--space-4);
   font-size: var(--text-4xl);
   background: linear-gradient(135deg,
-    rgba(0, 217, 192, 0.2),
+    rgba(143, 239, 16, 0.2),
     rgba(201, 169, 113, 0.2));
   border: 1px solid var(--color-border-primary);
   border-radius: var(--radius-xl);
-  box-shadow: var(--glow-cyan);
+  box-shadow: var(--glow-lime);
 }
 
 .feature-title {
@@ -347,7 +347,7 @@
 .stat-value {
   font-size: var(--text-5xl);
   font-weight: var(--font-extrabold);
-  background: linear-gradient(135deg, var(--color-primary-cyan), var(--color-accent-gold));
+  background: linear-gradient(135deg, var(--color-primary-lime), var(--color-accent-gold));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -367,7 +367,7 @@
 .cta {
   padding: var(--space-20) 0;
   background: linear-gradient(135deg,
-    rgba(0, 217, 192, 0.1) 0%,
+    rgba(143, 239, 16, 0.08) 0%,
     rgba(201, 169, 113, 0.1) 100%);
   border-top: 1px solid var(--color-border-primary);
   border-bottom: 1px solid var(--color-border-secondary);
@@ -384,7 +384,7 @@
   font-weight: var(--font-extrabold);
   margin-bottom: var(--space-4);
   background: linear-gradient(135deg,
-    var(--color-primary-cyan-light),
+    var(--color-primary-lime-light),
     var(--color-accent-gold));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -462,7 +462,7 @@
 }
 
 .footer-link:hover {
-  color: var(--color-primary-cyan);
+  color: var(--color-primary-lime);
 }
 
 .footer-bottom {
