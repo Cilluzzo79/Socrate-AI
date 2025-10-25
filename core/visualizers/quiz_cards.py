@@ -174,10 +174,10 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
             height: 100%;
             backface-visibility: hidden;
             border-radius: 15px;
-            padding: 60px 30px 50px 30px;
+            padding: 60px 30px 20px 30px;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
+            justify-content: space-between;
             align-items: center;
             overflow-y: auto;
             overflow-x: hidden;
@@ -241,13 +241,14 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
         }}
 
         .tap-hint {{
-            position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: relative;
+            width: 100%;
+            text-align: center;
             font-size: 0.85rem;
             opacity: 0.8;
             font-style: italic;
+            margin-top: 15px;
+            flex-shrink: 0;
         }}
 
         .print-button {{
