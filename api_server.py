@@ -1401,7 +1401,7 @@ ONLY output the map in the exact format shown above."""
             query=full_prompt,
             context="",  # Context is already in the prompt!
             temperature=0.1,  # Very low = more deterministic, less creative freedom
-            max_tokens=2000
+            max_tokens=1500  # Reduced to force conciseness
         )
 
         if response_data.get('metadata', {}).get('error'):
