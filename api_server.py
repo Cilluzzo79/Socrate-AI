@@ -1348,31 +1348,61 @@ def generate_mindmap_tool(document_id):
         # Get mindmap prompt
         mindmap_prompt = get_mermaid_mindmap_prompt(depth_level=depth, central_concept=topic if topic else None)
 
-        # Query document using RAG
+        # Get document chunks for context (like memvidBeta does)
+        from core.query_engine import query_engine
         metadata_file = document.file_path
         metadata_r2_key = document.doc_metadata.get('metadata_r2_key') if document.doc_metadata else None
 
-        user_tier = 'premium'  # TODO: Get from user settings
+        # Load metadata
+        if metadata_r2_key:
+            metadata = query_engine.load_document_metadata(metadata_r2_key, is_r2_key=True)
+        elif metadata_file:
+            metadata = query_engine.load_document_metadata(metadata_file, is_r2_key=False)
+        else:
+            return jsonify({'error': 'No metadata source available'}), 500
 
-        result = query_document(
-            query=mindmap_prompt,
-            metadata_file=metadata_file,
-            metadata_r2_key=metadata_r2_key,
-            top_k=15,  # Reduced from 40: Too much context confuses LLM for structured outputs
-            max_tokens=2500,  # Match old app: 2000-3000 range for mindmaps
-            temperature=0.3,  # Low temperature for strict format adherence
-            user_tier=user_tier,
-            query_type='mindmap',
-            command_params={'depth': depth, 'topic': topic}
+        if not metadata:
+            return jsonify({'error': 'Failed to load document metadata'}), 500
+
+        # Get all chunks
+        chunks = metadata.get('chunks', [])
+        if not chunks:
+            return jsonify({'error': 'No content found in document'}), 500
+
+        # Get stratified chunks (uniform sampling like memvidBeta)
+        total_chunks = len(chunks)
+        num_chunks = min(30, total_chunks)
+        step = max(1, total_chunks // num_chunks)
+        stratified_indices = [i * step for i in range(min(num_chunks, total_chunks // step))]
+        stratified_chunks = [chunks[i] for i in stratified_indices if i < len(chunks)]
+
+        # Build context from stratified chunks
+        context_parts = [chunk['text'] for chunk in stratified_chunks]
+        stratified_context = "\n\n---\n\n".join(context_parts)
+
+        # Call LLM directly (like memvidBeta does)
+        from core.llm_client import generate_chat_response
+
+        full_prompt = f"""Basandoti sul seguente contesto estratto dal documento, {mindmap_prompt}
+
+CONTESTO DEL DOCUMENTO:
+{stratified_context}
+
+Genera ora la mappa concettuale seguendo ESATTAMENTE il formato richiesto."""
+
+        response_data = generate_chat_response(
+            query=full_prompt,
+            context="",  # Context is already in the prompt!
+            temperature=0.3,
+            max_tokens=2000
         )
 
-        if not result.get('success'):
-            error_msg = result.get('error', 'Failed to generate mindmap')
-            logger.warning(f"Mindmap generation failed: {error_msg}")
+        if response_data.get('metadata', {}).get('error'):
+            logger.warning(f"Mindmap generation failed: {response_data['metadata'].get('message')}")
             return jsonify({'error': 'Failed to generate mindmap'}), 500
 
         # Log raw LLM response for debugging
-        llm_response = result['answer']
+        llm_response = response_data.get('text', '')
         logger.info(f"[MINDMAP DEBUG] Raw LLM response (first 500 chars): {llm_response[:500]}")
         logger.info(f"[MINDMAP DEBUG] Response length: {len(llm_response)} chars")
 
