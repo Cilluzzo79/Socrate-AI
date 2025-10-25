@@ -1,9 +1,14 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: ALT-A-OCR-PRE-PDF-21OCT2025
+ * VERSION: CHAT-FIX-25OCT2025-v2
  *
- * ALTERNATIVE A: OCR Pre-PDF (multi-page image-based PDF fix)
+ * LATEST CHANGES (25 OCT 2025):
+ * - Mobile-first chat interface redesign with cyan-purple gradient
+ * - Larger fonts and touch targets (iOS HIG compliance)
+ * - Aggressive cache-busting to force browser reload
+ *
+ * PREVIOUS: ALT-A-OCR-PRE-PDF (21 OCT 2025)
  * - OCR applied BEFORE PDF creation (parallel processing)
  * - Limit: 10 photos per batch (cost control + performance)
  * - Pre-extracted text stored in metadata → encoder uses it directly

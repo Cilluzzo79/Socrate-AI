@@ -43,8 +43,10 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 
-# Cache busting: Generate timestamp on startup (changes every deployment)
-APP_VERSION = os.getenv('RAILWAY_DEPLOYMENT_ID', str(int(datetime.now().timestamp())))
+# Cache busting: Manual version + deployment ID for aggressive cache invalidation
+# INCREMENT THIS VERSION WHEN MAKING UI/JS CHANGES!
+MANUAL_VERSION = "CHAT-FIX-25OCT2025-v2"
+APP_VERSION = f"{MANUAL_VERSION}-{os.getenv('RAILWAY_DEPLOYMENT_ID', str(int(datetime.now().timestamp())))}"
 logger.info(f"App version for cache busting: {APP_VERSION}")
 
 # SECURITY: SECRET_KEY validation
