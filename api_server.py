@@ -1383,17 +1383,24 @@ def generate_mindmap_tool(document_id):
         # Call LLM directly (like memvidBeta does)
         from core.llm_client import generate_chat_response
 
-        full_prompt = f"""Basandoti sul seguente contesto estratto dal documento, {mindmap_prompt}
+        full_prompt = f"""⚠️ CRITICAL: You MUST follow the EXACT format specified below. DO NOT use markdown headers (##, ###), DO NOT use numbered lists (1., 2.), DO NOT add analysis or explanations.
+
+{mindmap_prompt}
 
 CONTESTO DEL DOCUMENTO:
 {stratified_context}
 
-Genera ora la mappa concettuale seguendo ESATTAMENTE il formato richiesto."""
+REMEMBER: Start your response IMMEDIATELY with:
+=== MAPPA CONCETTUALE ===
+
+Then TEMA_CENTRALE:, DESCRIZIONE_CENTRALE:, then RAMO_1:, RAMO_2:, etc.
+DO NOT write analysis, DO NOT write "Step 1", DO NOT use markdown.
+ONLY output the map in the exact format shown above."""
 
         response_data = generate_chat_response(
             query=full_prompt,
             context="",  # Context is already in the prompt!
-            temperature=0.3,
+            temperature=0.1,  # Very low = more deterministic, less creative freedom
             max_tokens=2000
         )
 
