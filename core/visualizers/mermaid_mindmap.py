@@ -113,7 +113,9 @@ def parse_simple_mindmap(response: str) -> Dict:
 
     # Extract branches
     branches = []
-    ramo_pattern = r'RAMO_(\d+):\s*(.+?)(?=\n(?:RAMO_|\-\-\-|COLLEGAMENTI|===))'
+    # Match RAMO_N: ... until we hit another RAMO_, ---, COLLEGAMENTI, or ===
+    # But stop before empty lines or lines that look like connections
+    ramo_pattern = r'RAMO_(\d+):\s*(.+?)(?=\n(?:RAMO_|\-\-\-|COLLEGAMENTI|===|\n\s*\n))'
 
     for match in re.finditer(ramo_pattern, response, re.DOTALL):
         ramo_num = match.group(1)
@@ -126,9 +128,11 @@ def parse_simple_mindmap(response: str) -> Dict:
         # Extract sub-concepts
         sub_concepts = []
         for line in lines[1:]:
+            # Only process lines that have tree characters (├ └ │)
             if any(char in line for char in ['├', '└', '│']):
                 clean_line = re.sub(r'[├└│─\s]+', '', line, count=1).strip()
-                if clean_line and len(clean_line) > 3:
+                # Filter out lines that look like connections (contain <->, →, etc.)
+                if clean_line and len(clean_line) > 3 and '<->' not in clean_line and '→' not in clean_line and '->' not in clean_line:
                     sub_concepts.append(clean_line)
 
         branches.append({
