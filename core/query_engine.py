@@ -40,18 +40,31 @@ class SimpleQueryEngine:
     def __init__(self):
         """Initialize query engine (lazy load embedding model)"""
         self._model = None  # Lazy loaded
-        self.model_name = 'all-MiniLM-L6-v2'
+        # IMPROVED: Using multilingual MPNet model (768 dims vs 384, better for Italian)
+        # Falls back to MiniLM if multilingual not available
+        self.model_name = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
+        self.fallback_model_name = 'all-MiniLM-L6-v2'
 
     @property
     def model(self):
-        """Lazy load embedding model only when needed"""
+        """Lazy load embedding model only when needed (with fallback)"""
         if not EMBEDDINGS_AVAILABLE:
             return None
 
         if self._model is None:
-            logger.info(f"Loading embedding model: {self.model_name}...")
-            self._model = SentenceTransformer(self.model_name)
-            logger.info("Embedding model loaded successfully")
+            try:
+                logger.info(f"Loading embedding model: {self.model_name}...")
+                self._model = SentenceTransformer(self.model_name)
+                logger.info(f"Embedding model loaded successfully: {self.model_name}")
+            except Exception as e:
+                logger.warning(f"Failed to load {self.model_name}: {e}")
+                logger.info(f"Falling back to: {self.fallback_model_name}")
+                try:
+                    self._model = SentenceTransformer(self.fallback_model_name)
+                    logger.info(f"Fallback model loaded: {self.fallback_model_name}")
+                except Exception as fallback_error:
+                    logger.error(f"Failed to load fallback model: {fallback_error}")
+                    return None
 
         return self._model
 
@@ -143,12 +156,20 @@ class SimpleQueryEngine:
             semantic_norm = (semantic_scores - semantic_scores.min()) / (semantic_scores.max() - semantic_scores.min() + 1e-10)
             keyword_norm = (keyword_scores - keyword_scores.min()) / (keyword_scores.max() - keyword_scores.min() + 1e-10)
 
+            # IMPROVED: Detect proper nouns in query to adjust hybrid weighting
+            has_proper_nouns = any(len(term) > 2 and term[0].isupper() and not term.isupper()
+                                  for term in query.split())
+
             # Combine: 70% semantic, 30% keyword (prioritize semantic understanding)
             # BUT if keyword score is high (>0.8), boost it to catch exact matches
+            # IMPROVED: Also boost keyword weight if query contains proper nouns
             hybrid_scores = np.zeros(len(chunks))
             for i in range(len(chunks)):
                 if keyword_norm[i] > 0.8:
                     # Strong keyword match → boost keyword weight to 50%
+                    hybrid_scores[i] = 0.5 * semantic_norm[i] + 0.5 * keyword_norm[i]
+                elif has_proper_nouns:
+                    # Query contains proper nouns (regions, names) → boost keyword to 50%
                     hybrid_scores[i] = 0.5 * semantic_norm[i] + 0.5 * keyword_norm[i]
                 else:
                     # Normal: 70% semantic, 30% keyword
@@ -181,6 +202,7 @@ class SimpleQueryEngine:
     ) -> np.ndarray:
         """
         Calculate keyword-based scores for all chunks (TF-IDF-like)
+        IMPROVED: Detects and boosts proper nouns (capitalized terms like region names, recipe names)
 
         Args:
             query: User query
@@ -191,6 +213,13 @@ class SimpleQueryEngine:
         """
         query_lower = query.lower()
         query_terms = [term for term in query_lower.split() if len(term) > 2]  # Filter stopwords
+
+        # IMPROVED: Detect proper nouns in original query (before lowercasing)
+        proper_nouns = set()
+        for term in query.split():
+            # Proper noun: capitalized word that's not at start of sentence
+            if len(term) > 2 and term[0].isupper() and not term.isupper():
+                proper_nouns.add(term.lower())
 
         scores = np.zeros(len(chunks))
 
@@ -203,15 +232,24 @@ class SimpleQueryEngine:
             # Count term frequency for each query term
             score = 0
             for term in query_terms:
+                is_proper_noun = term in proper_nouns
+
                 # Exact term matches
                 term_count = text_lower.count(term)
-                score += term_count * 2  # Weight exact matches higher
+                if is_proper_noun:
+                    # BOOST proper nouns significantly (regions, names, etc.)
+                    score += term_count * 5  # Was 2, now 5 for proper nouns
+                else:
+                    score += term_count * 2  # Weight exact matches higher
 
                 # Partial matches (term as substring)
                 words = text_lower.split()
                 for word in words:
                     if term in word and term != word:  # Substring but not exact
-                        score += 0.5
+                        if is_proper_noun:
+                            score += 1.5  # Boost partial proper noun matches too
+                        else:
+                            score += 0.5
 
             scores[i] = score
 
@@ -289,10 +327,11 @@ class SimpleQueryEngine:
         command_params = command_params or {}
 
         # Adjust top_k and max_tokens based on tier AND query type
+        # IMPROVED: Increased limits to capture more relevant chunks (especially for proper nouns/regional content)
         tier_limits = {
-            'free': {'query': 5, 'summary': 20, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 30},
-            'pro': {'query': 10, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 100},
-            'enterprise': {'query': 20, 'summary': 100, 'quiz': 100, 'outline': 100, 'mindmap': 50, 'analyze': 200}
+            'free': {'query': 10, 'summary': 20, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 30},
+            'pro': {'query': 20, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 100},
+            'enterprise': {'query': 30, 'summary': 100, 'quiz': 100, 'outline': 100, 'mindmap': 50, 'analyze': 200}
         }
 
         tier_config = tier_limits.get(user_tier, tier_limits['free'])
