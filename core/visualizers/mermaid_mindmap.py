@@ -384,6 +384,68 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
             font-weight: 700 !important;
         }}
 
+        /* HIERARCHICAL COLORS - Different color for each branch level */
+        /* Level 0 = Root (gray) */
+        .mindmap-container .mindmap-node[id$="-0"] rect,
+        .mindmap-container .mindmap-node[id$="-0"] circle {{
+            fill: #cbd5e1 !important;
+            stroke: #64748b !important;
+        }}
+
+        /* Level 1 = Main branches (distinct vibrant colors) */
+        .mindmap-container .mindmap-node[id*="-0-0"] rect,
+        .mindmap-container .mindmap-node[id*="-0-0"] circle {{
+            fill: #fca5a5 !important;  /* Red */
+            stroke: #ef4444 !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-1"] rect,
+        .mindmap-container .mindmap-node[id*="-0-1"] circle {{
+            fill: #a5f3fc !important;  /* Cyan */
+            stroke: #06b6d4 !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-2"] rect,
+        .mindmap-container .mindmap-node[id*="-0-2"] circle {{
+            fill: #ddd6fe !important;  /* Purple */
+            stroke: #a855f7 !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-3"] rect,
+        .mindmap-container .mindmap-node[id*="-0-3"] circle {{
+            fill: #bef264 !important;  /* Lime */
+            stroke: #84cc16 !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-4"] rect,
+        .mindmap-container .mindmap-node[id*="-0-4"] circle {{
+            fill: #fdba74 !important;  /* Orange */
+            stroke: #f97316 !important;
+        }}
+
+        /* Level 2 = Sub-concepts (lighter shades of parent) */
+        .mindmap-container .mindmap-node[id*="-0-0-"] rect,
+        .mindmap-container .mindmap-node[id*="-0-0-"] circle {{
+            fill: #fecaca !important;  /* Light red */
+            stroke: #f87171 !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-1-"] rect,
+        .mindmap-container .mindmap-node[id*="-0-1-"] circle {{
+            fill: #cffafe !important;  /* Light cyan */
+            stroke: #22d3ee !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-2-"] rect,
+        .mindmap-container .mindmap-node[id*="-0-2-"] circle {{
+            fill: #e9d5ff !important;  /* Light purple */
+            stroke: #c084fc !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-3-"] rect,
+        .mindmap-container .mindmap-node[id*="-0-3-"] circle {{
+            fill: #d9f99d !important;  /* Light lime */
+            stroke: #a3e635 !important;
+        }}
+        .mindmap-container .mindmap-node[id*="-0-4-"] rect,
+        .mindmap-container .mindmap-node[id*="-0-4-"] circle {{
+            fill: #fed7aa !important;  /* Light orange */
+            stroke: #fb923c !important;
+        }}
+
         @media (max-width: 768px) {{
             .header h1 {{ font-size: 1.8rem; }}
             .mindmap-container {{ padding: 20px; }}
