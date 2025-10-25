@@ -391,22 +391,42 @@
                 fileInput.click();
             });
 
-            // Drag & drop
+            // Drag & drop - FIX: Accept ALL file types (PDF, DOCX, TXT, images)
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                // Force copy cursor for all file types
+                e.dataTransfer.dropEffect = 'copy';
                 uploadArea.classList.add('dragging');
             });
 
-            uploadArea.addEventListener('dragleave', () => {
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 uploadArea.classList.remove('dragging');
             });
 
             uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 uploadArea.classList.remove('dragging');
 
                 const files = e.dataTransfer.files;
+                console.log('[DRAG-DROP] Files dropped:', files.length, 'First file:', files[0]?.name, files[0]?.type);
+
                 if (files.length > 0) {
+                    // Validate file type against accepted extensions
+                    const acceptedTypes = ['.pdf', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.heic', '.heif', '.webp', '.bmp', '.tiff'];
+                    const fileName = files[0].name.toLowerCase();
+                    const isAccepted = acceptedTypes.some(ext => fileName.endsWith(ext));
+
+                    if (!isAccepted) {
+                        alert('❌ Tipo file non supportato.\n\nFormati accettati: PDF, DOCX, TXT, JPG, PNG, HEIC, WebP, TIFF');
+                        console.error('[DRAG-DROP] Rejected file type:', fileName);
+                        return;
+                    }
+
+                    console.log('[DRAG-DROP] File accepted, uploading:', fileName);
                     handleFileUpload(files[0]);
                 }
             });
