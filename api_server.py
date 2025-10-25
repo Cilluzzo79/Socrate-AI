@@ -45,7 +45,7 @@ app = Flask(__name__)
 
 # Cache busting: Manual version + deployment ID for aggressive cache invalidation
 # INCREMENT THIS VERSION WHEN MAKING UI/JS CHANGES!
-MANUAL_VERSION = "CHAT-FIX-25OCT2025-v2"
+MANUAL_VERSION = "RACE-FIX-25OCT2025-v3"
 APP_VERSION = f"{MANUAL_VERSION}-{os.getenv('RAILWAY_DEPLOYMENT_ID', str(int(datetime.now().timestamp())))}"
 logger.info(f"App version for cache busting: {APP_VERSION}")
 

@@ -368,18 +368,29 @@
             const script = document.createElement('script');
             script.src = '/static/js/dashboard.js?v={{ app_version }}&t=' + timestamp;
             script.async = false; // Load synchronously to ensure availability
+
+            // Wait for script to load before initializing
+            script.onload = function() {
+                console.log('[CACHE-BUSTER] dashboard.js loaded successfully');
+                // Initialize after dashboard.js is loaded
+                if (typeof loadDocuments === 'function') {
+                    loadDocuments();
+                } else {
+                    console.error('[INIT] loadDocuments not found in dashboard.js');
+                }
+                if (typeof setupUploadHandlers === 'function') {
+                    setupUploadHandlers();
+                } else {
+                    console.error('[INIT] setupUploadHandlers not found in dashboard.js');
+                }
+            };
+
             document.head.appendChild(script);
             console.log('[CACHE-BUSTER] Loading dashboard.js with timestamp:', timestamp);
         })();
     </script>
     <script>
         let documentToDelete = null;
-
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', () => {
-            loadDocuments();
-            setupUploadHandlers();
-        });
 
         // Setup drag & drop upload
         function setupUploadHandlers() {
