@@ -329,9 +329,9 @@ class SimpleQueryEngine:
         # Adjust top_k and max_tokens based on tier AND query type
         # IMPROVED: Increased limits to capture more relevant chunks (especially for proper nouns/regional content)
         tier_limits = {
-            'free': {'query': 10, 'summary': 20, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 30},
-            'pro': {'query': 20, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 100},
-            'enterprise': {'query': 30, 'summary': 100, 'quiz': 100, 'outline': 100, 'mindmap': 50, 'analyze': 200}
+            'free': {'query': 15, 'summary': 20, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 30},  # Increased query from 10 to 15
+            'pro': {'query': 25, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 100},  # Increased query from 20 to 25
+            'enterprise': {'query': 35, 'summary': 100, 'quiz': 100, 'outline': 100, 'mindmap': 50, 'analyze': 200}  # Increased query from 30 to 35
         }
 
         tier_config = tier_limits.get(user_tier, tier_limits['free'])
