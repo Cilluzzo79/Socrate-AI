@@ -417,29 +417,24 @@ class SimpleQueryEngine:
         # Find relevant chunks (STAGE 1: High Recall)
         candidate_chunks = self.find_relevant_chunks(query, chunks, retrieval_top_k)
 
-        # RERANKING: Select best chunks (STAGE 2: High Precision)
-        try:
-            from core.reranker import get_reranker
+        # PASS ALL CHUNKS TO LLM (no reranking limit)
+        # This allows LLM to find ALL references (titles + full content)
+        # For example: "Ossobuco" title on page 107 + recipe on page 120+
+        logger.info(f"[NO RERANKING LIMIT] Passing ALL {len(candidate_chunks)} chunks to LLM for comprehensive search")
+        relevant_chunks = candidate_chunks
 
-            # Calculate final top_k for LLM (fewer, higher quality)
-            final_top_k = self._calculate_final_top_k(query_type, user_tier)
-
-            logger.info(f"[RERANKING] {len(candidate_chunks)} → {final_top_k} chunks")
-
-            reranker = get_reranker()
-            relevant_chunks = reranker.rerank(
-                query=query,
-                chunks=candidate_chunks,
-                top_k=final_top_k
-            )
-
-            logger.info(f"[RERANKING] Success: selected {len(relevant_chunks)} best chunks")
-
-        except Exception as e:
-            logger.warning(f"[RERANKING] Failed, using top chunks: {e}")
-            # Fallback: use top chunks without reranking
-            final_top_k = min(top_k, len(candidate_chunks))
-            relevant_chunks = candidate_chunks[:final_top_k]
+        # Keep reranking code for future use if needed
+        # try:
+        #     from core.reranker import get_reranker
+        #     final_top_k = self._calculate_final_top_k(query_type, user_tier)
+        #     logger.info(f"[RERANKING] {len(candidate_chunks)} → {final_top_k} chunks")
+        #     reranker = get_reranker()
+        #     relevant_chunks = reranker.rerank(query=query, chunks=candidate_chunks, top_k=final_top_k)
+        #     logger.info(f"[RERANKING] Success: selected {len(relevant_chunks)} best chunks")
+        # except Exception as e:
+        #     logger.warning(f"[RERANKING] Failed, using top chunks: {e}")
+        #     final_top_k = min(top_k, len(candidate_chunks))
+        #     relevant_chunks = candidate_chunks[:final_top_k]
 
         if not relevant_chunks:
             return {
