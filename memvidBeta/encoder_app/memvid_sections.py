@@ -359,15 +359,26 @@ def divide_text_into_chunks(text, chunk_size, overlap, max_chunks_per_section=20
             start += max(int(chunk_size * 0.1), 1)
             continue
         
-        # Estrai il chunk
+        # Estrai il chunk con FORWARD OVERLAP per catturare contenuto della pagina successiva
         chunk_text = text[start:end]
-        
+
+        # FORWARD OVERLAP FIX: Aggiungi i primi 400 caratteri DOPO questo chunk
+        # Questo risolve il problema di liste/contenuti che vanno a capo su nuova pagina
+        forward_overlap_size = 400
+        if end < text_length:
+            forward_end = min(end + forward_overlap_size, text_length)
+            forward_text = text[end:forward_end]
+            if forward_text:
+                chunk_text = chunk_text + forward_text
+                print(f"[FORWARD OVERLAP] Chunk {chunk_index}: aggiunto forward overlap di {len(forward_text)} chars")
+
         # Crea metadati di base
         metadata = {
             "index": chunk_index,
             "start": start,
-            "end": end,
-            "length": len(chunk_text)
+            "end": end,  # Mantiene end originale per calcolo avanzamento
+            "length": len(chunk_text),  # La lunghezza include il forward overlap
+            "has_forward_overlap": end < text_length  # Flag per indicare presenza di forward overlap
         }
         
         # Cerca di estrarre un possibile titolo
