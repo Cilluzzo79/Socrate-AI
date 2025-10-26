@@ -26,7 +26,7 @@ def generate_and_save_embeddings(
     metadata_file: str,
     output_dir: str,
     document_id: str,
-    model_name: str = 'all-MiniLM-L6-v2',
+    model_name: str = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
     batch_size: int = 8,  # Very small batches for low memory
     max_chunks_per_batch: int = 50  # Process in very small groups
 ) -> Tuple[Optional[str], Optional[str]]:
@@ -214,7 +214,7 @@ def search_similar_chunks(
 
 def generate_and_save_embeddings_inline(
     metadata_file: str,
-    model_name: str = 'all-MiniLM-L6-v2',
+    model_name: str = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
     batch_size: int = 8,
     max_chunks_per_batch: int = 50
 ) -> bool:
