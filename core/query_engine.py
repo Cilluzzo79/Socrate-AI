@@ -328,10 +328,11 @@ class SimpleQueryEngine:
 
         # Adjust top_k and max_tokens based on tier AND query type
         # IMPROVED: Increased limits to capture more relevant chunks (especially for proper nouns/regional content)
+        # CRITICAL FIX: Increased query chunks to 30 to match mindmap's performance (mindmap uses 30, chat was using only 15)
         tier_limits = {
-            'free': {'query': 15, 'summary': 20, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 30},  # Increased query from 10 to 15
-            'pro': {'query': 25, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 100},  # Increased query from 20 to 25
-            'enterprise': {'query': 35, 'summary': 100, 'quiz': 100, 'outline': 100, 'mindmap': 50, 'analyze': 200}  # Increased query from 30 to 35
+            'free': {'query': 30, 'summary': 20, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 30},  # Increased query from 15 to 30 to match mindmap
+            'pro': {'query': 40, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 100},  # Increased query from 25 to 40
+            'enterprise': {'query': 50, 'summary': 100, 'quiz': 100, 'outline': 100, 'mindmap': 50, 'analyze': 200}  # Increased query from 35 to 50
         }
 
         tier_config = tier_limits.get(user_tier, tier_limits['free'])
