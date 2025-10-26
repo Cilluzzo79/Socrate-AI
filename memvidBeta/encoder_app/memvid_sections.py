@@ -461,20 +461,37 @@ def process_file_in_sections(file_path, chunk_size, overlap, output_format="mp4"
         
         # Elabora ogni sezione
         all_chunks = []
+        previous_section_tail = ""  # Store last part of previous section for overlap
+
         for i, section in enumerate(sections):
             update_activity(f"Elaborazione sezione {i+1}/{len(sections)}...")
             print(f"\nElaborazione sezione {i+1}/{len(sections)}...")
-            print(f"Dimensione della sezione: {len(section)} caratteri")
-            
+
+            # INTER-SECTION OVERLAP FIX: Add overlap from previous section
+            if i > 0 and previous_section_tail:
+                # Prepend last 'overlap' characters from previous section
+                section_with_overlap = previous_section_tail + section
+                print(f"[OVERLAP FIX] Aggiunto overlap di {len(previous_section_tail)} caratteri dalla sezione precedente")
+            else:
+                section_with_overlap = section
+
+            print(f"Dimensione della sezione: {len(section_with_overlap)} caratteri")
+
             # Dividi la sezione in chunk con limite di sicurezza
-            section_chunks = divide_text_into_chunks(section, chunk_size, overlap, max_chunks_per_section=2000)
+            section_chunks = divide_text_into_chunks(section_with_overlap, chunk_size, overlap, max_chunks_per_section=2000)
             print(f"Generati {len(section_chunks)} chunk dalla sezione {i+1}")
-            
+
             # Se la sezione ha prodotto zero chunk, salta
             if not section_chunks:
                 print(f"[AVVISO] La sezione {i+1} non ha prodotto chunk, potrebbe esserci un problema")
+                previous_section_tail = ""
                 continue
-            
+
+            # Store tail of current section for next iteration
+            # Use 2x overlap to ensure we capture boundary content
+            tail_size = min(overlap * 2, len(section))
+            previous_section_tail = section[-tail_size:] if tail_size > 0 else ""
+
             # Aggiungi gli offset corretti agli indici
             update_activity(f"Aggiornamento indici per {len(section_chunks)} chunks")
             offset = len(all_chunks)
@@ -482,7 +499,7 @@ def process_file_in_sections(file_path, chunk_size, overlap, output_format="mp4"
                 chunk["metadata"]["index"] = offset + j
                 chunk["metadata"]["section"] = i + 1
                 chunk["metadata"]["total_sections"] = len(sections)
-            
+
             # Aggiungi i chunk alla lista completa
             all_chunks.extend(section_chunks)
             
