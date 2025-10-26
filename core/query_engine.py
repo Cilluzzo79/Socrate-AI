@@ -307,12 +307,12 @@ class SimpleQueryEngine:
     def _calculate_final_top_k(self, query_type: str, user_tier: str) -> int:
         """Calculate final chunks for LLM after reranking (high precision)"""
         final_limits = {
-            'free': {'query': 10, 'summary': 15, 'quiz': 20, 'outline': 20, 'mindmap': 15, 'analyze': 20},
-            'pro': {'query': 15, 'summary': 25, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 40},
-            'enterprise': {'query': 20, 'summary': 35, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 60}
+            'free': {'query': 15, 'summary': 15, 'quiz': 20, 'outline': 20, 'mindmap': 15, 'analyze': 20},
+            'pro': {'query': 20, 'summary': 25, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 40},
+            'enterprise': {'query': 25, 'summary': 35, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 60}
         }
         tier_config = final_limits.get(user_tier, final_limits['free'])
-        return tier_config.get(query_type, 10)
+        return tier_config.get(query_type, 15)
 
     def query_document(
         self,
