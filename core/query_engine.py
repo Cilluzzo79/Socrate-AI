@@ -293,6 +293,27 @@ class SimpleQueryEngine:
 
         return scored_chunks[:top_k]
 
+    def _calculate_dynamic_retrieval_top_k(self, total_chunks: int, user_tier: str, query_type: str) -> int:
+        """Calculate optimal chunks for RETRIEVAL stage (high recall)"""
+        if total_chunks <= 20:
+            return max(10, int(total_chunks * 0.8))  # Small docs: 80%
+        elif total_chunks <= 200:
+            return int(total_chunks * 0.30)  # Medium: 30%
+        elif total_chunks <= 500:
+            return int(total_chunks * 0.20)  # Large: 20%
+        else:
+            return int(total_chunks * 0.15)  # Very large: 15%
+
+    def _calculate_final_top_k(self, query_type: str, user_tier: str) -> int:
+        """Calculate final chunks for LLM after reranking (high precision)"""
+        final_limits = {
+            'free': {'query': 10, 'summary': 15, 'quiz': 20, 'outline': 20, 'mindmap': 15, 'analyze': 20},
+            'pro': {'query': 15, 'summary': 25, 'quiz': 30, 'outline': 30, 'mindmap': 20, 'analyze': 40},
+            'enterprise': {'query': 20, 'summary': 35, 'quiz': 50, 'outline': 50, 'mindmap': 30, 'analyze': 60}
+        }
+        tier_config = final_limits.get(user_tier, final_limits['free'])
+        return tier_config.get(query_type, 10)
+
     def query_document(
         self,
         query: str,
@@ -380,8 +401,45 @@ class SimpleQueryEngine:
                 'metadata': {'error': 'no_chunks'}
             }
 
-        # Find relevant chunks
-        relevant_chunks = self.find_relevant_chunks(query, chunks, top_k)
+        # DYNAMIC TOP_K: Calculate optimal retrieval based on document size
+        total_chunks = len(chunks)
+        retrieval_top_k = self._calculate_dynamic_retrieval_top_k(
+            total_chunks=total_chunks,
+            user_tier=user_tier,
+            query_type=query_type
+        )
+
+        logger.info(
+            f"[DYNAMIC_RAG] Doc has {total_chunks} chunks, "
+            f"retrieving {retrieval_top_k} for reranking"
+        )
+
+        # Find relevant chunks (STAGE 1: High Recall)
+        candidate_chunks = self.find_relevant_chunks(query, chunks, retrieval_top_k)
+
+        # RERANKING: Select best chunks (STAGE 2: High Precision)
+        try:
+            from core.reranker import get_reranker
+
+            # Calculate final top_k for LLM (fewer, higher quality)
+            final_top_k = self._calculate_final_top_k(query_type, user_tier)
+
+            logger.info(f"[RERANKING] {len(candidate_chunks)} → {final_top_k} chunks")
+
+            reranker = get_reranker()
+            relevant_chunks = reranker.rerank(
+                query=query,
+                chunks=candidate_chunks,
+                top_k=final_top_k
+            )
+
+            logger.info(f"[RERANKING] Success: selected {len(relevant_chunks)} best chunks")
+
+        except Exception as e:
+            logger.warning(f"[RERANKING] Failed, using top chunks: {e}")
+            # Fallback: use top chunks without reranking
+            final_top_k = min(top_k, len(candidate_chunks))
+            relevant_chunks = candidate_chunks[:final_top_k]
 
         if not relevant_chunks:
             return {

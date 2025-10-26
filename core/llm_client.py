@@ -70,7 +70,7 @@ Remember: You are a helpful assistant, not a philosopher. Answer questions clear
 
 class OpenRouterClient:
     """Client for interacting with the OpenRouter API."""
-    
+
     def __init__(self, api_key: str = None, model: str = None):
         """
         Initialize the OpenRouter client.
@@ -80,10 +80,16 @@ class OpenRouterClient:
             model: Model to use (defaults to config)
         """
         self.api_key = api_key or OPENROUTER_API_KEY
-        # Changed to Claude Haiku 4.5 for better reliability and speed
-        # Claude Haiku: fast, reliable, good balance of cost/performance
-        # Input: ~$0.80/1M, Output: ~$4.00/1M
-        self.model = model or "anthropic/claude-haiku-4.5"
+
+        # Cost-optimized model selection (can override via env var MODEL_NAME)
+        # OPTION A: Claude Haiku 4.5 (reliable, balanced)
+        #   Input: ~$0.80/1M, Output: ~$4.00/1M
+        # OPTION B: Gemini 1.5 Flash (best cost/performance)
+        #   Input: ~$0.075/1M, Output: ~$0.30/1M (-93% cost vs Haiku!)
+        #   200K context, fast, multilingual
+        default_model = os.getenv('MODEL_NAME', 'google/gemini-flash-1.5')
+
+        self.model = model or default_model
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
 
         if not self.api_key:
