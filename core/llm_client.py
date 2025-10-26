@@ -162,7 +162,7 @@ class OpenRouterClient:
                     error_message = error_data["error"].get("message", str(e))
             except Exception:
                 error_payload = getattr(response, "text", "")
-            logger.error("Error calling OpenRouter API", extra={"message": error_message, "response": error_payload})
+            logger.error("Error calling OpenRouter API", extra={"error_msg": error_message, "response": error_payload})
             return {
                 "error": True,
                 "message": error_message
