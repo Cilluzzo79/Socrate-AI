@@ -808,7 +808,7 @@ def calculate_optimal_config(page_count: int, user_tier: str = 'free') -> dict:
     elif page_count <= 200:
         # Medium documents: balanced
         base_chunk_size = 1500
-        base_overlap = 300  # Increased from 250 to 300 (20% of 1500)
+        base_overlap = 600  # Increased from 300 to 600 (40% of 1500) for better context preservation
         max_chunks = None
 
     else:
