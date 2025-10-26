@@ -82,12 +82,15 @@ class OpenRouterClient:
         self.api_key = api_key or OPENROUTER_API_KEY
 
         # Cost-optimized model selection (can override via env var MODEL_NAME)
-        # OPTION A: Claude Haiku 4.5 (reliable, balanced)
+        # OPTION A: GPT-4o Mini (proven reliable, good cost)
+        #   Input: ~$0.15/1M, Output: ~$0.60/1M
+        #   128K context, fast, multilingual
+        # OPTION B: Claude Haiku 4.5 (reliable, balanced)
         #   Input: ~$0.80/1M, Output: ~$4.00/1M
-        # OPTION B: Gemini 1.5 Flash (best cost/performance)
-        #   Input: ~$0.075/1M, Output: ~$0.30/1M (-93% cost vs Haiku!)
-        #   200K context, fast, multilingual
-        default_model = os.getenv('MODEL_NAME', 'google/gemini-flash-1.5')
+        # OPTION C: Gemini 1.5 Flash (best cost if available)
+        #   Input: ~$0.075/1M, Output: ~$0.30/1M
+        #   Model: google/gemini-flash-1.5-8b
+        default_model = os.getenv('MODEL_NAME', 'openai/gpt-4o-mini')
 
         self.model = model or default_model
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
