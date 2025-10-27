@@ -31,6 +31,15 @@ from core.content_generators import (
     generate_analysis_prompt
 )
 
+# Import Universal Term Specificity Analyzer (ATSW solution)
+try:
+    from core.term_specificity_analyzer import create_term_analyzer_from_chunks
+    ATSW_AVAILABLE = True
+    logger.info("✅ ATSW (Adaptive Term Specificity Weighting) available")
+except ImportError:
+    ATSW_AVAILABLE = False
+    logger.warning("⚠️ ATSW not available - using standard hybrid search")
+
 
 class SimpleQueryEngine:
     """
@@ -54,6 +63,9 @@ class SimpleQueryEngine:
         except Exception as e:
             logger.warning(f"[CACHE] Failed to initialize cache: {e}")
             self.cache = None
+
+        # UNIVERSAL RAG: Term specificity analyzer (lazy loaded per document)
+        self._term_analyzer = None
 
     @property
     def model(self):
@@ -121,6 +133,7 @@ class SimpleQueryEngine:
     ) -> List[Dict[str, Any]]:
         """
         Find most relevant chunks using HYBRID SEARCH (semantic + keyword matching)
+        ENHANCED with ATSW (Adaptive Term Specificity Weighting) for universal RAG
 
         Args:
             query: User query
@@ -133,6 +146,16 @@ class SimpleQueryEngine:
 
         if not chunks:
             return []
+
+        # UNIVERSAL RAG: Initialize term analyzer if not already done
+        if ATSW_AVAILABLE and self._term_analyzer is None:
+            logger.info("[ATSW] Initializing term specificity analyzer for this document...")
+            self._term_analyzer = create_term_analyzer_from_chunks(chunks, min_term_length=2)
+            if self._term_analyzer:
+                stats = self._term_analyzer.get_statistics_summary()
+                logger.info(f"[ATSW] Ready: {stats['total_unique_terms']} unique terms analyzed")
+            else:
+                logger.warning("[ATSW] Analyzer initialization failed - using standard hybrid search")
 
         # If embeddings not available, use pure keyword matching
         if not EMBEDDINGS_AVAILABLE or self.model is None:
@@ -224,6 +247,7 @@ class SimpleQueryEngine:
         """
         Calculate keyword-based scores for all chunks (TF-IDF-like)
         IMPROVED: Detects and boosts proper nouns (capitalized terms like region names, recipe names)
+        UNIVERSAL RAG: Enhanced with ATSW (Adaptive Term Specificity Weighting)
 
         Args:
             query: User query
@@ -242,6 +266,17 @@ class SimpleQueryEngine:
             if len(term) > 2 and term[0].isupper() and not term.isupper():
                 proper_nouns.add(term.lower())
 
+        # UNIVERSAL RAG: Compute term specificity weights if ATSW available
+        term_weights = {}
+        if self._term_analyzer is not None:
+            try:
+                term_weights = self._term_analyzer.compute_query_term_weights(query)
+                key_terms = self._term_analyzer.identify_key_terms(query, top_k=2)
+                logger.info(f"[ATSW] Query: '{query}' | Key terms: {key_terms} | Weights: {term_weights}")
+            except Exception as e:
+                logger.warning(f"[ATSW] Failed to compute term weights: {e}")
+                term_weights = {}
+
         scores = np.zeros(len(chunks))
 
         for i, chunk in enumerate(chunks):
@@ -255,22 +290,27 @@ class SimpleQueryEngine:
             for term in query_terms:
                 is_proper_noun = term in proper_nouns
 
+                # UNIVERSAL RAG: Apply ATSW weighting
+                # If ATSW available, use learned weights; otherwise use heuristic boosting
+                if term in term_weights:
+                    # Use ATSW weight (0-1 range, normalized by total specificity)
+                    term_boost_factor = 1.0 + (term_weights[term] * 10.0)  # Scale to 1-11x range
+                elif is_proper_noun:
+                    # Fallback: Proper noun boost
+                    term_boost_factor = 5.0
+                else:
+                    # Fallback: Standard weight
+                    term_boost_factor = 2.0
+
                 # Exact term matches
                 term_count = text_lower.count(term)
-                if is_proper_noun:
-                    # BOOST proper nouns significantly (regions, names, etc.)
-                    score += term_count * 5  # Was 2, now 5 for proper nouns
-                else:
-                    score += term_count * 2  # Weight exact matches higher
+                score += term_count * term_boost_factor
 
                 # Partial matches (term as substring)
                 words = text_lower.split()
                 for word in words:
                     if term in word and term != word:  # Substring but not exact
-                        if is_proper_noun:
-                            score += 1.5  # Boost partial proper noun matches too
-                        else:
-                            score += 0.5
+                        score += 0.5 * term_boost_factor
 
             scores[i] = score
 
@@ -338,15 +378,15 @@ class SimpleQueryEngine:
         - Fewer chunks = lower LLM costs
         - Diversity filter ensures quality chunks
         """
-        # TESTING: Temporarily using 50 chunks to find optimal limit
-        # Normal values: free=12, pro=15, enterprise=20
+        # COST-OPTIMIZED + ATSW: With ATSW improving recall, we can use fewer chunks
+        # ATSW compensates for lower chunk count by better ranking specificity
         final_limits = {
-            'free': {'query': 50, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 50, 'analyze': 50},
-            'pro': {'query': 50, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 50, 'analyze': 50},
-            'enterprise': {'query': 50, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 50, 'analyze': 50}
+            'free': {'query': 20, 'summary': 25, 'quiz': 20, 'outline': 25, 'mindmap': 30, 'analyze': 25},
+            'pro': {'query': 25, 'summary': 30, 'quiz': 25, 'outline': 30, 'mindmap': 35, 'analyze': 30},
+            'enterprise': {'query': 30, 'summary': 40, 'quiz': 30, 'outline': 40, 'mindmap': 50, 'analyze': 40}
         }
         tier_config = final_limits.get(user_tier, final_limits['free'])
-        return tier_config.get(query_type, 12)
+        return tier_config.get(query_type, 20)
 
     def query_document(
         self,
@@ -476,7 +516,7 @@ class SimpleQueryEngine:
                 query=query,
                 chunks=candidate_chunks,
                 top_k=final_top_k,
-                diversity_threshold=0.70  # TESTING: Lower threshold for better recall (was 0.85)
+                diversity_threshold=0.80  # ATSW-OPTIMIZED: Balanced for better recall with term weighting
             )
 
             logger.info(f"[RERANKING SUCCESS] Selected {len(relevant_chunks)} diverse chunks (cost reduction: ~{100*(1-len(relevant_chunks)/len(candidate_chunks)):.0f}%)")
