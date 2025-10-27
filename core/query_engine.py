@@ -338,10 +338,12 @@ class SimpleQueryEngine:
         - Fewer chunks = lower LLM costs
         - Diversity filter ensures quality chunks
         """
+        # TESTING: Temporarily using 50 chunks to find optimal limit
+        # Normal values: free=12, pro=15, enterprise=20
         final_limits = {
-            'free': {'query': 12, 'summary': 15, 'quiz': 20, 'outline': 20, 'mindmap': 15, 'analyze': 20},
-            'pro': {'query': 15, 'summary': 20, 'quiz': 25, 'outline': 25, 'mindmap': 20, 'analyze': 30},
-            'enterprise': {'query': 20, 'summary': 30, 'quiz': 35, 'outline': 35, 'mindmap': 25, 'analyze': 40}
+            'free': {'query': 50, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 50, 'analyze': 50},
+            'pro': {'query': 50, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 50, 'analyze': 50},
+            'enterprise': {'query': 50, 'summary': 50, 'quiz': 50, 'outline': 50, 'mindmap': 50, 'analyze': 50}
         }
         tier_config = final_limits.get(user_tier, final_limits['free'])
         return tier_config.get(query_type, 12)
@@ -474,7 +476,7 @@ class SimpleQueryEngine:
                 query=query,
                 chunks=candidate_chunks,
                 top_k=final_top_k,
-                diversity_threshold=0.85  # High diversity to capture titles + content
+                diversity_threshold=0.70  # TESTING: Lower threshold for better recall (was 0.85)
             )
 
             logger.info(f"[RERANKING SUCCESS] Selected {len(relevant_chunks)} diverse chunks (cost reduction: ~{100*(1-len(relevant_chunks)/len(candidate_chunks)):.0f}%)")
