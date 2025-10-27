@@ -45,6 +45,16 @@ class SimpleQueryEngine:
         self.model_name = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
         self.fallback_model_name = 'all-MiniLM-L6-v2'
 
+        # COST-OPTIMIZED: Initialize cache manager
+        try:
+            from core.cache_manager import get_cache_manager
+            self.cache = get_cache_manager(ttl_seconds=3600)  # 1 hour TTL
+            if self.cache.enabled:
+                logger.info("[CACHE] Cache manager enabled for cost optimization")
+        except Exception as e:
+            logger.warning(f"[CACHE] Failed to initialize cache: {e}")
+            self.cache = None
+
     @property
     def model(self):
         """Lazy load embedding model only when needed (with fallback)"""
@@ -130,7 +140,18 @@ class SimpleQueryEngine:
 
         try:
             # STEP 1: Semantic search (embeddings)
-            query_embedding = self.model.encode(query, convert_to_tensor=False)
+            # COST-OPTIMIZED: Check embedding cache first
+            query_embedding = None
+            if self.cache and self.cache.enabled:
+                query_embedding = self.cache.get_embedding(query)
+
+            if query_embedding is None:
+                # Cache miss: compute embedding
+                query_embedding = self.model.encode(query, convert_to_tensor=False)
+
+                # Cache for future use
+                if self.cache and self.cache.enabled:
+                    self.cache.set_embedding(query, query_embedding)
 
             # Check if chunks have precomputed embeddings inline
             has_inline_embeddings = all('embedding' in chunk for chunk in chunks)
@@ -294,25 +315,36 @@ class SimpleQueryEngine:
         return scored_chunks[:top_k]
 
     def _calculate_dynamic_retrieval_top_k(self, total_chunks: int, user_tier: str, query_type: str) -> int:
-        """Calculate optimal chunks for RETRIEVAL stage (high recall)"""
+        """
+        Calculate optimal chunks for RETRIEVAL stage (high recall)
+
+        COST-OPTIMIZED: Increased coverage to capture all relevant content
+        Then reranking filters to top chunks (high precision)
+        """
         if total_chunks <= 20:
             return max(10, int(total_chunks * 0.8))  # Small docs: 80%
         elif total_chunks <= 200:
-            return int(total_chunks * 0.30)  # Medium: 30%
+            return int(total_chunks * 0.40)  # Medium: 40% (was 30%)
         elif total_chunks <= 500:
-            return int(total_chunks * 0.20)  # Large: 20%
+            return int(total_chunks * 0.30)  # Large: 30% (was 20%)
         else:
-            return int(total_chunks * 0.15)  # Very large: 15%
+            return int(total_chunks * 0.20)  # Very large: 20% (was 15%)
 
     def _calculate_final_top_k(self, query_type: str, user_tier: str) -> int:
-        """Calculate final chunks for LLM after reranking (high precision)"""
+        """
+        Calculate final chunks for LLM after reranking (high precision)
+
+        COST-OPTIMIZED: Reduced final chunks for better cost/quality balance
+        - Fewer chunks = lower LLM costs
+        - Diversity filter ensures quality chunks
+        """
         final_limits = {
-            'free': {'query': 30, 'summary': 30, 'quiz': 35, 'outline': 35, 'mindmap': 30, 'analyze': 35},
-            'pro': {'query': 40, 'summary': 45, 'quiz': 50, 'outline': 50, 'mindmap': 40, 'analyze': 60},
-            'enterprise': {'query': 50, 'summary': 60, 'quiz': 70, 'outline': 70, 'mindmap': 50, 'analyze': 80}
+            'free': {'query': 12, 'summary': 15, 'quiz': 20, 'outline': 20, 'mindmap': 15, 'analyze': 20},
+            'pro': {'query': 15, 'summary': 20, 'quiz': 25, 'outline': 25, 'mindmap': 20, 'analyze': 30},
+            'enterprise': {'query': 20, 'summary': 30, 'quiz': 35, 'outline': 35, 'mindmap': 25, 'analyze': 40}
         }
         tier_config = final_limits.get(user_tier, final_limits['free'])
-        return tier_config.get(query_type, 30)
+        return tier_config.get(query_type, 12)
 
     def query_document(
         self,
@@ -370,6 +402,15 @@ class SimpleQueryEngine:
 
         logger.info(f"Processing {query_type} (tier: {user_tier}, top_k: {top_k}): {query[:100]}")
 
+        # COST-OPTIMIZED: Check result cache first
+        # Cache key includes doc_id to ensure correct document
+        doc_id = metadata_r2_key or metadata_file
+        if self.cache and self.cache.enabled and doc_id:
+            cached_result = self.cache.get_result(query, doc_id)
+            if cached_result:
+                logger.info(f"[CACHE HIT] Returning cached result (zero cost, zero latency)")
+                return cached_result
+
         # Load document metadata (prefer R2, fallback to local)
         if metadata_r2_key:
             metadata = self.load_document_metadata(metadata_r2_key, is_r2_key=True)
@@ -417,24 +458,33 @@ class SimpleQueryEngine:
         # Find relevant chunks (STAGE 1: High Recall)
         candidate_chunks = self.find_relevant_chunks(query, chunks, retrieval_top_k)
 
-        # PASS ALL CHUNKS TO LLM (no reranking limit)
-        # This allows LLM to find ALL references (titles + full content)
-        # For example: "Ossobuco" title on page 107 + recipe on page 120+
-        logger.info(f"[NO RERANKING LIMIT] Passing ALL {len(candidate_chunks)} chunks to LLM for comprehensive search")
-        relevant_chunks = candidate_chunks
+        # STAGE 2: COST-OPTIMIZED RERANKING with Diversity Filter
+        # This reduces chunks to LLM by 85-90% while maintaining high quality
+        # - Captures both titles + full content (diversity filter)
+        # - Removes redundant chunks
+        # - Significantly reduces LLM costs
+        try:
+            from core.reranker_optimized import get_reranker
 
-        # Keep reranking code for future use if needed
-        # try:
-        #     from core.reranker import get_reranker
-        #     final_top_k = self._calculate_final_top_k(query_type, user_tier)
-        #     logger.info(f"[RERANKING] {len(candidate_chunks)} → {final_top_k} chunks")
-        #     reranker = get_reranker()
-        #     relevant_chunks = reranker.rerank(query=query, chunks=candidate_chunks, top_k=final_top_k)
-        #     logger.info(f"[RERANKING] Success: selected {len(relevant_chunks)} best chunks")
-        # except Exception as e:
-        #     logger.warning(f"[RERANKING] Failed, using top chunks: {e}")
-        #     final_top_k = min(top_k, len(candidate_chunks))
-        #     relevant_chunks = candidate_chunks[:final_top_k]
+            final_top_k = self._calculate_final_top_k(query_type, user_tier)
+            logger.info(f"[COST-OPTIMIZED RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final chunks")
+
+            reranker = get_reranker(use_cross_encoder=False)  # Use lightweight by default
+            relevant_chunks = reranker.rerank(
+                query=query,
+                chunks=candidate_chunks,
+                top_k=final_top_k,
+                diversity_threshold=0.85  # High diversity to capture titles + content
+            )
+
+            logger.info(f"[RERANKING SUCCESS] Selected {len(relevant_chunks)} diverse chunks (cost reduction: ~{100*(1-len(relevant_chunks)/len(candidate_chunks)):.0f}%)")
+
+        except Exception as e:
+            logger.warning(f"[RERANKING FAILED] Falling back to top chunks: {e}")
+            final_top_k = self._calculate_final_top_k(query_type, user_tier)
+            final_top_k = min(final_top_k, len(candidate_chunks))
+            relevant_chunks = candidate_chunks[:final_top_k]
+            logger.info(f"[FALLBACK] Using top {len(relevant_chunks)} chunks without reranking")
 
         if not relevant_chunks:
             return {
@@ -520,7 +570,7 @@ class SimpleQueryEngine:
             # Extract usage info for cost tracking
             usage = llm_response.get('metadata', {}).get('usage', {})
 
-            return {
+            result = {
                 'success': True,
                 'answer': llm_response.get('text', 'Errore nella generazione della risposta'),
                 'sources': sources,
@@ -534,6 +584,12 @@ class SimpleQueryEngine:
                     'finish_reason': llm_response.get('metadata', {}).get('finish_reason')
                 }
             }
+
+            # COST-OPTIMIZED: Cache successful result for future queries
+            if self.cache and self.cache.enabled and doc_id:
+                self.cache.set_result(query, doc_id, result)
+
+            return result
 
         except Exception as e:
             logger.error(f"Error calling LLM: {e}", exc_info=True)
