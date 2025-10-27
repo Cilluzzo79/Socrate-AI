@@ -90,7 +90,11 @@ class OpenRouterClient:
         #   128K context, fast, multilingual
         # OPTION C: Claude Haiku 4.5 (reliable, balanced)
         #   Input: ~$0.80/1M, Output: ~$4.00/1M
-        default_model = os.getenv('MODEL_NAME', 'google/gemini-2.0-flash-001')
+        # OPTION D: Claude Sonnet 4.5 (TESTING - best quality for complex queries)
+        #   Input: ~$3.00/1M, Output: ~$15.00/1M
+
+        # TEMPORARY: Testing Sonnet 4.5 for Ossobuco issue
+        default_model = os.getenv('MODEL_NAME', 'anthropic/claude-sonnet-4-20250514')
 
         self.model = model or default_model
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
