@@ -567,33 +567,57 @@ class SimpleQueryEngine:
         # Find relevant chunks (STAGE 1: High Recall)
         candidate_chunks = self.find_relevant_chunks(query, chunks, retrieval_top_k)
 
-        # STAGE 2: COST-OPTIMIZED RERANKING with Diversity Filter
-        # This reduces chunks to LLM by 85-90% while maintaining high quality
-        # - Captures both titles + full content (diversity filter)
-        # - Removes redundant chunks
-        # - Significantly reduces LLM costs
+        # STAGE 2: GPU-ACCELERATED RERANKING (Modal Labs)
+        # Try GPU Cross-Encoder first (best quality), fallback to local reranker if unavailable
+        final_top_k = self._calculate_final_top_k(query_type, user_tier, query)
+
         try:
-            from core.reranker_optimized import get_reranker
+            from core.modal_rerank_client import rerank_with_modal, is_modal_enabled
 
-            final_top_k = self._calculate_final_top_k(query_type, user_tier, query)  # RECIPE FIX: Pass query
-            logger.info(f"[COST-OPTIMIZED RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final chunks")
+            if is_modal_enabled():
+                logger.info(f"[MODAL-RERANKING] Attempting GPU reranking: {len(candidate_chunks)} candidates → {final_top_k} final")
 
-            reranker = get_reranker(use_cross_encoder=False)  # Use lightweight by default
-            relevant_chunks = reranker.rerank(
-                query=query,
-                chunks=candidate_chunks,
-                top_k=final_top_k,
-                diversity_threshold=0.80  # ATSW-OPTIMIZED: Balanced for better recall with term weighting
-            )
+                # Call Modal GPU service with 2s timeout
+                relevant_chunks = rerank_with_modal(
+                    query=query,
+                    chunks=candidate_chunks,
+                    top_k=final_top_k,
+                    timeout=2.0
+                )
 
-            logger.info(f"[RERANKING SUCCESS] Selected {len(relevant_chunks)} diverse chunks (cost reduction: ~{100*(1-len(relevant_chunks)/len(candidate_chunks)):.0f}%)")
+                if relevant_chunks is not None:
+                    logger.info(f"[MODAL SUCCESS] GPU reranked to {len(relevant_chunks)} chunks")
+                else:
+                    logger.warning("[MODAL] GPU reranking failed, falling back to local reranker")
+                    raise Exception("Modal reranking returned None")
+            else:
+                logger.debug("[MODAL] Not configured, using local reranker")
+                raise Exception("Modal not enabled")
 
         except Exception as e:
-            logger.warning(f"[RERANKING FAILED] Falling back to top chunks: {e}")
-            final_top_k = self._calculate_final_top_k(query_type, user_tier, query)  # RECIPE FIX: Pass query
-            final_top_k = min(final_top_k, len(candidate_chunks))
-            relevant_chunks = candidate_chunks[:final_top_k]
-            logger.info(f"[FALLBACK] Using top {len(relevant_chunks)} chunks without reranking")
+            # FALLBACK: Use local diversity reranker
+            logger.info(f"[LOCAL-RERANKING] Using diversity reranker: {e}")
+
+            try:
+                from core.reranker_optimized import get_reranker
+
+                logger.info(f"[COST-OPTIMIZED RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final chunks")
+
+                reranker = get_reranker(use_cross_encoder=False)  # Use lightweight by default
+                relevant_chunks = reranker.rerank(
+                    query=query,
+                    chunks=candidate_chunks,
+                    top_k=final_top_k,
+                    diversity_threshold=0.80  # ATSW-OPTIMIZED: Balanced for better recall with term weighting
+                )
+
+                logger.info(f"[RERANKING SUCCESS] Selected {len(relevant_chunks)} diverse chunks (cost reduction: ~{100*(1-len(relevant_chunks)/len(candidate_chunks)):.0f}%)")
+
+            except Exception as rerank_error:
+                logger.warning(f"[RERANKING FAILED] Falling back to top chunks: {rerank_error}")
+                final_top_k = min(final_top_k, len(candidate_chunks))
+                relevant_chunks = candidate_chunks[:final_top_k]
+                logger.info(f"[FALLBACK] Using top {len(relevant_chunks)} chunks without reranking")
 
         if not relevant_chunks:
             return {
