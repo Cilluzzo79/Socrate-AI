@@ -270,9 +270,21 @@ class SimpleQueryEngine:
         term_weights = {}
         if self._term_analyzer is not None:
             try:
-                term_weights = self._term_analyzer.compute_query_term_weights(query)
-                key_terms = self._term_analyzer.identify_key_terms(query, top_k=2)
-                logger.info(f"[ATSW] Query: '{query}' | Key terms: {key_terms} | Weights: {term_weights}")
+                # Extract ONLY the actual user query (not conversation history)
+                # Query format: "Conversazione precedente:...\nNuova domanda dell'utente: ACTUAL_QUERY\n..."
+                actual_query = query
+                if "Nuova domanda dell'utente:" in query:
+                    # Extract text after "Nuova domanda dell'utente:"
+                    parts = query.split("Nuova domanda dell'utente:")
+                    if len(parts) > 1:
+                        # Get everything after the marker, stop at next newline or "Rispondi"
+                        query_part = parts[1].split('\n')[0].strip()
+                        if query_part:
+                            actual_query = query_part
+
+                term_weights = self._term_analyzer.compute_query_term_weights(actual_query)
+                key_terms = self._term_analyzer.identify_key_terms(actual_query, top_k=2)
+                logger.info(f"[ATSW] Actual query: '{actual_query}' | Key terms: {key_terms} | Weights: {term_weights}")
             except Exception as e:
                 logger.warning(f"[ATSW] Failed to compute term weights: {e}")
                 term_weights = {}
