@@ -88,13 +88,22 @@ class UniversalTermSpecificityAnalyzer:
 
     def _tokenize(self, text: str) -> List[str]:
         """Simple tokenization (split on whitespace and normalize)."""
-        # Lowercase and split
-        tokens = text.lower().split()
+        import re
+
+        # Lowercase
+        text = text.lower()
+
+        # Remove punctuation but keep apostrophes in words (l'ossobuco)
+        # Keep only alphanumeric and apostrophes
+        text = re.sub(r"[^\w\s']", ' ', text)
+
+        # Split on whitespace
+        tokens = text.split()
 
         # Filter by length and stopwords
         tokens = [
-            t for t in tokens
-            if len(t) >= self.min_term_length and t not in self.stopwords
+            t.strip("'") for t in tokens  # Remove leading/trailing apostrophes
+            if len(t) >= self.min_term_length and t.strip("'") not in self.stopwords
         ]
 
         return tokens

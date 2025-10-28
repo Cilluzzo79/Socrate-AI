@@ -294,7 +294,8 @@ class SimpleQueryEngine:
                 # If ATSW available, use learned weights; otherwise use heuristic boosting
                 if term in term_weights:
                     # Use ATSW weight (0-1 range, normalized by total specificity)
-                    term_boost_factor = 1.0 + (term_weights[term] * 10.0)  # Scale to 1-11x range
+                    # Scale more conservatively: 1x to 6x range (not 1-11x)
+                    term_boost_factor = 1.0 + (term_weights[term] * 5.0)
                 elif is_proper_noun:
                     # Fallback: Proper noun boost
                     term_boost_factor = 5.0
