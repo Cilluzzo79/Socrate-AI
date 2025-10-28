@@ -204,12 +204,19 @@ class SimpleQueryEngine:
             has_proper_nouns = any(len(term) > 2 and term[0].isupper() and not term.isupper()
                                   for term in query.split())
 
+            # RECIPE FIX: Detect recipe queries for special hybrid weighting
+            is_recipe = self._is_recipe_query(query)
+
             # Combine: 70% semantic, 30% keyword (prioritize semantic understanding)
             # BUT if keyword score is high (>0.8), boost it to catch exact matches
             # IMPROVED: Also boost keyword weight if query contains proper nouns
+            # RECIPE FIX: Boost keyword weight to 60% for recipe queries (overcome title-content separation)
             hybrid_scores = np.zeros(len(chunks))
             for i in range(len(chunks)):
-                if keyword_norm[i] > 0.8:
+                if is_recipe:
+                    # RECIPE MODE: 40% semantic, 60% keyword (keywords crucial for recipe matching)
+                    hybrid_scores[i] = 0.4 * semantic_norm[i] + 0.6 * keyword_norm[i]
+                elif keyword_norm[i] > 0.8:
                     # Strong keyword match → boost keyword weight to 50%
                     hybrid_scores[i] = 0.5 * semantic_norm[i] + 0.5 * keyword_norm[i]
                 elif has_proper_nouns:
@@ -238,6 +245,31 @@ class SimpleQueryEngine:
             logger.error(f"Error in hybrid search: {e}")
             # Fallback to keyword matching
             return self._keyword_matching(query, chunks, top_k)
+
+    def _is_recipe_query(self, query: str) -> bool:
+        """
+        Detect if query is asking for a recipe.
+
+        RECIPE FIX: Recipe queries need special handling due to title-content separation issue.
+
+        Args:
+            query: User query string
+
+        Returns:
+            True if query appears to be asking for a recipe
+        """
+        recipe_keywords = [
+            'ricetta', 'ricette', 'preparano', 'prepara', 'preparare', 'preparazione',
+            'ingredienti', 'cucinare', 'cucina', 'cucinato', 'cucinati',
+            'come si fa', 'come si prepara', 'come fare'
+        ]
+        query_lower = query.lower()
+        is_recipe = any(keyword in query_lower for keyword in recipe_keywords)
+
+        if is_recipe:
+            logger.info(f"[RECIPE MODE] Recipe query detected: '{query[:100]}'")
+
+        return is_recipe
 
     def _calculate_keyword_scores(
         self,
@@ -306,11 +338,12 @@ class SimpleQueryEngine:
                 # If ATSW available, use learned weights; otherwise use heuristic boosting
                 if term in term_weights:
                     # Use ATSW weight (0-1 range, normalized by total specificity)
-                    # Scale more conservatively: 1x to 6x range (not 1-11x)
-                    term_boost_factor = 1.0 + (term_weights[term] * 5.0)
+                    # RECIPE FIX: Cap boost at 4x maximum (was 6x) to prevent over-amplification
+                    # Scale: 1x to 4x range for balanced keyword emphasis
+                    term_boost_factor = 1.0 + (term_weights[term] * 3.0)  # Cap at 4x (1 + 1*3 = 4)
                 elif is_proper_noun:
-                    # Fallback: Proper noun boost
-                    term_boost_factor = 5.0
+                    # Fallback: Proper noun boost (also capped at 4x)
+                    term_boost_factor = 4.0
                 else:
                     # Fallback: Standard weight
                     term_boost_factor = 2.0
@@ -367,30 +400,52 @@ class SimpleQueryEngine:
 
         return scored_chunks[:top_k]
 
-    def _calculate_dynamic_retrieval_top_k(self, total_chunks: int, user_tier: str, query_type: str) -> int:
+    def _calculate_dynamic_retrieval_top_k(self, total_chunks: int, user_tier: str, query_type: str, query: str = "") -> int:
         """
         Calculate optimal chunks for RETRIEVAL stage (high recall)
 
         COST-OPTIMIZED: Increased coverage to capture all relevant content
         Then reranking filters to top chunks (high precision)
-        """
-        if total_chunks <= 20:
-            return max(10, int(total_chunks * 0.8))  # Small docs: 80%
-        elif total_chunks <= 200:
-            return int(total_chunks * 0.40)  # Medium: 40% (was 30%)
-        elif total_chunks <= 500:
-            return int(total_chunks * 0.30)  # Large: 30% (was 20%)
-        else:
-            return int(total_chunks * 0.20)  # Very large: 20% (was 15%)
 
-    def _calculate_final_top_k(self, query_type: str, user_tier: str) -> int:
+        RECIPE FIX: Higher coverage for recipe queries to overcome title-content separation
+        """
+        # RECIPE FIX: Detect recipe queries and apply higher coverage
+        is_recipe = self._is_recipe_query(query) if query else False
+
+        if is_recipe:
+            # RECIPE MODE: Increase coverage significantly due to title-content chunking issue
+            if total_chunks <= 20:
+                return max(10, int(total_chunks * 0.9))  # Small: 90% coverage
+            elif total_chunks <= 200:
+                return int(total_chunks * 0.50)  # Medium: 50% (vs 40% normal)
+            elif total_chunks <= 500:
+                return int(total_chunks * 0.45)  # Large: 45% (vs 30% normal)
+            else:
+                return int(total_chunks * 0.40)  # Very large: 40% (vs 20% normal)
+        else:
+            # NORMAL MODE: Standard coverage
+            if total_chunks <= 20:
+                return max(10, int(total_chunks * 0.8))  # Small docs: 80%
+            elif total_chunks <= 200:
+                return int(total_chunks * 0.40)  # Medium: 40% (was 30%)
+            elif total_chunks <= 500:
+                return int(total_chunks * 0.30)  # Large: 30% (was 20%)
+            else:
+                return int(total_chunks * 0.20)  # Very large: 20% (was 15%)
+
+    def _calculate_final_top_k(self, query_type: str, user_tier: str, query: str = "") -> int:
         """
         Calculate final chunks for LLM after reranking (high precision)
 
         COST-OPTIMIZED: Reduced final chunks for better cost/quality balance
         - Fewer chunks = lower LLM costs
         - Diversity filter ensures quality chunks
+
+        RECIPE FIX: Increase final chunks for recipe queries to capture title + full content
         """
+        # RECIPE FIX: Detect recipe queries and apply higher final_top_k
+        is_recipe = self._is_recipe_query(query) if query else False
+
         # COST-OPTIMIZED + ATSW: With ATSW improving recall, we can use fewer chunks
         # ATSW compensates for lower chunk count by better ranking specificity
         final_limits = {
@@ -399,7 +454,15 @@ class SimpleQueryEngine:
             'enterprise': {'query': 30, 'summary': 40, 'quiz': 30, 'outline': 40, 'mindmap': 50, 'analyze': 40}
         }
         tier_config = final_limits.get(user_tier, final_limits['free'])
-        return tier_config.get(query_type, 20)
+        base_top_k = tier_config.get(query_type, 20)
+
+        # RECIPE FIX: Increase final_top_k by 50% for recipe queries (20 → 30, 25 → 38, etc.)
+        if is_recipe:
+            recipe_top_k = int(base_top_k * 1.5)
+            logger.info(f"[RECIPE MODE] Increased final_top_k: {base_top_k} → {recipe_top_k}")
+            return recipe_top_k
+
+        return base_top_k
 
     def query_document(
         self,
@@ -502,7 +565,8 @@ class SimpleQueryEngine:
         retrieval_top_k = self._calculate_dynamic_retrieval_top_k(
             total_chunks=total_chunks,
             user_tier=user_tier,
-            query_type=query_type
+            query_type=query_type,
+            query=query  # RECIPE FIX: Pass query for recipe detection
         )
 
         logger.info(
@@ -521,7 +585,7 @@ class SimpleQueryEngine:
         try:
             from core.reranker_optimized import get_reranker
 
-            final_top_k = self._calculate_final_top_k(query_type, user_tier)
+            final_top_k = self._calculate_final_top_k(query_type, user_tier, query)  # RECIPE FIX: Pass query
             logger.info(f"[COST-OPTIMIZED RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final chunks")
 
             reranker = get_reranker(use_cross_encoder=False)  # Use lightweight by default
@@ -536,7 +600,7 @@ class SimpleQueryEngine:
 
         except Exception as e:
             logger.warning(f"[RERANKING FAILED] Falling back to top chunks: {e}")
-            final_top_k = self._calculate_final_top_k(query_type, user_tier)
+            final_top_k = self._calculate_final_top_k(query_type, user_tier, query)  # RECIPE FIX: Pass query
             final_top_k = min(final_top_k, len(candidate_chunks))
             relevant_chunks = candidate_chunks[:final_top_k]
             logger.info(f"[FALLBACK] Using top {len(relevant_chunks)} chunks without reranking")

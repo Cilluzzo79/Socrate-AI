@@ -44,6 +44,26 @@ class CostOptimizedReranker:
         else:
             logger.info("Using lightweight reranker (memory efficient)")
 
+    def _is_recipe_query(self, query: str) -> bool:
+        """
+        Detect if query is asking for a recipe.
+
+        RECIPE FIX: Recipe queries need lower diversity threshold to capture both title and content.
+
+        Args:
+            query: User query string
+
+        Returns:
+            True if query appears to be asking for a recipe
+        """
+        recipe_keywords = [
+            'ricetta', 'ricette', 'preparano', 'prepara', 'preparare', 'preparazione',
+            'ingredienti', 'cucinare', 'cucina', 'cucinato', 'cucinati',
+            'come si fa', 'come si prepara', 'come fare'
+        ]
+        query_lower = query.lower()
+        return any(keyword in query_lower for keyword in recipe_keywords)
+
     @property
     def cross_encoder(self):
         """Lazy load cross-encoder model"""
@@ -73,6 +93,7 @@ class CostOptimizedReranker:
             top_k: Number of final chunks to return
             diversity_threshold: Cosine similarity threshold for diversity
                                Higher = more diverse (0.85 recommended)
+                               RECIPE FIX: Automatically lowered to 0.70 for recipe queries
 
         Returns:
             Top-k chunks that are relevant AND diverse
@@ -85,6 +106,13 @@ class CostOptimizedReranker:
             # Not enough chunks to filter, return all
             logger.info(f"Only {len(chunks)} chunks, returning all (no reranking needed)")
             return chunks
+
+        # RECIPE FIX: Lower diversity threshold for recipe queries
+        is_recipe = self._is_recipe_query(query)
+        if is_recipe:
+            original_threshold = diversity_threshold
+            diversity_threshold = 0.70  # Lower threshold to allow similar title+content chunks
+            logger.info(f"[RECIPE MODE] Lowered diversity threshold: {original_threshold} → {diversity_threshold} (capture title + full content)")
 
         logger.info(f"[RERANKING] Starting: {len(chunks)} candidates → {top_k} final (diversity: {diversity_threshold})")
 
