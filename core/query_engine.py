@@ -299,24 +299,14 @@ class SimpleQueryEngine:
                 proper_nouns.add(term.lower())
 
         # UNIVERSAL RAG: Compute term specificity weights if ATSW available
+        # CRITICAL FIX: Query is now ALWAYS clean (conversation extraction happens at API level)
         term_weights = {}
         if self._term_analyzer is not None:
             try:
-                # Extract ONLY the actual user query (not conversation history)
-                # Query format: "Conversazione precedente:...\nNuova domanda dell'utente: ACTUAL_QUERY\n..."
-                actual_query = query
-                if "Nuova domanda dell'utente:" in query:
-                    # Extract text after "Nuova domanda dell'utente:"
-                    parts = query.split("Nuova domanda dell'utente:")
-                    if len(parts) > 1:
-                        # Get everything after the marker, stop at next newline or "Rispondi"
-                        query_part = parts[1].split('\n')[0].strip()
-                        if query_part:
-                            actual_query = query_part
-
-                term_weights = self._term_analyzer.compute_query_term_weights(actual_query)
-                key_terms = self._term_analyzer.identify_key_terms(actual_query, top_k=2)
-                logger.info(f"[ATSW] Actual query: '{actual_query}' | Key terms: {key_terms} | Weights: {term_weights}")
+                # Query is already clean - no extraction needed
+                term_weights = self._term_analyzer.compute_query_term_weights(query)
+                key_terms = self._term_analyzer.identify_key_terms(query, top_k=2)
+                logger.info(f"[ATSW] Query: '{query}' | Key terms: {key_terms} | Weights: {term_weights}")
             except Exception as e:
                 logger.warning(f"[ATSW] Failed to compute term weights: {e}")
                 term_weights = {}
@@ -638,39 +628,46 @@ class SimpleQueryEngine:
 
         logger.info(f"Built context from {len(relevant_chunks)} chunks ({len(context)} chars)")
 
-        # Generate specialized prompt based on command type
-        final_query = query
-        if query_type == 'quiz':
-            final_query = generate_quiz_prompt(
-                quiz_type=command_params.get('quiz_type', 'multiple_choice'),
-                num_questions=command_params.get('num_questions', 10),
-                difficulty=command_params.get('difficulty', 'medium'),
-                focus_area=command_params.get('focus_area')
-            )
-        elif query_type == 'outline':
-            final_query = generate_outline_prompt(
-                outline_type=command_params.get('outline_type', 'hierarchical'),
-                detail_level=command_params.get('detail_level', 'medium'),
-                focus_area=command_params.get('focus_area')
-            )
-        elif query_type == 'mindmap':
-            final_query = generate_mindmap_prompt(
-                central_concept=command_params.get('central_concept'),
-                depth_level=command_params.get('depth_level', 3),
-                focus_area=command_params.get('focus_area')
-            )
-        elif query_type == 'summary':
-            final_query = generate_summary_prompt(
-                summary_type=command_params.get('summary_type', 'medium'),
-                length=command_params.get('length', '3-5 paragrafi'),
-                focus_area=command_params.get('focus_area')
-            )
-        elif query_type == 'analyze':
-            final_query = generate_analysis_prompt(
-                analysis_type=command_params.get('analysis_type', 'thematic'),
-                focus_area=command_params.get('focus_area'),
-                depth=command_params.get('depth', 'profonda')
-            )
+        # CRITICAL FIX: Use llm_prompt_override if provided (for conversation context)
+        # This separates retrieval (clean query) from generation (contextualized prompt)
+        if command_params and 'llm_prompt_override' in command_params:
+            # Use the contextualized prompt from API (includes conversation history)
+            final_query = command_params['llm_prompt_override']
+            logger.info(f"[LLM] Using contextualized prompt with conversation history")
+        else:
+            # Generate specialized prompt based on command type
+            final_query = query
+            if query_type == 'quiz':
+                final_query = generate_quiz_prompt(
+                    quiz_type=command_params.get('quiz_type', 'multiple_choice'),
+                    num_questions=command_params.get('num_questions', 10),
+                    difficulty=command_params.get('difficulty', 'medium'),
+                    focus_area=command_params.get('focus_area')
+                )
+            elif query_type == 'outline':
+                final_query = generate_outline_prompt(
+                    outline_type=command_params.get('outline_type', 'hierarchical'),
+                    detail_level=command_params.get('detail_level', 'medium'),
+                    focus_area=command_params.get('focus_area')
+                )
+            elif query_type == 'mindmap':
+                final_query = generate_mindmap_prompt(
+                    central_concept=command_params.get('central_concept'),
+                    depth_level=command_params.get('depth_level', 3),
+                    focus_area=command_params.get('focus_area')
+                )
+            elif query_type == 'summary':
+                final_query = generate_summary_prompt(
+                    summary_type=command_params.get('summary_type', 'medium'),
+                    length=command_params.get('length', '3-5 paragrafi'),
+                    focus_area=command_params.get('focus_area')
+                )
+            elif query_type == 'analyze':
+                final_query = generate_analysis_prompt(
+                    analysis_type=command_params.get('analysis_type', 'thematic'),
+                    focus_area=command_params.get('focus_area'),
+                    depth=command_params.get('depth', 'profonda')
+                )
 
         # Call LLM
         try:

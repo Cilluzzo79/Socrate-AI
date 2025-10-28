@@ -1222,10 +1222,15 @@ def document_chat(document_id):
                 'help': 'Document may need to be reprocessed'
             }), 500
 
-        # Build enhanced query with conversation context
-        enhanced_query = query
+        # CRITICAL FIX: Separate retrieval query from LLM prompt to prevent contamination
+        # Retrieval uses CLEAN query (no conversation history)
+        # LLM generation uses CONTEXTUALIZED prompt (with conversation history)
+        retrieval_query = query  # Clean query for semantic search
+
+        # Build contextualized prompt for LLM generation
+        llm_prompt = query
         if conversation_context:
-            enhanced_query = f"""Conversazione precedente:
+            llm_prompt = f"""Conversazione precedente:
 {conversation_context}
 
 Nuova domanda dell'utente: {query}
@@ -1236,13 +1241,13 @@ Rispondi alla nuova domanda tenendo conto del contesto della conversazione."""
         from core.query_engine import query_document
 
         result = query_document(
-            query=enhanced_query,
+            query=retrieval_query,  # Clean query for retrieval
             metadata_file=metadata_file,
             metadata_r2_key=metadata_r2_key,
             top_k=top_k,
             user_tier=user_tier,
             query_type='chat',
-            command_params={}
+            command_params={'llm_prompt_override': llm_prompt}  # Contextualized prompt for LLM
         )
 
         # Build updated messages array
