@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 MODAL_RERANK_URL = os.getenv("MODAL_RERANK_URL")
 
 # Configuration
-DEFAULT_TIMEOUT = 2.0  # 2 seconds timeout
+DEFAULT_TIMEOUT = 30.0  # 30 seconds timeout (allow cold starts)
 MAX_CHUNKS_PER_REQUEST = 100  # Modal service limit
 DEFAULT_TOP_K = 10
 
