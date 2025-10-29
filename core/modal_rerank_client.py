@@ -29,6 +29,11 @@ DEFAULT_TIMEOUT = 30.0  # 30 seconds timeout (allow cold starts for GPU model lo
 MAX_CHUNKS_PER_REQUEST = 100  # Modal service limit
 DEFAULT_TOP_K = 10
 
+# Log timeout at module load for debugging deployments
+import logging
+_logger = logging.getLogger(__name__)
+_logger.info(f"[MODAL-CLIENT-INIT] DEFAULT_TIMEOUT = {DEFAULT_TIMEOUT}s (commit d0655f6+)")
+
 
 def is_modal_enabled() -> bool:
     """Check if Modal GPU reranking is enabled."""
