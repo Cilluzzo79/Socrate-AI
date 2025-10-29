@@ -577,12 +577,12 @@ class SimpleQueryEngine:
             if is_modal_enabled():
                 logger.info(f"[MODAL-RERANKING] Attempting GPU reranking: {len(candidate_chunks)} candidates → {final_top_k} final")
 
-                # Call Modal GPU service with 2s timeout
+                # Call Modal GPU service (uses DEFAULT_TIMEOUT = 30.0s for cold starts)
                 relevant_chunks = rerank_with_modal(
                     query=query,
                     chunks=candidate_chunks,
-                    top_k=final_top_k,
-                    timeout=2.0
+                    top_k=final_top_k
+                    # timeout parameter removed - will use DEFAULT_TIMEOUT from modal_rerank_client
                 )
 
                 if relevant_chunks is not None:
