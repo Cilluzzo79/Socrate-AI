@@ -196,6 +196,9 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
     <title>Mappa Concettuale - {document_title}</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <style>
@@ -206,7 +209,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         }}
 
         body {{
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
             color: #e2e8f0;
             min-height: 100vh;
@@ -220,7 +223,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         }}
 
         .header {{
-            background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
+            background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%);
             padding: 40px;
             border-radius: 15px;
             text-align: center;
@@ -241,7 +244,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
 
         .description-box {{
             background: #1e293b;
-            border: 2px solid #06b6d4;
+            border: 2px solid #8FEF10;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 30px;
@@ -249,7 +252,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         }}
 
         .description-box h2 {{
-            color: #06b6d4;
+            color: #8FEF10;
             margin-bottom: 10px;
             font-size: 1.3rem;
         }}
@@ -273,7 +276,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
             position: absolute;
             top: 30px;
             right: 30px;
-            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            background: linear-gradient(135deg, #8FEF10 0%, #7DD900 100%);
             color: white;
             border: none;
             padding: 12px 24px;
@@ -287,7 +290,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         }}
 
         .print-button:hover {{
-            background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+            background: linear-gradient(135deg, #7DD900 0%, #A4FF2E 100%);
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(6, 182, 212, 0.5);
         }}
@@ -337,7 +340,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         }}
 
         .connections-box h2 {{
-            color: #06b6d4;
+            color: #8FEF10;
             margin-bottom: 15px;
             font-size: 1.3rem;
         }}
@@ -347,7 +350,7 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
             padding: 12px 15px;
             margin-bottom: 10px;
             border-radius: 8px;
-            border-left: 4px solid #a855f7;
+            border-left: 4px solid #D4AF37;
             color: #cbd5e1;
         }}
 
@@ -405,12 +408,12 @@ def generate_mermaid_mindmap_html(data: Dict, document_title: str) -> str:
         .mindmap-container .mindmap-node[id*="-0-1"] rect,
         .mindmap-container .mindmap-node[id*="-0-1"] circle {{
             fill: #a5f3fc !important;  /* Cyan */
-            stroke: #06b6d4 !important;
+            stroke: #8FEF10 !important;
         }}
         .mindmap-container .mindmap-node[id*="-0-2"] rect,
         .mindmap-container .mindmap-node[id*="-0-2"] circle {{
             fill: #ddd6fe !important;  /* Purple */
-            stroke: #a855f7 !important;
+            stroke: #D4AF37 !important;
         }}
         .mindmap-container .mindmap-node[id*="-0-3"] rect,
         .mindmap-container .mindmap-node[id*="-0-3"] circle {{

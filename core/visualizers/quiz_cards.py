@@ -68,6 +68,9 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Interattivo - {document_title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {{
             margin: 0;
@@ -76,8 +79,8 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
         }}
 
         body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0A1612 0%, #15241E 100%);
             min-height: 100vh;
             padding: 20px;
         }}
@@ -102,10 +105,11 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
         }}
 
         .header h1 {{
-            color: #667eea;
+            color: #8FEF10;
             font-size: 2.2rem;
             margin-bottom: 10px;
-        }}
+        
+            font-family: "Space Grotesk", sans-serif;}}
 
         .header-meta {{
             color: #666;
@@ -121,10 +125,11 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
         }}
 
         .quiz-info h2 {{
-            color: #667eea;
+            color: #8FEF10;
             margin-bottom: 15px;
             font-size: 1.3rem;
-        }}
+        
+            font-family: "Space Grotesk", sans-serif;}}
 
         .quiz-info p {{
             color: #555;
@@ -184,12 +189,12 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
         }}
 
         .card-front {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0A1612 0%, #15241E 100%);
             color: white;
         }}
 
         .card-back {{
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #D4AF37 0%, #C9A971 100%);  
             color: white;
             transform: rotateY(180deg);
         }}
@@ -251,26 +256,44 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
             flex-shrink: 0;
         }}
 
-        .print-button {{
+        /* Compact Toolbar */
+        .toolbar {{
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: white;
-            color: #667eea;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            transition: all 0.3s;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
             z-index: 1000;
         }}
 
-        .print-button:hover {{
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        .toolbar-btn {{
+            width: 44px;
+            height: 44px;
+            background: rgba(143, 239, 16, 0.15);
+            border: 2px solid #8FEF10;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(143, 239, 16, 0.3);
+        }}
+
+        .toolbar-btn:hover {{
+            background: rgba(143, 239, 16, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(143, 239, 16, 0.5);
+        }}
+
+        @media (max-width: 768px) {{
+            .toolbar {{
+                top: auto;
+                bottom: 20px;
+                right: 20px;
+                flex-direction: column;
+            }}
         }}
 
         @media print {{
@@ -288,7 +311,7 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
                 box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             }}
 
-            .print-button {{
+            .toolbar {{
                 display: none;
             }}
 
@@ -315,7 +338,8 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
 
             .header h1 {{
                 font-size: 1.5rem;
-            }}
+            
+            font-family: "Space Grotesk", sans-serif;}}
 
             .question-text {{
                 font-size: 1rem;
@@ -324,7 +348,11 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
     </style>
 </head>
 <body>
-    <button class="print-button" onclick="window.print()">🖨️ Stampa / PDF</button>
+    <!-- Compact Toolbar -->
+    <div class="toolbar">
+        <button class="toolbar-btn" onclick="window.print()" title="Stampa / Scarica PDF">🖨️</button>
+        <button class="toolbar-btn" onclick="downloadHTML()" title="Scarica HTML">💾</button>
+    </div>
 
     <div class="container">
         <div class="header">
@@ -340,7 +368,7 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
             <p><strong>Tipo:</strong> {quiz_type_label}</p>
             <p><strong>Difficoltà:</strong> {difficulty_label}</p>
             <p><strong>Numero domande:</strong> {len(questions)}</p>
-            <p style="margin-top: 15px; font-style: italic; color: #667eea;">
+            <p style="margin-top: 15px; font-style: italic; color: #8FEF10;">
                 💡 Clicca su ogni card per vedere la risposta!
             </p>
         </div>
@@ -351,6 +379,20 @@ def generate_quiz_cards_html(quiz_content: str, document_title: str, quiz_config
     </div>
 
     <script>
+        // Download HTML function
+        function downloadHTML() {{
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], {{ type: 'text/html' }});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'quiz_{document_title.replace(" ", "_")}.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }}
+        
         // Add click handlers to all cards
         document.querySelectorAll('.card').forEach(card => {{
             card.addEventListener('click', function() {{

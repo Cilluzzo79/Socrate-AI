@@ -171,6 +171,9 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
     <title>Schema - {document_title}</title>
     <style>
         * {{
@@ -180,14 +183,14 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
         }}
 
         body {{
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
             color: #e2e8f0;
             line-height: 1.6;
         }}
 
         .header {{
-            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%);
             padding: 30px;
             box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3);
             position: sticky;
@@ -226,7 +229,7 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
 
         .print-button {{
             background: white;
-            color: #06b6d4;
+            color: #8FEF10;
             border: none;
             padding: 10px 20px;
             border-radius: 8px;
@@ -260,7 +263,7 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
         }}
 
         .sidebar h3 {{
-            color: #06b6d4;
+            color: #8FEF10;
             margin-bottom: 15px;
             font-size: 1.1rem;
             text-transform: uppercase;
@@ -281,7 +284,7 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
 
         .toc-item:hover, .toc-item.active {{
             background: #1e40af;
-            border-left-color: #06b6d4;
+            border-left-color: #8FEF10;
             transform: translateX(5px);
             color: white;
         }}
@@ -306,7 +309,7 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
         }}
 
         .section-header {{
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, #15241E 0%, #8FEF10 100%);
             padding: 20px;
             cursor: pointer;
             user-select: none;
@@ -314,7 +317,7 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
         }}
 
         .section-header:hover {{
-            background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+            background: linear-gradient(135deg, #1A2B24 0%, #A4FF2E 100%);
         }}
 
         .section-header h2 {{
@@ -373,11 +376,11 @@ def generate_outline_html(outline_data: Dict, document_title: str, outline_type:
             margin: 15px 0;
             border-radius: 8px;
             overflow: hidden;
-            border-left: 4px solid #06b6d4;
+            border-left: 4px solid #8FEF10;
         }}
 
         .subsection h3 {{
-            color: #06b6d4;
+            color: #8FEF10;
             padding: 15px;
             cursor: pointer;
             user-select: none;
