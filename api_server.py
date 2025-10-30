@@ -604,7 +604,7 @@ def upload_batch_documents():
         logger.info(f"Processing {len(files)} images with memory-efficient method...")
 
         total_size = 0
-        max_size_mb = 50
+        max_size_mb = 200  # Increased from 50MB to 200MB for unlimited photo batches
         max_dimension = 2000  # Max pixels on longest side
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -740,18 +740,16 @@ def upload_batch_documents():
 
         logger.info(f"Created PDF: {len(processed_paths)} pages, {pdf_size} bytes")
 
-        # Upload PDF to R2
-        from core.s3_storage import upload_file, generate_file_key
+        # OPTIMIZATION: Skip PDF upload to R2 - we only need OCR text in metadata
+        # The worker will use pre-extracted OCR (ocr_texts) instead of downloading PDF
+        # This saves massive storage space: only metadata.json will be stored on R2
+        from core.s3_storage import generate_file_key
 
         pdf_filename = f"{document_name}.pdf"
         file_key = generate_file_key(user_id, doc_id, pdf_filename)
-        upload_success = upload_file(pdf_content, file_key, 'application/pdf')
 
-        if not upload_success:
-            logger.error(f"Failed to upload merged PDF to R2: {pdf_filename}")
-            return jsonify({'error': 'Upload to cloud storage failed'}), 500
-
-        logger.info(f"Merged PDF uploaded to R2: {file_key}")
+        # PDF created for page count but NOT uploaded to R2
+        logger.info(f"PDF created locally ({pdf_size} bytes) but NOT uploaded to R2 - using OCR text only")
 
         # Create document record
         doc = create_document(

@@ -65,32 +65,43 @@ def process_document_task(self, document_id: str, user_id: str):
             meta={'status': 'Reading file', 'progress': 10}
         )
 
-        # 2. Download file from R2
-        from core.s3_storage import download_file
+        # Check if OCR was pre-extracted (skip PDF download if so)
+        ocr_preextracted = doc.doc_metadata.get('ocr_preextracted', False) if doc.doc_metadata else False
+        ocr_texts = doc.doc_metadata.get('ocr_texts', None) if doc.doc_metadata else None
 
-        logger.info(f"Downloading file from R2: {doc.file_path}")
-        file_data = download_file(doc.file_path)  # file_path contains R2 key
-
-        if not file_data:
-            logger.error(f"File not found in R2: {doc.file_path}")
-            update_document_status(
-                document_id,
-                user_id,
-                status='failed',
-                error_message='File not found in cloud storage'
-            )
-            return {
-                'success': False,
-                'error': 'File not found in cloud storage'
-            }
-
-        # 3. Save temporarily for processing
+        # 2. Download file from R2 (ONLY if OCR was NOT pre-extracted)
         import tempfile
         temp_dir = tempfile.mkdtemp()
-        temp_file_path = os.path.join(temp_dir, doc.filename)
 
-        with open(temp_file_path, 'wb') as f:
-            f.write(file_data)
+        if ocr_preextracted and ocr_texts:
+            logger.info(f"[OCR-OPTIMIZED] Skipping PDF download - using pre-extracted OCR from {len(ocr_texts)} pages")
+            # Create dummy filename for base_name extraction
+            temp_file_path = os.path.join(temp_dir, doc.filename)
+        else:
+            # Standard flow: Download PDF from R2
+            from core.s3_storage import download_file
+
+            logger.info(f"Downloading file from R2: {doc.file_path}")
+            file_data = download_file(doc.file_path)  # file_path contains R2 key
+
+            if not file_data:
+                logger.error(f"File not found in R2: {doc.file_path}")
+                update_document_status(
+                    document_id,
+                    user_id,
+                    status='failed',
+                    error_message='File not found in cloud storage'
+                )
+                return {
+                    'success': False,
+                    'error': 'File not found in cloud storage'
+                }
+
+            # 3. Save temporarily for processing
+            temp_file_path = os.path.join(temp_dir, doc.filename)
+
+            with open(temp_file_path, 'wb') as f:
+                f.write(file_data)
 
         logger.info(f"File downloaded to temp: {temp_file_path}")
 
@@ -106,13 +117,10 @@ def process_document_task(self, document_id: str, user_id: str):
             meta={'status': 'Calculating optimal configuration', 'progress': 15}
         )
 
-        # ALTERNATIVE A: Check if OCR text was pre-extracted (batch upload from gallery)
-        ocr_preextracted = doc.doc_metadata.get('ocr_preextracted', False) if doc.doc_metadata else False
-        ocr_texts = doc.doc_metadata.get('ocr_texts', None) if doc.doc_metadata else None
-
         # Save original base_name for metadata file lookup (before we change temp_file_path)
         original_base_name = base_name
 
+        # Use pre-extracted OCR if available (already checked at line 69-70)
         if ocr_preextracted and ocr_texts:
             logger.info(f"[ALT-A] Using pre-extracted OCR text from {len(ocr_texts)} pages")
 

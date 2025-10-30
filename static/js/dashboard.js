@@ -8,12 +8,13 @@
  * - Larger fonts and touch targets (iOS HIG compliance)
  * - Aggressive cache-busting to force browser reload
  *
- * PREVIOUS: ALT-A-OCR-PRE-PDF (21 OCT 2025)
+ * LATEST: UNLIMITED PHOTO BATCHES (30 OCT 2025)
+ * - Removed 10-photo limit - unlimited images per batch
+ * - Server-side limit: 200MB total size (auto-resizes to 2000px max)
+ * - Images auto-deleted after PDF creation (only PDF stored on R2)
  * - OCR applied BEFORE PDF creation (parallel processing)
- * - Limit: 10 photos per batch (cost control + performance)
  * - Pre-extracted text stored in metadata → encoder uses it directly
  * - Zero new dependencies (Railway-safe, no Poppler binary)
- * - 2x faster than sequential OCR (3-5s vs 8-12s for 3 photos)
  *
  * FIX 10: Gallery-Only Approach (100% compatibility, CAMERA REMOVED)
  * - Gallery multi-select as ONLY method (works on Oppo, iOS, Samsung, ALL brands)
@@ -1836,12 +1837,7 @@ window.uploadBatch = async function() {
         return;
     }
 
-    // ALTERNATIVE A: Limit to 10 photos (cost control + performance)
-    const MAX_BATCH_IMAGES = 10;
-    if (capturedImages.length > MAX_BATCH_IMAGES) {
-        alert(`Puoi caricare massimo ${MAX_BATCH_IMAGES} foto per volta.\nHai selezionato ${capturedImages.length} foto.\n\nRimuovi ${capturedImages.length - MAX_BATCH_IMAGES} foto prima di caricare.`);
-        return;
-    }
+    // No limit on number of images - only total size limit enforced server-side (200MB)
 
     const documentName = document.getElementById('batch-document-name').value.trim() || 'documento-scansionato';
 
