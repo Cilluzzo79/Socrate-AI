@@ -1274,6 +1274,8 @@ window.openGallery = function() {
     console.log('[GALLERY] Gallery picker button clicked');
     const galleryInput = document.getElementById('gallery-input');
     if (galleryInput) {
+        // Reset input value to allow re-selection of same files (Android compatibility)
+        galleryInput.value = '';
         galleryInput.click();
     }
 }
