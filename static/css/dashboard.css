@@ -1311,3 +1311,151 @@
     font-size: 1.3rem;
   }
 }
+
+/* =============================================================================
+   MOBILE CHAT INTERFACE OPTIMIZATIONS
+   Critical UX fixes for mobile chat experience
+   ============================================================================= */
+
+@media (max-width: 767px) {
+  /* FULL-SCREEN MODAL: Maximize available space */
+  [id^="chat-modal-"] .modal-content {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    width: 100% !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* COMPACT HEADER: Reduce from 108px to 76px (saves 32px) */
+  [id^="chat-modal-"] .modal-content > div:first-child {
+    padding: 1rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Header gradient container */
+  [id^="chat-modal-"] .modal-content > div:first-child > div:first-child {
+    padding: 0.75rem 1rem !important;
+    min-height: auto !important;
+  }
+
+  /* Document title in header */
+  [id^="chat-modal-"] .modal-content > div:first-child h3,
+  [id^="chat-modal-"] .modal-content > div:first-child p {
+    font-size: 0.875rem !important;
+    line-height: 1.3 !important;
+    margin: 0.25rem 0 !important;
+  }
+
+  /* iOS-COMPLIANT CLOSE BUTTON: 36px → 44px */
+  [id^="chat-modal-"] button[onclick*="closeChat"] {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* MESSAGES CONTAINER: Optimize vertical space */
+  [id^="chat-messages-"] {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 0.75rem !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* WIDER MESSAGE BUBBLES: 85% → 95% (+18% more text area) */
+  [id^="chat-messages-"] > div > div {
+    max-width: 95% !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* PREVENT iOS AUTO-ZOOM: 15px → 16px font */
+  [id^="chat-messages-"] > div > div,
+  [id^="chat-messages-"] p,
+  [id^="chat-messages-"] span {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Better text wrapping */
+  [id^="chat-messages-"] > div > div {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    hyphens: auto !important;
+  }
+
+  /* INPUT AREA: Optimize for mobile typing */
+  [id^="chat-modal-"] .modal-content > div:last-child {
+    flex-shrink: 0 !important;
+    padding: 0.75rem !important;
+    border-top: 1px solid var(--color-border-subtle) !important;
+  }
+
+  /* Textarea: 16px font to prevent iOS zoom */
+  [id^="chat-input-"] {
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+    padding: 0.75rem !important;
+    min-height: 44px !important;
+    max-height: 120px !important;
+  }
+
+  /* Send button: iOS-compliant touch target */
+  [id^="chat-modal-"] button[onclick*="sendMessage"] {
+    min-height: 44px !important;
+    padding: 0.75rem 1.25rem !important;
+    font-size: 16px !important;
+  }
+
+  /* LOADING INDICATOR: Compact mobile version */
+  [id^="chat-loading-"] {
+    padding: 0.5rem !important;
+    font-size: 14px !important;
+  }
+
+  /* ERROR MESSAGES: Mobile-optimized */
+  [id^="chat-modal-"] .error-message,
+  [id^="chat-modal-"] [style*="color: red"] {
+    font-size: 14px !important;
+    padding: 0.5rem !important;
+    line-height: 1.4 !important;
+  }
+
+  /* SCROLLBAR: Thinner for mobile */
+  [id^="chat-messages-"]::-webkit-scrollbar {
+    width: 6px !important;
+  }
+
+  /* Remove modal padding to maximize space */
+  .modal-content {
+    padding: 0 !important;
+  }
+
+  /* Ensure modal overlay doesn't interfere with touch */
+  .modal {
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Smooth scrolling on iOS */
+  [id^="chat-messages-"] {
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth !important;
+  }
+}
+
+/* Tablet breakpoint (768px - 1023px): Slight optimizations */
+@media (min-width: 768px) and (max-width: 1023px) {
+  [id^="chat-modal-"] .modal-content {
+    max-width: 95% !important;
+    width: 95% !important;
+  }
+
+  [id^="chat-messages-"] > div > div {
+    max-width: 90% !important;
+  }
+}
