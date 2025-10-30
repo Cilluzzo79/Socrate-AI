@@ -1491,16 +1491,14 @@ function setupGalleryListener() {
 
         console.log(`[GALLERY] ✅ ${files.length} photo(s) selected from gallery! Processing...`);
 
-        // Clear previous captured images
-        if (capturedImages.length > 0) {
-            console.log('[GALLERY] Clearing previous batch');
-            cleanupCapturedImages();
-        }
+        // CUMULATIVE SELECTION: Keep previous photos for browsers that don't support multi-select
+        const previousCount = capturedImages.length;
+        console.log(`[GALLERY] Cumulative mode: ${previousCount} existing photo(s), adding ${files.length} new photo(s)`);
 
         try {
             // Process all selected files in parallel (same as camera)
             const results = await Promise.allSettled(
-                files.map((file, index) => handleCameraCaptureAsync(file, index))
+                files.map((file, index) => handleCameraCaptureAsync(file, previousCount + index))
             );
 
             const successful = results.filter(r => r.status === 'fulfilled');
@@ -1693,11 +1691,17 @@ function showBatchPreview() {
         </div>
 
         <!-- Action Buttons -->
-        <div style="display: flex; gap: var(--space-3);">
-            <button class="btn btn-secondary" onclick="addAnotherPhoto()" style="flex: 1;">
+        <div style="display: flex; gap: var(--space-3); margin-bottom: var(--space-3);">
+            <button class="btn btn-secondary" onclick="openCamera()" style="flex: 1;">
                 <span>📷</span>
-                <span>Aggiungi Foto</span>
+                <span>Scatta</span>
             </button>
+            <button class="btn btn-secondary" onclick="openGallery()" style="flex: 1;">
+                <span>🖼️</span>
+                <span>Galleria</span>
+            </button>
+        </div>
+        <div style="display: flex; gap: var(--space-3);">
             <button class="btn btn-primary" onclick="uploadBatch()" style="flex: 1;">
                 <span>✅</span>
                 <span>Carica Tutto (${capturedImages.length})</span>
