@@ -195,14 +195,14 @@ function openTools(documentId) {
             padding: 1rem;
             margin: 0.5rem;
             background: var(--color-bg-card, #1a1f2e);
-            border: 2px solid rgba(0, 217, 192, 0.4);
+            border: 2px solid rgba(143, 239, 16, 0.4);
             border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
             color: var(--color-text-primary, #e8eaed);
             transition: all 0.2s;
             font-weight: 500;
-        " onmouseover="this.style.background='rgba(0, 217, 192, 0.1)'; this.style.borderColor='rgba(0, 217, 192, 0.6)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='var(--color-bg-card, #1a1f2e)'; this.style.borderColor='rgba(0, 217, 192, 0.4)'; this.style.transform='translateY(0)';">
+        " onmouseover="this.style.background='rgba(143, 239, 16, 0.1)'; this.style.borderColor='rgba(143, 239, 16, 0.6)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='var(--color-bg-card, #1a1f2e)'; this.style.borderColor='rgba(143, 239, 16, 0.4)'; this.style.transform='translateY(0)';">
             ${tool.icon} ${tool.name}
         </button>
     `).join('');
@@ -215,11 +215,11 @@ function openTools(documentId) {
             max-width: 600px;
             background: var(--color-bg-card, #1a1f2e);
             border-radius: var(--radius-lg, 12px);
-            border: 1px solid rgba(0, 217, 192, 0.2);
+            border: 1px solid rgba(143, 239, 16, 0.2);
         ">
             <div style="
                 padding: 1.5rem;
-                background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
+                background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%);
                 border-radius: 12px 12px 0 0;
                 margin: -1px -1px 0 -1px;
             ">
@@ -277,8 +277,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <input type="text" id="tool-topic" placeholder="Es: Intelligenza Artificiale, Capitolo 3, ecc." style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -291,8 +293,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-depth" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -313,8 +317,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <input type="text" id="tool-topic" placeholder="Es: Metodologia, Risultati, ecc." style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -327,8 +333,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-type" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -345,8 +353,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-detail" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -367,8 +377,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <input type="text" id="tool-topic" placeholder="Es: Capitolo 2, Teoria, ecc." style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -381,8 +393,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-num-questions" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -400,8 +414,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-quiz-type" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -419,8 +435,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-difficulty" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -441,8 +459,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <input type="text" id="tool-topic" placeholder="Es: Introduzione, Conclusioni, ecc." style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -455,8 +475,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-length" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -477,8 +499,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <input type="text" id="tool-theme" placeholder="Es: Impatto economico, Metodologia statistica, ecc." style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -491,8 +515,10 @@ window.openToolConfig = function(documentId, toolType) {
                 <select id="tool-focus" style="
                     width: 100%;
                     padding: 0.75rem;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: linear-gradient(135deg, rgba(143, 239, 16, 0.08), rgba(212, 175, 55, 0.08));
+                    border: 2px solid rgba(143, 239, 16, 0.35);
+                    box-shadow: 0 0 12px rgba(143, 239, 16, 0.15);
+                    transition: all 0.2s ease;
                     border-radius: 6px;
                     color: var(--color-text-primary);
                     font-size: 1rem;
@@ -533,7 +559,7 @@ window.openToolConfig = function(documentId, toolType) {
         </style>
         <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
             <div style="
-                background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
+                background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%);
                 padding: 1.5rem;
                 border-radius: 12px 12px 0 0;
                 margin: -1.5rem -1.5rem 1.5rem -1.5rem;
@@ -548,7 +574,7 @@ window.openToolConfig = function(documentId, toolType) {
                 <button onclick="window.confirmToolConfig('${documentId}', '${toolType}')" class="primary-btn" style="
                     flex: 1;
                     padding: 0.875rem;
-                    background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
+                    background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%);
                     border: none;
                     border-radius: 8px;
                     cursor: pointer;
@@ -752,7 +778,7 @@ function openPersistentChat(documentId) {
             <!-- Chat Header - MOBILE-FIRST: Cyan-Purple Gradient + Larger Fonts -->
             <div style="
                 padding: 1.5rem;
-                background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
+                background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%);
                 color: white;
                 display: flex;
                 justify-content: space-between;
@@ -814,7 +840,7 @@ function openPersistentChat(documentId) {
             <div style="
                 padding: 1.5rem;
                 background: var(--color-bg-card, #1a1f2e);
-                border-top: 1px solid rgba(0, 217, 192, 0.2);
+                border-top: 1px solid rgba(143, 239, 16, 0.2);
             ">
                 <form id="chat-form-${documentId}" onsubmit="sendChatMessage('${documentId}', event); return false;" style="
                     display: flex;
@@ -837,7 +863,7 @@ function openPersistentChat(documentId) {
                     " onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage('${documentId}',event);}"></textarea>
                     <button type="submit" style="
                         padding: 14px 24px;
-                        background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%);
+                        background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%);
                         border: none;
                         border-radius: 8px;
                         color: white;
@@ -889,7 +915,7 @@ function renderChatHistory(documentId) {
                     padding: 14px 18px;
                     border-radius: 12px;
                     ${isUser ?
-                        'background: linear-gradient(135deg, #06b6d4 0%, #a855f7 100%); color: white;' :
+                        'background: linear-gradient(135deg, #8FEF10 0%, #D4AF37 100%); color: white;' :
                         'background: rgba(6, 182, 212, 0.1); color: #e8eaed; border: 1px solid rgba(6, 182, 212, 0.3);'
                     }
                     word-wrap: break-word;
@@ -941,8 +967,8 @@ async function sendChatMessage(documentId, event) {
         <div style="
             padding: 1rem 1.25rem;
             border-radius: 12px;
-            background: rgba(0, 217, 192, 0.1);
-            border: 1px solid rgba(0, 217, 192, 0.3);
+            background: rgba(143, 239, 16, 0.1);
+            border: 1px solid rgba(143, 239, 16, 0.3);
             color: var(--color-text-secondary, #8b949e);
             display: flex;
             align-items: center;
@@ -1095,7 +1121,7 @@ function showResult(content, type) {
                 white-space: pre-wrap;
                 font-family: monospace;
                 color: #e8eaed;
-                border: 1px solid rgba(0, 217, 192, 0.3);
+                border: 1px solid rgba(143, 239, 16, 0.3);
                 line-height: 1.6;
             ">${sanitizeContent(displayContent)}</div>
             <button onclick="this.closest('.modal').remove()" class="primary-btn" style="width: 100%;">
@@ -1142,7 +1168,7 @@ function showHTMLViewer(htmlContent, toolType) {
             <div style="
                 background: #1a1f2e;
                 padding: 1rem 1.5rem;
-                border-bottom: 1px solid rgba(0, 217, 192, 0.3);
+                border-bottom: 1px solid rgba(143, 239, 16, 0.3);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;

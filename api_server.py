@@ -1589,7 +1589,16 @@ def generate_quiz_tool(document_id):
             return jsonify({'error': result.get('error', 'Failed to generate quiz')}), 500
 
         # Generate HTML with quiz cards
-        html = generate_quiz_cards_html(result['answer'], document.filename, quiz_config)
+        # Get logo path
+        from pathlib import Path
+        logo_path = Path(__file__).parent / 'static' / 'images' / 'socrate_logo.png'
+        
+        html = generate_quiz_cards_html(
+            result['answer'], 
+            document.filename, 
+            quiz_config,
+            logo_path=str(logo_path) if logo_path.exists() else None
+        )
 
         # Return HTML directly
         from flask import Response

@@ -225,6 +225,34 @@
   margin-top: 2px;
 }
 
+/* Unified SOCRATE AI Branding */
+.logo-unified {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, 
+    #FFD700 0%,      /* Gold for SOCRATE */
+    #FFA500 20%,     /* Orange-gold */
+    #8FEF10 45%,     /* Lime green */
+    #A4FF2E 65%,     /* Lime light */
+    #00FFE0 100%     /* Cyan for AI */
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 12px rgba(143, 239, 16, 0.4))
+          drop-shadow(0 2px 8px rgba(255, 215, 0, 0.3));
+  transition: all 0.3s ease;
+}
+
+.logo-unified:hover {
+  filter: drop-shadow(0 3px 16px rgba(143, 239, 16, 0.6))
+          drop-shadow(0 3px 12px rgba(255, 215, 0, 0.5));
+  transform: scale(1.02);
+}
+
+
 /* Dashboard Actions */
 .dashboard-actions {
   display: flex;
@@ -779,6 +807,11 @@
    ----------------------------------------------------------------------------- */
 
 @media (max-width: 768px) {
+  .logo-unified {
+    font-size: 28px; /* Smaller on mobile */
+  }
+
+  
   .dashboard-header-content {
     flex-wrap: wrap;
   }
