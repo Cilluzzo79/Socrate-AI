@@ -44,6 +44,13 @@ railway logs --service web      # View web service logs
 railway logs --service worker   # View Celery worker logs
 ```
 
+**Modal GPU Deployment** (Reranking Service)
+```bash
+modal deploy modal_reranker.py  # Deploy GPU reranking service to Modal
+# Health check: curl https://cilluzzo79--socrate-reranker-health.modal.run
+# Note: Requires Modal account (30 GPU-hours/month free tier)
+```
+
 ## Architecture
 
 **3-Tier Multi-Tenant System**
@@ -103,6 +110,7 @@ User queries document → RAG retrieval from R2 index → LLM generates answer
 - `R2_BUCKET_NAME`, `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`: Cloudflare R2
 - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`: LLM provider
 - `SECRET_KEY`: Flask session secret (must be strong in production)
+- `MODAL_RERANK_URL`: Modal GPU reranking endpoint (optional, falls back to local reranker)
 
 ## Key Files
 
@@ -114,8 +122,10 @@ User queries document → RAG retrieval from R2 index → LLM generates answer
 **Domain Logic**
 - `core/database.py`: SQLAlchemy models and session management
 - `core/document_operations.py`: Multi-tenant CRUD with user isolation
-- `core/query_engine.py`: RAG retrieval engine
+- `core/query_engine.py`: RAG retrieval engine with adaptive term specificity weighting (ATSW)
 - `core/rag_wrapper.py`: Full RAG pipeline orchestration
+- `core/modal_rerank_client.py`: HTTP client for Modal GPU reranking (cross-encoder)
+- `core/reranker.py`: Local fallback reranker (diversity-based)
 
 **Deployment**
 - `Procfile`: Gunicorn web service command
@@ -137,10 +147,24 @@ User queries document → RAG retrieval from R2 index → LLM generates answer
 4. Return JSON response with proper error handling
 
 **Modifying RAG behavior**
-1. Edit retrieval logic in `core/query_engine.py` (chunk selection, embeddings)
-2. Edit reranking in `core/reranker.py` (semantic/keyword scoring)
+1. Edit retrieval logic in `core/query_engine.py` (chunk selection, embeddings, ATSW weighting)
+2. Edit reranking in `core/reranker.py` (local fallback) or `core/modal_rerank_client.py` (GPU reranking)
 3. Edit prompt construction in `core/rag_wrapper.py` (context formatting)
 4. Edit LLM call in `core/llm_client.py` (model selection, parameters)
+
+**Understanding RAG system architecture**
+The RAG system uses a two-stage approach with adaptive term specificity weighting (ATSW):
+- **Stage 1: Hybrid Retrieval** - Combines semantic (70%) + keyword (30%) search with proper noun boosting
+- **Stage 2: Reranking** - Uses Modal GPU cross-encoder (SOTA) with fallback to local diversity reranker
+- **Stage 3: Generation** - LLM generates answer using top-k reranked chunks
+- **ATSW Algorithm** - Automatically detects and downweights generic terms (e.g., "ricetta", "documento") while boosting specific terms (e.g., "ossobuco", "lombardia")
+
+Key files for RAG system understanding:
+- `core/query_engine.py`: Main retrieval logic with ATSW
+- `modal_reranker.py`: GPU reranking service (deployed on Modal)
+- `core/modal_rerank_client.py`: Client for Modal GPU service
+- `UNIVERSAL_RAG_IMPLEMENTATION.py`: Standalone ATSW implementation for testing
+- `STATO DEL PROGETTO SOCRATE/`: Extensive RAG analysis, diagnosis, and evaluation reports
 
 **Adding new async task**
 1. Define task in `tasks.py` with `@celery_app.task` decorator
@@ -168,6 +192,45 @@ python test_r2_connection.py  # Verify R2 credentials
 # Check R2_BUCKET_NAME, R2_ENDPOINT_URL, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 ```
 
+**Modal GPU reranking issues**
+```bash
+# Check Modal service health
+curl https://cilluzzo79--socrate-reranker-health.modal.run
+
+# View logs for Modal reranking
+railway logs --service web | grep MODAL
+
+# Expected patterns:
+# - Success: "[MODAL SUCCESS] GPU reranked to X chunks"
+# - Fallback: "[LOCAL-RERANKING] Using diversity reranker"
+# - Cold start: 15-25 seconds is normal for GPU model loading
+# - Warm requests: Should be <1 second
+
+# If Modal always times out, check:
+# 1. MODAL_RERANK_URL is set correctly
+# 2. Modal service is deployed: modal deploy modal_reranker.py
+# 3. Network connectivity from Railway to Modal
+```
+
+**RAG retrieval quality issues**
+```bash
+# Diagnose retrieval issues for specific documents
+python diagnose_recipe_retrieval.py  # Test recipe retrieval
+python test_ossobuco_diagnosis.py   # Specific ossobuco query test
+
+# Run RAG evaluation framework
+python run_baseline_eval.py          # Baseline (no reranking)
+python run_crossencoder_eval.py      # With cross-encoder reranking
+
+# Test universal RAG solution (ATSW)
+python integrate_universal_rag.py --test
+
+# Common issues:
+# - Embedding dimension mismatch (384 vs 768): Re-encode documents
+# - Generic terms drowning specific terms: ATSW should handle this
+# - Query too vague: Add regional/domain qualifiers (e.g., "ossobuco milanese" vs "ossobuco")
+```
+
 **Database migrations (if schema changes)**
 ```bash
 # Currently using direct SQLAlchemy, no Alembic migrations
@@ -175,9 +238,81 @@ python test_r2_connection.py  # Verify R2 credentials
 python -c "from core.database import init_db; init_db()"
 ```
 
+## Agent Collaboration Policy
+
+**When to Use Specialized Agents**
+
+Claude Code has access to specialized agents for complex, multi-step tasks. **ALWAYS** use the appropriate agent when the task matches their expertise domain.
+
+### Available Agents
+
+1. **backend-master-analyst**
+   - **Use for**: Code review, debugging, security analysis of backend code
+   - **Triggers**: API endpoints, database operations, authentication logic, async tasks
+   - **When**: After implementing/modifying backend features, proactively for quality assurance
+
+2. **rag-pipeline-architect**
+   - **Use for**: RAG system diagnosis, optimization, evaluation
+   - **Triggers**: Retrieval quality issues, embedding problems, reranking performance
+   - **When**: RAG performance degradation, new RAG features, domain-specific retrieval
+
+3. **frontend-architect-prime**
+   - **Use for**: React/Next.js components, UI code review, frontend architecture
+   - **Triggers**: Component implementation, state management, performance optimization
+   - **When**: Building/reviewing frontend features, accessibility issues, performance bottlenecks
+
+4. **ui-design-master**
+   - **Use for**: UI/UX design analysis, interface critique, design system consultation
+   - **Triggers**: User complaints about UI, design inconsistencies, new features needing design
+   - **When**: Visual design issues, accessibility audits, brand consistency problems
+
+5. **cognitive-load-ux-auditor**
+   - **Use for**: Cognitive load analysis, usability evaluation, service comparison
+   - **Triggers**: User confusion, complex workflows, educational interfaces
+   - **When**: UX audits, learning curve issues, competitive analysis needed
+   - **Expertise**: Reduces cognitive friction, evaluates information architecture, compares against competitors
+
+### Agent Collaboration Protocol
+
+**CRITICAL**: When multiple agents are needed, run them **IN PARALLEL** using a single message with multiple Task tool calls.
+
+**Information Sharing**: Agents MUST exchange ALL detailed information necessary to achieve the final planned goal. Each agent should:
+1. Share complete context and findings with other agents
+2. Reference work done by other agents in their analysis
+3. Build upon insights from parallel agent work
+4. Provide actionable, implementable recommendations
+
+**Example Parallel Execution**:
+```
+User: "The quiz interface has UX issues and the backend code needs review"
+→ Launch ui-design-master + backend-master-analyst + cognitive-load-ux-auditor in parallel
+→ Each agent analyzes their domain
+→ Synthesize recommendations from all agents
+→ Implement unified solution
+```
+
 ## Documentation References
 
+**Setup & Deployment**
 - `QUICK_START_LOCAL.md`: Detailed local setup with troubleshooting
 - `DEPLOYMENT_GUIDE.md`: Railway deployment step-by-step
 - `ASYNC_DEPLOYMENT_CHECKLIST.md`: Async processing verification checklist
-- `STATO DEL PROGETTO SOCRATE/`: Project status, RAG diagnostics, design system docs
+- `MODAL_SETUP_GUIDE.md`: Modal GPU service setup
+
+**RAG System** (extensive documentation in `STATO DEL PROGETTO SOCRATE/`)
+- `RAG_SYSTEM_ANALYSIS_REPORT.md`: Comprehensive RAG architecture analysis and optimization guide
+- `UNIVERSAL_RAG_EXECUTIVE_SUMMARY.md`: Universal term specificity solution (ATSW)
+- `UNIVERSAL_RAG_SOLUTION.md`: Detailed ATSW implementation guide
+- `MODAL_GPU_DEPLOYMENT_SUCCESS_29_OCT.md`: Modal GPU reranking deployment report
+- `RAG_EVALUATION_REPORT_28_OCT.md`: Evaluation framework and metrics
+- `RECIPE_RETRIEVAL_DIAGNOSIS_COMPLETE.md`: Recipe domain retrieval analysis
+- `RAG_BEST_PRACTICES_2025.md`: State-of-the-art RAG techniques
+
+**Design System**
+- `DESIGN_SYSTEM.md`: Frontend design system
+- `UNIFIED_DESIGN_SYSTEM.md`: Comprehensive UI/UX guidelines
+- `CHAT_REDESIGN_IMPLEMENTATION_GUIDE.md`: Chat interface redesign
+
+**Project Status**
+- `SESSION_REPORT_27_OCT_2025.md`: Recent development session summaries
+- `DEPLOYMENT_SUCCESS.md`: Production deployment reports
