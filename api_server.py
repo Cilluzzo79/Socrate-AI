@@ -45,7 +45,8 @@ app = Flask(__name__)
 
 # Cache busting: Manual version + deployment ID for aggressive cache invalidation
 # INCREMENT THIS VERSION WHEN MAKING UI/JS CHANGES!
-MANUAL_VERSION = "FIX12-GALLERY-PROPAGATION-v2-01NOV2025"
+# NUCLEAR OPTION: Renamed JS file to dashboard_fix12_v2.js to force new URL
+MANUAL_VERSION = "NUCLEAR-FIX12-RENAMED-JS-01NOV2025"
 APP_VERSION = f"{MANUAL_VERSION}-{os.getenv('RAILWAY_DEPLOYMENT_ID', str(int(datetime.now().timestamp())))}"
 logger.info(f"App version for cache busting: {APP_VERSION}")
 
