@@ -1,7 +1,7 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: CHAT-FIX-25OCT2025-v2
+ * VERSION: GALLERY-FIX-12-31OCT2025
  *
  * LATEST CHANGES (25 OCT 2025):
  * - Mobile-first chat interface redesign with cyan-purple gradient
@@ -1268,9 +1268,15 @@ const processedFileKeys = new Set(); // ✅ FIX 9: Track processed files to prev
 
 /**
  * FIX 10: Open gallery picker for multi-select (universal compatibility)
+ * FIX 12: Stop event propagation to prevent upload-area click handler
  * EXPOSED TO GLOBAL SCOPE for onclick handlers
  */
-window.openGallery = function() {
+window.openGallery = function(event) {
+    // Stop event from bubbling to upload-area parent
+    if (event && event.stopPropagation) {
+        event.stopPropagation();
+    }
+
     console.log('[GALLERY] Gallery picker button clicked');
     const galleryInput = document.getElementById('gallery-input');
     if (galleryInput) {
