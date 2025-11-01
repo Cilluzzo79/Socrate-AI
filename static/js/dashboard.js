@@ -1,7 +1,7 @@
 /**
  * Socrate AI - Dashboard JavaScript
  * Handles document management, upload, and interactions
- * VERSION: CHAT-FIX-25OCT2025-v2
+ * VERSION: GALLERY-AUTO-UPLOAD-31OCT2025
  *
  * LATEST CHANGES (25 OCT 2025):
  * - Mobile-first chat interface redesign with cyan-purple gradient
@@ -1511,12 +1511,12 @@ function setupGalleryListener() {
                 console.error(`[GALLERY] Photo ${index + 1} failed:`, result.reason);
             });
 
-            // Show preview modal
+            // Upload directly without preview modal
             if (capturedImages.length > 0) {
-                console.log(`[GALLERY] Showing preview with ${capturedImages.length} photos...`);
-                showBatchPreview();
+                console.log(`[GALLERY] Auto-uploading ${capturedImages.length} photos as single PDF...`);
+                await uploadBatch();
             } else {
-                console.warn('[GALLERY] No valid photos to preview (all failed validation)');
+                console.warn('[GALLERY] No valid photos to upload (all failed validation)');
             }
 
         } catch (error) {
