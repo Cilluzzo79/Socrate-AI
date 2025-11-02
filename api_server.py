@@ -71,7 +71,11 @@ def add_no_cache_headers(response):
     
     Solution A: HTTP Cache-Control headers to bypass Railway CDN cache
     """
-    if request.path.startswith('/static/js/') or request.path.startswith('/static/css/'):
+    # Apply no-cache to static assets AND HTML pages (Railway caches both!)
+    if (request.path.startswith('/static/js/') or 
+        request.path.startswith('/static/css/') or 
+        request.path == '/dashboard' or 
+        response.content_type and 'text/html' in response.content_type):
         # Nuclear option: disable ALL caching
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
