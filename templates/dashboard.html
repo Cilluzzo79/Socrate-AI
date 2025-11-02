@@ -365,27 +365,27 @@
             // Force fresh load with millisecond timestamp
             const timestamp = new Date().getTime();
             const script = document.createElement('script');
-            script.src = '/static/js/dashboard.js?v={{ app_version }}&t=' + timestamp;
+            script.src = '/static/js/main-app-v2025-11-02.js?v={{ app_version }}&t=' + timestamp;
             script.async = false; // Load synchronously to ensure availability
 
             // Wait for script to load before initializing
             script.onload = function() {
-                console.log('[CACHE-BUSTER] dashboard.js loaded successfully');
-                // Initialize after dashboard.js is loaded
+                console.log('[CACHE-BUSTER] main-app-v2025-11-02.js loaded successfully');
+                // Initialize after main-app-v2025-11-02.js is loaded
                 if (typeof loadDocuments === 'function') {
                     loadDocuments();
                 } else {
-                    console.error('[INIT] loadDocuments not found in dashboard.js');
+                    console.error('[INIT] loadDocuments not found in main-app-v2025-11-02.js');
                 }
                 if (typeof setupUploadHandlers === 'function') {
                     setupUploadHandlers();
                 } else {
-                    console.error('[INIT] setupUploadHandlers not found in dashboard.js');
+                    console.error('[INIT] setupUploadHandlers not found in main-app-v2025-11-02.js');
                 }
             };
 
             document.head.appendChild(script);
-            console.log('[CACHE-BUSTER] Loading dashboard.js with timestamp:', timestamp);
+            console.log('[CACHE-BUSTER] Loading main-app-v2025-11-02.js with timestamp:', timestamp);
         })();
     </script>
     <script>

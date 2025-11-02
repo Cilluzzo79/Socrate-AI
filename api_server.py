@@ -45,8 +45,8 @@ app = Flask(__name__)
 
 # Cache busting: Manual version + deployment ID for aggressive cache invalidation
 # INCREMENT THIS VERSION WHEN MAKING UI/JS CHANGES!
-# REVERTED to working version 83ed65f (gallery auto-upload)
-MANUAL_VERSION = "REVERT-WORKING-GALLERY-01NOV2025"
+# NUCLEAR: Renamed JS file to main-app-v2025-11-02.js to bypass Railway edge cache
+MANUAL_VERSION = "MAIN-APP-V2-02NOV2025"
 APP_VERSION = f"{MANUAL_VERSION}-{os.getenv('RAILWAY_DEPLOYMENT_ID', str(int(datetime.now().timestamp())))}"
 logger.info(f"App version for cache busting: {APP_VERSION}")
 
