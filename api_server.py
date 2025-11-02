@@ -60,6 +60,28 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max request size (
 CORS(app, supports_credentials=True)
 
 # ============================================================================
+# CACHE CONTROL HEADERS - NUCLEAR CACHE BUSTING
+# ============================================================================
+@app.after_request
+def add_no_cache_headers(response):
+    """
+    Add aggressive no-cache headers for static JS/CSS files.
+    Railway CDN edge cache ignores query params (?v=...), so we force
+    no-cache at HTTP header level to ensure users ALWAYS get latest version.
+    
+    Solution A: HTTP Cache-Control headers to bypass Railway CDN cache
+    """
+    if request.path.startswith('/static/js/') or request.path.startswith('/static/css/'):
+        # Nuclear option: disable ALL caching
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.headers['X-Cache-Bypass'] = 'SOLUTION-A-02NOV2025'
+        logger.debug(f"[CACHE-BYPASS] No-cache headers applied to: {request.path}")
+    return response
+
+
+# ============================================================================
 # RATE LIMITING CONFIGURATION
 # ============================================================================
 
