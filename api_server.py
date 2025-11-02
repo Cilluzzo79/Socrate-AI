@@ -560,17 +560,8 @@ def upload_batch_documents():
     if not files:
         return jsonify({'error': 'No files provided'}), 400
 
-    # ALTERNATIVE A: Limit batch size to 10 images (cost control + performance)
-    MAX_BATCH_IMAGES = 10
-
-    if len(files) > MAX_BATCH_IMAGES:
-        logger.warning(f"User {user_id} tried to upload {len(files)} images (max {MAX_BATCH_IMAGES})")
-        return jsonify({
-            'error': f'Puoi caricare massimo {MAX_BATCH_IMAGES} foto per volta. Hai selezionato {len(files)} foto.',
-            'max_allowed': MAX_BATCH_IMAGES,
-            'images_selected': len(files)
-        }), 400
-
+    # UNLIMITED IMAGES: Only limit is user's storage quota (no arbitrary photo count limit)
+    # The 200MB request size limit and storage quota will naturally constrain batch size
     logger.info(f"Batch upload: {len(files)} images by user {user_id}, document_name: {document_name}")
 
     try:
