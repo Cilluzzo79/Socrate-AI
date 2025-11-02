@@ -363,16 +363,7 @@
     <!-- Hash: e62c55ee (MD5 of file content) - Changes ONLY when file content changes -->
     <!-- This bypasses ALL caching layers because filename changes with each code update -->
     <script src="/static/js/dashboard.180faf63.js"></script>
-    <script>
-        console.log('[SOLUTION-B] Content-hash filename loaded: dashboard.180faf63.js');
-        // Initialize after script loads
-        if (typeof loadDocuments === 'function') {
-            loadDocuments();
-        }
-        if (typeof setupUploadHandlers === 'function') {
-            setupUploadHandlers();
-        }
-    </script>
+
     <script>
         let documentToDelete = null;
 
@@ -638,6 +629,24 @@
                 console.error('Rename error:', error);
                 alert('❌ Errore: ' + error.message);
             }
+        }
+
+        // ============================================================================
+        // INITIALIZE AFTER ALL FUNCTIONS ARE DEFINED (FIX RACE CONDITION)
+        // ============================================================================
+        console.log('[SOLUTION-B] Content-hash filename loaded: dashboard.180faf63.js');
+        
+        // Initialize document list
+        if (typeof loadDocuments === 'function') {
+            loadDocuments();
+        }
+        
+        // Initialize upload handlers (MUST be called AFTER setupUploadHandlers is defined)
+        if (typeof setupUploadHandlers === 'function') {
+            setupUploadHandlers();
+            console.log('[INIT] setupUploadHandlers() successfully called');
+        } else {
+            console.error('[INIT] setupUploadHandlers is not defined!');
         }
     </script>
 </body>
