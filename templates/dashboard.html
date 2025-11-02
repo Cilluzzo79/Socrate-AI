@@ -359,34 +359,19 @@
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 
-    <!-- Dynamic script loading with runtime timestamp to bypass ALL caching -->
+    <!-- SOLUTION B: Content-Hash Filename (Webpack/Vite standard approach) -->
+    <!-- Hash: e62c55ee (MD5 of file content) - Changes ONLY when file content changes -->
+    <!-- This bypasses ALL caching layers because filename changes with each code update -->
+    <script src="/static/js/dashboard.e62c55ee.js"></script>
     <script>
-        (function() {
-            // Force fresh load with millisecond timestamp
-            const timestamp = new Date().getTime();
-            const script = document.createElement('script');
-            script.src = '/static/js/main-app-v2025-11-02.js?v={{ app_version }}&t=' + timestamp;
-            script.async = false; // Load synchronously to ensure availability
-
-            // Wait for script to load before initializing
-            script.onload = function() {
-                console.log('[CACHE-BUSTER] main-app-v2025-11-02.js loaded successfully');
-                // Initialize after main-app-v2025-11-02.js is loaded
-                if (typeof loadDocuments === 'function') {
-                    loadDocuments();
-                } else {
-                    console.error('[INIT] loadDocuments not found in main-app-v2025-11-02.js');
-                }
-                if (typeof setupUploadHandlers === 'function') {
-                    setupUploadHandlers();
-                } else {
-                    console.error('[INIT] setupUploadHandlers not found in main-app-v2025-11-02.js');
-                }
-            };
-
-            document.head.appendChild(script);
-            console.log('[CACHE-BUSTER] Loading main-app-v2025-11-02.js with timestamp:', timestamp);
-        })();
+        console.log('[SOLUTION-B] Content-hash filename loaded: dashboard.e62c55ee.js');
+        // Initialize after script loads
+        if (typeof loadDocuments === 'function') {
+            loadDocuments();
+        }
+        if (typeof setupUploadHandlers === 'function') {
+            setupUploadHandlers();
+        }
     </script>
     <script>
         let documentToDelete = null;
