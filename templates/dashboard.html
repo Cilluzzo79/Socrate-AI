@@ -175,7 +175,7 @@
 
                     <!-- Photo Capture Actions -->
                     <div class="camera-upload-actions">
-                        <button type="button" class="btn-gallery-primary" id="gallery-btn" onclick="openGallery(event)" style="
+                        <button type="button" class="btn-gallery-primary" id="gallery-btn" onclick="openGallery()" style="
                             display: flex;
                             align-items: center;
                             gap: 8px;
@@ -365,27 +365,27 @@
             // Force fresh load with millisecond timestamp
             const timestamp = new Date().getTime();
             const script = document.createElement('script');
-            script.src = '/static/js/dashboard_fix12_v2.js?v={{ app_version }}&t=' + timestamp;
+            script.src = '/static/js/dashboard.js?v={{ app_version }}&t=' + timestamp;
             script.async = false; // Load synchronously to ensure availability
 
             // Wait for script to load before initializing
             script.onload = function() {
-                console.log('[CACHE-BUSTER] dashboard_fix12_v2.js loaded successfully');
-                // Initialize after dashboard_fix12_v2.js is loaded
+                console.log('[CACHE-BUSTER] dashboard.js loaded successfully');
+                // Initialize after dashboard.js is loaded
                 if (typeof loadDocuments === 'function') {
                     loadDocuments();
                 } else {
-                    console.error('[INIT] loadDocuments not found in dashboard_fix12_v2.js');
+                    console.error('[INIT] loadDocuments not found in dashboard.js');
                 }
                 if (typeof setupUploadHandlers === 'function') {
                     setupUploadHandlers();
                 } else {
-                    console.error('[INIT] setupUploadHandlers not found in dashboard_fix12_v2.js');
+                    console.error('[INIT] setupUploadHandlers not found in dashboard.js');
                 }
             };
 
             document.head.appendChild(script);
-            console.log('[CACHE-BUSTER] Loading dashboard_fix12_v2.js with timestamp:', timestamp);
+            console.log('[CACHE-BUSTER] Loading dashboard.js with timestamp:', timestamp);
         })();
     </script>
     <script>
