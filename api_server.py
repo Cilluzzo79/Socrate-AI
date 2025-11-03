@@ -873,6 +873,7 @@ def rename_document_endpoint(document_id: str):
     try:
         # Update document filename in database
         from core.database import SessionLocal, Document
+        import uuid
 
         db = SessionLocal()
         try:
