@@ -876,8 +876,15 @@ def rename_document_endpoint(document_id: str):
 
         db = SessionLocal()
         try:
-            doc.filename = new_filename
-            doc.updated_at = datetime.utcnow()
+            # FIX: Re-fetch document in current session to avoid detached instance error
+            # (doc from get_document_by_id is from a different session that's already closed)
+            fresh_doc = db.query(Document).filter_by(id=uuid.UUID(document_id)).first()
+            
+            if not fresh_doc:
+                return jsonify({'error': 'Document not found'}), 404
+            
+            fresh_doc.filename = new_filename
+            fresh_doc.updated_at = datetime.utcnow()
             db.commit()
 
             logger.info(f"Document renamed: {document_id} from '{original_filename}' to '{new_filename}' by user {user_id}")
