@@ -623,7 +623,8 @@
 
                 closeRenameModal();
                 await loadDocuments();
-                alert('✅ Documento rinominato');
+                // Alert AFTER loadDocuments completes so UI updates first
+                setTimeout(() => alert('✅ Documento rinominato'), 100);
 
             } catch (error) {
                 console.error('Rename error:', error);
