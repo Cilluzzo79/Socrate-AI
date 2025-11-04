@@ -1015,7 +1015,7 @@ def custom_query():
     query = data.get('query')
     command_type = data.get('command_type', 'query')
     command_params = data.get('command_params', {})
-    top_k = data.get('top_k', 5)
+    top_k = data.get('top_k', 15)  # Increased from 5 to 15 for better context coverage
 
     if not document_id or not query:
         return jsonify({'error': 'document_id and query required'}), 400
