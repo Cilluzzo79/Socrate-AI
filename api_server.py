@@ -2138,6 +2138,17 @@ def initialize():
         logger.error(f"Database initialization failed: {e}")
         logger.warning("Application will continue but database operations may fail")
 
+    # Preload ONNX model in production to avoid first-request timeout
+    if os.getenv('RAILWAY_ENVIRONMENT'):
+        try:
+            logger.info("[PRELOAD] Starting ONNX model preload (may take 60-90s on first deploy)...")
+            from core.reranker_onnx import preload_model
+            preload_model()
+            logger.info("[PRELOAD] ONNX model preloaded successfully")
+        except Exception as e:
+            logger.warning(f"[PRELOAD] Could not preload ONNX model: {e}")
+            logger.warning("[PRELOAD] Model will be loaded on first query (may cause timeout)")
+
 # Initialize at module load time (for gunicorn workers)
 try:
     initialize()
