@@ -1,6 +1,11 @@
-# ONNX Reranker Integration Guide - SOLVED
+# ONNX Reranker Integration Guide - DEPRECATED
 
-## Problem Diagnosis & Solution
+> **⚠️ DEPRECATION NOTICE (November 2025)**
+> This ONNX integration was removed from production due to Railway's ephemeral filesystem preventing cache persistence.
+> The system now uses **Modal GPU Cross-Encoder** as the primary reranker with excellent results.
+> This document is kept for historical reference and lessons learned.
+
+## Problem Diagnosis & Solution (Historical)
 
 ### Original Issue
 - **Symptom**: 56 seconds total time for 30 chunks, but only 2.6s actual ONNX inference
