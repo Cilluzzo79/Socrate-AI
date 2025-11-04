@@ -2138,22 +2138,11 @@ def initialize():
         logger.error(f"Database initialization failed: {e}")
         logger.warning("Application will continue but database operations may fail")
 
-    # Preload ONNX model in background to avoid blocking healthcheck
+    # ONNX preload disabled: causes worker timeout during export
+    # Model will be loaded on first query and cached permanently
+    # TODO: Pre-build ONNX cache during Docker build phase
     if os.getenv('RAILWAY_ENVIRONMENT'):
-        import threading
-        def preload_in_background():
-            try:
-                logger.info("[PRELOAD] Starting background ONNX model preload...")
-                from core.reranker_onnx import preload_model
-                preload_model()
-                logger.info("[PRELOAD] ONNX model preloaded successfully in background")
-            except Exception as e:
-                logger.warning(f"[PRELOAD] Background preload failed: {e}")
-                logger.warning("[PRELOAD] Model will be loaded on first query")
-
-        preload_thread = threading.Thread(target=preload_in_background, daemon=True)
-        preload_thread.start()
-        logger.info("[PRELOAD] Background thread started (non-blocking healthcheck)")
+        logger.info("[ONNX] Preload disabled - model will load on first query")
 
 # Initialize at module load time (for gunicorn workers)
 try:

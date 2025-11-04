@@ -567,25 +567,32 @@ class SimpleQueryEngine:
         # Find relevant chunks (STAGE 1: High Recall)
         candidate_chunks = self.find_relevant_chunks(query, chunks, retrieval_top_k)
 
-        # STAGE 2: COST-OPTIMIZED CROSS-ENCODER RERANKING (ONNX → Modal GPU → Diversity)
-        # Priority 1: ONNX CPU cross-encoder (free, <2s, SOTA quality)
-        # Priority 2: Modal GPU cross-encoder (fallback only, $30-50/month)
-        # Priority 3: Local diversity reranker (final fallback)
+        # STAGE 2: SMART RERANKING (Modal → ONNX after cache → Diversity)
+        # Strategy: Use Modal until ONNX is cached to avoid first-query timeout
+        # Once ONNX cache exists, switch to ONNX priority (cost optimization)
         final_top_k = self._calculate_final_top_k(query_type, user_tier, query)
 
+        # Check if ONNX cache exists
+        from pathlib import Path
+        onnx_cache_exists = (Path.home() / ".cache" / "huggingface" / "onnx" / "BAAI_bge-reranker-v2-m3" / "model.onnx").exists()
+
         try:
-            # PRIORITY 1: ONNX Cross-Encoder (Cost: $0, Latency: <2s)
-            from core.reranker_onnx import rerank_chunks_onnx
+            if onnx_cache_exists:
+                # PRIORITY 1: ONNX Cross-Encoder (Cost: $0, Latency: <2s) - CACHED MODEL
+                from core.reranker_onnx import rerank_chunks_onnx
 
-            logger.info(f"[ONNX-RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final (SOTA cross-encoder)")
+                logger.info(f"[ONNX-RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final (cached model)")
 
-            relevant_chunks = rerank_chunks_onnx(
-                query=query,
-                chunks=candidate_chunks,
-                top_k=final_top_k
-            )
+                relevant_chunks = rerank_chunks_onnx(
+                    query=query,
+                    chunks=candidate_chunks,
+                    top_k=final_top_k
+                )
 
-            logger.info(f"[ONNX SUCCESS] Reranked to {len(relevant_chunks)} chunks (cost: $0/month, latency: <2s)")
+                logger.info(f"[ONNX SUCCESS] Reranked to {len(relevant_chunks)} chunks (cost: $0/month)")
+            else:
+                # ONNX not cached yet, use Modal to avoid timeout
+                raise Exception("ONNX cache not found, using Modal")
 
         except Exception as onnx_error:
             logger.warning(f"[ONNX FALLBACK] ONNX reranking failed: {onnx_error}")
