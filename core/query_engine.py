@@ -567,77 +567,51 @@ class SimpleQueryEngine:
         # Find relevant chunks (STAGE 1: High Recall)
         candidate_chunks = self.find_relevant_chunks(query, chunks, retrieval_top_k)
 
-        # STAGE 2: SMART RERANKING (Modal → ONNX after cache → Diversity)
-        # Strategy: Use Modal until ONNX is cached to avoid first-query timeout
-        # Once ONNX cache exists, switch to ONNX priority (cost optimization)
+        # STAGE 2: RERANKING (Modal GPU Cross-Encoder with Diversity Fallback)
         final_top_k = self._calculate_final_top_k(query_type, user_tier, query)
 
-        # Check if ONNX cache exists
-        from pathlib import Path
-        onnx_cache_exists = (Path.home() / ".cache" / "huggingface" / "onnx" / "BAAI_bge-reranker-v2-m3" / "model.onnx").exists()
-
         try:
-            if onnx_cache_exists:
-                # PRIORITY 1: ONNX Cross-Encoder (Cost: $0, Latency: <2s) - CACHED MODEL
-                from core.reranker_onnx import rerank_chunks_onnx
+            # PRIORITY 1: Modal GPU Cross-Encoder (SOTA quality, optimized latency)
+            from core.modal_rerank_client import rerank_with_modal, is_modal_enabled
 
-                logger.info(f"[ONNX-RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final (cached model)")
+            if is_modal_enabled():
+                logger.info(f"[MODAL-RERANKING] GPU cross-encoder: {len(candidate_chunks)} → {final_top_k}")
 
-                relevant_chunks = rerank_chunks_onnx(
+                relevant_chunks = rerank_with_modal(
                     query=query,
                     chunks=candidate_chunks,
                     top_k=final_top_k
                 )
 
-                logger.info(f"[ONNX SUCCESS] Reranked to {len(relevant_chunks)} chunks (cost: $0/month)")
+                if relevant_chunks is not None:
+                    logger.info(f"[MODAL SUCCESS] GPU reranked to {len(relevant_chunks)} chunks")
+                else:
+                    raise Exception("Modal returned None")
             else:
-                # ONNX not cached yet, use Modal to avoid timeout
-                raise Exception("ONNX cache not found, using Modal")
+                raise Exception("Modal not configured")
 
-        except Exception as onnx_error:
-            logger.warning(f"[ONNX FALLBACK] ONNX reranking failed: {onnx_error}")
+        except Exception as modal_error:
+            # PRIORITY 2: Local Diversity Reranker (Fast fallback)
+            logger.warning(f"[MODAL FALLBACK] Modal reranking failed: {modal_error}")
+            logger.info(f"[DIVERSITY-RERANKING] Using local diversity reranker")
 
             try:
-                # PRIORITY 2: Modal GPU Cross-Encoder (Cost: $30-50/month, Latency: 1-25s)
-                from core.modal_rerank_client import rerank_with_modal, is_modal_enabled
+                from core.reranker_optimized import get_reranker
 
-                if is_modal_enabled():
-                    logger.info(f"[MODAL-RERANKING] Attempting GPU fallback: {len(candidate_chunks)} → {final_top_k}")
+                reranker = get_reranker(use_cross_encoder=False)
+                relevant_chunks = reranker.rerank(
+                    query=query,
+                    chunks=candidate_chunks,
+                    top_k=final_top_k,
+                    diversity_threshold=0.80
+                )
 
-                    relevant_chunks = rerank_with_modal(
-                        query=query,
-                        chunks=candidate_chunks,
-                        top_k=final_top_k
-                    )
+                logger.info(f"[DIVERSITY SUCCESS] Selected {len(relevant_chunks)} diverse chunks")
 
-                    if relevant_chunks is not None:
-                        logger.info(f"[MODAL SUCCESS] GPU reranked to {len(relevant_chunks)} chunks")
-                    else:
-                        raise Exception("Modal returned None")
-                else:
-                    raise Exception("Modal not configured")
-
-            except Exception as modal_error:
-                # PRIORITY 3: Local Diversity Reranker (Fast but lower quality)
-                logger.info(f"[DIVERSITY-RERANKING] Both ONNX and Modal failed, using diversity reranker")
-
-                try:
-                    from core.reranker_optimized import get_reranker
-
-                    reranker = get_reranker(use_cross_encoder=False)
-                    relevant_chunks = reranker.rerank(
-                        query=query,
-                        chunks=candidate_chunks,
-                        top_k=final_top_k,
-                        diversity_threshold=0.80
-                    )
-
-                    logger.info(f"[DIVERSITY SUCCESS] Selected {len(relevant_chunks)} diverse chunks")
-
-                except Exception as rerank_error:
-                    logger.warning(f"[RERANKING FAILED] All reranking methods failed: {rerank_error}")
-                    final_top_k = min(final_top_k, len(candidate_chunks))
-                    relevant_chunks = candidate_chunks[:final_top_k]
+            except Exception as rerank_error:
+                logger.warning(f"[RERANKING FAILED] All reranking methods failed: {rerank_error}")
+                final_top_k = min(final_top_k, len(candidate_chunks))
+                relevant_chunks = candidate_chunks[:final_top_k]
                 logger.info(f"[FALLBACK] Using top {len(relevant_chunks)} chunks without reranking")
 
         if not relevant_chunks:
