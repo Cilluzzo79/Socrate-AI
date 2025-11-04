@@ -55,3 +55,8 @@ google-cloud-vision==3.7.2
 python-dotenv==1.0.0
 requests==2.31.0
 pydantic>=2.0.0
+
+# ONNX optimization for reranking (cost optimization - Nov 2025)
+# Replaces Modal GPU ($30-50/month) with local CPU inference
+optimum[onnxruntime]>=1.15.0
+onnxruntime>=1.16.0

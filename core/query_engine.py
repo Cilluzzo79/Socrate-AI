@@ -567,56 +567,70 @@ class SimpleQueryEngine:
         # Find relevant chunks (STAGE 1: High Recall)
         candidate_chunks = self.find_relevant_chunks(query, chunks, retrieval_top_k)
 
-        # STAGE 2: GPU-ACCELERATED RERANKING (Modal Labs)
-        # Try GPU Cross-Encoder first (best quality), fallback to local reranker if unavailable
+        # STAGE 2: COST-OPTIMIZED CROSS-ENCODER RERANKING (ONNX → Modal GPU → Diversity)
+        # Priority 1: ONNX CPU cross-encoder (free, <2s, SOTA quality)
+        # Priority 2: Modal GPU cross-encoder (fallback only, $30-50/month)
+        # Priority 3: Local diversity reranker (final fallback)
         final_top_k = self._calculate_final_top_k(query_type, user_tier, query)
 
         try:
-            from core.modal_rerank_client import rerank_with_modal, is_modal_enabled
+            # PRIORITY 1: ONNX Cross-Encoder (Cost: $0, Latency: <2s)
+            from core.reranker_onnx import rerank_chunks_onnx
 
-            if is_modal_enabled():
-                logger.info(f"[MODAL-RERANKING] Attempting GPU reranking: {len(candidate_chunks)} candidates → {final_top_k} final")
+            logger.info(f"[ONNX-RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final (SOTA cross-encoder)")
 
-                # Call Modal GPU service (uses DEFAULT_TIMEOUT = 30.0s for cold starts)
-                relevant_chunks = rerank_with_modal(
-                    query=query,
-                    chunks=candidate_chunks,
-                    top_k=final_top_k
-                    # timeout parameter removed - will use DEFAULT_TIMEOUT from modal_rerank_client
-                )
+            relevant_chunks = rerank_chunks_onnx(
+                query=query,
+                chunks=candidate_chunks,
+                top_k=final_top_k
+            )
 
-                if relevant_chunks is not None:
-                    logger.info(f"[MODAL SUCCESS] GPU reranked to {len(relevant_chunks)} chunks")
-                else:
-                    logger.warning("[MODAL] GPU reranking failed, falling back to local reranker")
-                    raise Exception("Modal reranking returned None")
-            else:
-                logger.debug("[MODAL] Not configured, using local reranker")
-                raise Exception("Modal not enabled")
+            logger.info(f"[ONNX SUCCESS] Reranked to {len(relevant_chunks)} chunks (cost: $0/month, latency: <2s)")
 
-        except Exception as e:
-            # FALLBACK: Use local diversity reranker
-            logger.info(f"[LOCAL-RERANKING] Using diversity reranker: {e}")
+        except Exception as onnx_error:
+            logger.warning(f"[ONNX FALLBACK] ONNX reranking failed: {onnx_error}")
 
             try:
-                from core.reranker_optimized import get_reranker
+                # PRIORITY 2: Modal GPU Cross-Encoder (Cost: $30-50/month, Latency: 1-25s)
+                from core.modal_rerank_client import rerank_with_modal, is_modal_enabled
 
-                logger.info(f"[COST-OPTIMIZED RERANKING] {len(candidate_chunks)} candidates → {final_top_k} final chunks")
+                if is_modal_enabled():
+                    logger.info(f"[MODAL-RERANKING] Attempting GPU fallback: {len(candidate_chunks)} → {final_top_k}")
 
-                reranker = get_reranker(use_cross_encoder=False)  # Use lightweight by default
-                relevant_chunks = reranker.rerank(
-                    query=query,
-                    chunks=candidate_chunks,
-                    top_k=final_top_k,
-                    diversity_threshold=0.80  # ATSW-OPTIMIZED: Balanced for better recall with term weighting
-                )
+                    relevant_chunks = rerank_with_modal(
+                        query=query,
+                        chunks=candidate_chunks,
+                        top_k=final_top_k
+                    )
 
-                logger.info(f"[RERANKING SUCCESS] Selected {len(relevant_chunks)} diverse chunks (cost reduction: ~{100*(1-len(relevant_chunks)/len(candidate_chunks)):.0f}%)")
+                    if relevant_chunks is not None:
+                        logger.info(f"[MODAL SUCCESS] GPU reranked to {len(relevant_chunks)} chunks")
+                    else:
+                        raise Exception("Modal returned None")
+                else:
+                    raise Exception("Modal not configured")
 
-            except Exception as rerank_error:
-                logger.warning(f"[RERANKING FAILED] Falling back to top chunks: {rerank_error}")
-                final_top_k = min(final_top_k, len(candidate_chunks))
-                relevant_chunks = candidate_chunks[:final_top_k]
+            except Exception as modal_error:
+                # PRIORITY 3: Local Diversity Reranker (Fast but lower quality)
+                logger.info(f"[DIVERSITY-RERANKING] Both ONNX and Modal failed, using diversity reranker")
+
+                try:
+                    from core.reranker_optimized import get_reranker
+
+                    reranker = get_reranker(use_cross_encoder=False)
+                    relevant_chunks = reranker.rerank(
+                        query=query,
+                        chunks=candidate_chunks,
+                        top_k=final_top_k,
+                        diversity_threshold=0.80
+                    )
+
+                    logger.info(f"[DIVERSITY SUCCESS] Selected {len(relevant_chunks)} diverse chunks")
+
+                except Exception as rerank_error:
+                    logger.warning(f"[RERANKING FAILED] All reranking methods failed: {rerank_error}")
+                    final_top_k = min(final_top_k, len(candidate_chunks))
+                    relevant_chunks = candidate_chunks[:final_top_k]
                 logger.info(f"[FALLBACK] Using top {len(relevant_chunks)} chunks without reranking")
 
         if not relevant_chunks:
