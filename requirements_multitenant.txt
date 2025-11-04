@@ -49,7 +49,11 @@ redis>=5.0.0
 boto3>=1.28.0
 
 # OCR (Google Cloud Vision)
+# Fixed version constraints to avoid grpcio-status backtracking (Nov 2025)
 google-cloud-vision==3.7.2
+grpcio>=1.59.0,<1.63.0
+grpcio-status>=1.59.0,<1.63.0
+google-api-core>=2.14.0,<2.20.0
 
 # Utilities
 python-dotenv==1.0.0
